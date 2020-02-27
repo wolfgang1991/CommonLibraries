@@ -1,0 +1,41 @@
+LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
+C_LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_C_LINKOBJ))
+
+ifeq ($(DEBUG),1)
+OPTIM = $(USEROPTIM) -g
+else ifeq ($(DEBUG),2)
+OPTIM = $(USEROPTIM) -fsanitize=address -fno-omit-frame-pointer -g3
+else
+OPTIM = $(USEROPTIM) -O3 -DNDEBUG
+endif
+
+CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall -std=c++11
+
+all_lib: build_deps $(STATIC_LIB)
+
+# Builds as static lib
+$(STATIC_LIB): $(LINKOBJ) $(C_LINKOBJ)
+	$(AR) rs $@ $^
+	
+# Create dependency files for automatic recompilation
+$(OBJDIR)/%.d:$(SRCDIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -MM -MF $@ $<
+	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
+	echo "	$(CXX) $(CPPFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
+	
+$(OBJDIR)/%.d:$(SRCDIR)/%.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MM -MF $@ $<
+	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
+	echo "	$(CC) $(CFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(LINKOBJ:.o=.d)
+endif
+
+clean: clean_deps
+	$(RM) $(LINKOBJ) $(LINKOBJ:.o=.d)
+	$(RM) $(STATIC_LIB)
+
+.PHONY: all clean

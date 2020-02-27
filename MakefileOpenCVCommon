@@ -1,0 +1,4 @@
+#opencv stuff (must be updated if opencv is updated or other opencv modules are needed)
+OPENCVMODULES = $(OPENCVDIR)/modules
+OPENCVINCLUDES = -I$(OPENCVDIR)/include -I$(OPENCVDIR)/build -I$(OPENCVMODULES)/calib3d/include -I$(OPENCVMODULES)/features2d/include -I$(OPENCVMODULES)/imgproc/include -I$(OPENCVMODULES)/flann/include -I$(OPENCVMODULES)/core/include
+OPENCVLIBS = -L$(OPENCVDIR)/build/lib -lopencv_calib3d -lopencv_features2d -lopencv_imgproc -lopencv_core -lopencv_flann

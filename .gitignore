@@ -1,0 +1,13 @@
+obj/
+build/
+doctemp/
+bin/
+.svn/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+octave-workspace
+xcuserdata/
+.reviewboardrc

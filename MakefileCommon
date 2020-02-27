@@ -1,0 +1,42 @@
+LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
+
+ifeq ($(DEBUG),1)
+OPTIM = $(USEROPTIM) -g
+else ifeq ($(DEBUG),2)
+OPTIM = $(USEROPTIM) -fsanitize=address -fno-omit-frame-pointer -g3
+else
+OPTIM = $(USEROPTIM) -O3 -DNDEBUG
+endif
+
+CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall -std=c++11
+
+all_linux: CPPFLAGS += -I/usr/X11R6/include
+all_linux: LIBFLAGS += -L$(COMMONLIBPATH)/Irrlicht/lib/Linux -lIrrlicht -L/usr/X11R6/lib -lGL -lXxf86vm -lXext -lX11
+
+all_linux: build_deps $(LINKOBJ)
+	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) -o $(EXECFILE) $(LIBFLAGS)
+
+#TODO: win32 not tested!
+win32: LIBFLAGS += -L$(COMMONLIBPATH)/Irrlicht/lib/Win32-gcc -lIrrlicht -lgdi32 -lwinspool -lcomdlg32 -lole32 -loleaut32 -luuid -lodbc32 -lodbccp32 -lopengl32 -lwinmm -lm
+win32: EXECFILE += .exe
+win32: build_deps $(LINKOBJ)
+	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) -o $(EXECFILE) $(LIBFLAGS)
+
+# Create dependency files for automatic recompilation
+$(OBJDIR)/%.d:$(SRCDIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -MM -MF $@ $<
+	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
+	echo "	$(CXX) $(CPPFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(LINKOBJ:.o=.d)
+endif
+
+# Cleans all temporary files and compilation results.
+clean: clean_deps
+	$(RM) $(LINKOBJ) $(LINKOBJ:.o=.d)
+	$(RM) $(EXECFILE)
+
+
+.PHONY: all clean
