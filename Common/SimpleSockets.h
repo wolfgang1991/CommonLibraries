@@ -47,11 +47,15 @@ class IPv4Address : public IIPAddress{
 	
 	void setPort(uint16_t port);
 	
+	sockaddr_in& getInternalRepresentation();
+	
 	const sockaddr_in& getInternalRepresentation() const;
 	
 	void setInternalRepresentation(const sockaddr_in& r);
 	
 	IPv4Address* createNewCopy() const;
+	
+	bool operator<(const IPv4Address& other) const;
 
 };
 
@@ -73,11 +77,15 @@ class IPv6Address : public IIPAddress{
 	
 	void setPort(uint16_t port);
 	
+	sockaddr_in6& getInternalRepresentation();
+	
 	const sockaddr_in6& getInternalRepresentation() const;
 	
 	void setInternalRepresentation(const sockaddr_in6& r);
 	
 	IPv6Address* createNewCopy() const;
+	
+	bool operator<(const IPv6Address& other) const;
 
 };
 
@@ -243,7 +251,8 @@ class IPv4TCPSocket : public IPv4Socket{
 	bool listen(int maxPendingConnections);
 	
 	//! timeout in ms (if NOT equal 0 it blocks until there's something to accept or timeout)
-	IPv4TCPSocket* accept(uint32_t timeout = 0);
+	//! peerAddress: if not NULL it will be filled with the peer address
+	IPv4TCPSocket* accept(uint32_t timeout = 0, IPv4Address* peerAddress = NULL);
 	
 	//! timeout in ms
 	bool connect(const IPv4Address& address, uint32_t timeout);
@@ -268,7 +277,7 @@ class IPv6TCPSocket : public IPv6Socket{
 	bool listen(int maxPendingConnections);
 	
 	//! timeout in ms (if not equal 0 it blocks until there's something to accept or timeout)
-	IPv6TCPSocket* accept(uint32_t timeout = 0);
+	IPv6TCPSocket* accept(uint32_t timeout = 0, IPv6Address* peerAddress = NULL);
 	
 	//! timeout in ms
 	bool connect(const IPv6Address& address, uint32_t timeout);

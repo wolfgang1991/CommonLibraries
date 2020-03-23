@@ -90,6 +90,13 @@ IPv4Address::IPv4Address(const std::string& addressString, uint16_t port){
 	}
 }
 
+bool IPv4Address::operator<(const IPv4Address& other) const{
+	if(addr.sin_addr.s_addr==other.addr.sin_addr.s_addr){
+		return addr.sin_port<other.addr.sin_port;
+	}
+	return addr.sin_addr.s_addr<other.addr.sin_addr.s_addr;
+}
+
 IPv4Address* IPv4Address::createNewCopy() const{
 	return new IPv4Address(*this);
 }
@@ -115,6 +122,10 @@ void IPv4Address::setPort(uint16_t port){
 	addr.sin_port = htons(port);
 }
 
+sockaddr_in& IPv4Address::getInternalRepresentation(){
+	return addr;
+}
+
 const sockaddr_in& IPv4Address::getInternalRepresentation() const{
 	return addr;
 }
@@ -130,6 +141,19 @@ IPv6Address::IPv6Address(const std::string& addressString, uint16_t port){
 	if(inet_pton(AF_INET6, addressString.c_str(), &(addr.sin6_addr))!=1){
 		handleErrorMessage("Invalid IP address");
 	}
+}
+
+bool IPv6Address::operator<(const IPv6Address& other) const{
+	const uint8_t* this_s6_addr = addr.sin6_addr.s6_addr;
+	const uint8_t* other_s6_addr = other.addr.sin6_addr.s6_addr;
+	for(int i=0; i<16; i++){
+		if(this_s6_addr[i]<other_s6_addr[i]){
+			return true;
+		}else if(this_s6_addr[i]>other_s6_addr[i]){
+			return false;
+		}
+	}
+	return addr.sin6_port<other.addr.sin6_port;
 }
 
 IPv6Address* IPv6Address::createNewCopy() const{
@@ -155,6 +179,10 @@ uint16_t IPv6Address::getPort() const{
 
 void IPv6Address::setPort(uint16_t port){
 	addr.sin6_port = htons(port);
+}
+
+sockaddr_in6& IPv6Address::getInternalRepresentation(){
+	return addr;
 }
 
 const sockaddr_in6& IPv6Address::getInternalRepresentation() const{
@@ -508,7 +536,7 @@ bool IPv4TCPSocket::listen(int maxPendingConnections){
 }
 
 //! Helper function to do an accept with timeout
-static inline int acceptWithTimeout(int socketHandle, uint32_t timeout){
+static inline int acceptWithTimeout(int socketHandle, uint32_t timeout, sockaddr* saddr, socklen_t* saddrLen){
 	fd_set readSet;
 	FD_ZERO(&readSet);
 	FD_SET(socketHandle, &readSet);
@@ -516,15 +544,16 @@ static inline int acceptWithTimeout(int socketHandle, uint32_t timeout){
 	tv.tv_sec=timeout/1000;
 	tv.tv_usec=(timeout%1000)*1000;
 	if(select(socketHandle+1, &readSet, NULL, NULL, &tv)>0){
-		return ::accept(socketHandle, NULL, NULL);
+		return ::accept(socketHandle, saddr, saddrLen);
 	}else{
 		return -1;
 	}
 }
 
-template<typename TSocket>
-static inline TSocket* acceptWithTimeout(TSocket* socket, uint32_t timeout){
-	int newHandle = acceptWithTimeout(socket->getSocketHandle(), timeout);
+template<typename TSocket, typename TIPAddress>
+static inline TSocket* acceptWithTimeout(TSocket* socket, uint32_t timeout, TIPAddress* peerAddress){
+	socklen_t internalLen = sizeof(peerAddress->getInternalRepresentation());
+	int newHandle = acceptWithTimeout(socket->getSocketHandle(), timeout, (sockaddr*)(peerAddress?&(peerAddress->getInternalRepresentation()):NULL), peerAddress?&internalLen:NULL);
 	if(newHandle>=0){
 		TSocket* sock = new TSocket();
 		sock->setSocketHandle(newHandle);
@@ -533,8 +562,8 @@ static inline TSocket* acceptWithTimeout(TSocket* socket, uint32_t timeout){
 	return NULL;
 }
 
-IPv4TCPSocket* IPv4TCPSocket::accept(uint32_t timeout){
-	return acceptWithTimeout<IPv4TCPSocket>(this, timeout);
+IPv4TCPSocket* IPv4TCPSocket::accept(uint32_t timeout, IPv4Address* peerAddress){
+	return acceptWithTimeout<IPv4TCPSocket, IPv4Address>(this, timeout, peerAddress);
 }
 
 static int setBlockingFlag(int fd, bool blocking){
@@ -616,8 +645,8 @@ bool IPv6TCPSocket::listen(int maxPendingConnections){
 	return false;
 }
 	
-IPv6TCPSocket* IPv6TCPSocket::accept(uint32_t timeout){
-	return acceptWithTimeout<IPv6TCPSocket>(this, timeout);
+IPv6TCPSocket* IPv6TCPSocket::accept(uint32_t timeout, IPv6Address* peerAddress){
+	return acceptWithTimeout<IPv6TCPSocket, IPv6Address>(this, timeout, peerAddress);
 }
 	
 bool IPv6TCPSocket::connect(const IPv6Address& address, uint32_t timeout){

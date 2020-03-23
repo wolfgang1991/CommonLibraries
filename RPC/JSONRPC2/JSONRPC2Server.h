@@ -28,7 +28,8 @@ class JSONRPC2Server{
 	bool isGood();
 	
 	//! timeout in ms (if NOT equal 0 it blocks until there's something to accept or timeout)
-	JSONRPC2Client* accept(uint32_t timeout = 0);
+	//! peerAddress: if not NULL it will be filled with the peer address
+	JSONRPC2Client* accept(uint32_t timeout = 0, IPv6Address* peerAddress = NULL);
 	
 };
 

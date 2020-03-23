@@ -34,8 +34,8 @@ bool JSONRPC2Server::isGood(){
 	return good;
 }
 	
-JSONRPC2Client* JSONRPC2Server::accept(uint32_t timeout){
-	IPv6TCPSocket* clientSocket = serverSocket->accept(timeout);
+JSONRPC2Client* JSONRPC2Server::accept(uint32_t timeout, IPv6Address* peerAddress){
+	IPv6TCPSocket* clientSocket = serverSocket->accept(timeout, peerAddress);
 	if(clientSocket){
 		if(handler){
 			bool res = handler->tryNegotiate(clientSocket);
