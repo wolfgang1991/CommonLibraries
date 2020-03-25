@@ -397,6 +397,7 @@ bool JSONRPC2Client::isConnected() const{
 }
 
 void JSONRPC2Client::disconnect(){
+	update();//required to get the current connection state
 	if(isConnected()){
 		lockMutex(mutexSync);
 		syncExit = true;
