@@ -58,9 +58,9 @@ std::string unescapeIniStrings(const std::string& s){
 		if(sthToEscape){
 			if(escapeChar){
 				i++;
-				assert(i<s.size());
+				if(i<s.size()){return s;}//assert
 				int idx = findChar(escapes, escapeSize, s[i]);
-				assert(idx<escapeSize);
+				if(idx<escapeSize){return s;}//assert
 				ss << characters[idx];
 			}else{
 				ss << s[i];
@@ -68,9 +68,9 @@ std::string unescapeIniStrings(const std::string& s){
 		}else if(escapeChar){
 			sthToEscape = true;
 			i++;
-			assert(i<s.size());
+			if(i<s.size()){return s;}//assert
 			int idx = findChar(escapes, escapeSize, s[i]);
-			assert(idx<escapeSize);
+			if(idx<escapeSize){return s;}//assert
 			ss << s.substr(0, i-1) << characters[idx];
 		}
 	}

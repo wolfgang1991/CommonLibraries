@@ -38,7 +38,7 @@ AMLGUIElement::AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpa
 	drawer(context->getDrawer()){
 	back = fwd = reset = zoomOut = zoomIn = NULL;
 	printParsingErrors = true;
-	utf8Code = "<empty/>";
+	utf8Code = "<empty />";
 	navGUI = NULL;
 	buttonSpace = 0.f;
 	this->invisibleAggregationId = invisibleAggregationId;
