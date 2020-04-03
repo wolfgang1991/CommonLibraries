@@ -168,6 +168,8 @@ JSONRPC2Client::JSONRPC2Client(){
 }
 
 JSONRPC2Client::~JSONRPC2Client(){
+	jsonId2Caller.clear();
+	receivers.clear();//robustness against forgotten deregistrations before delete
 	disconnect();
 	delete parser;
 	deleteAllElements(mainToReceive);
