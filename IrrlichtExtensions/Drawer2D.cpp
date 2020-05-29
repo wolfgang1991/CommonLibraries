@@ -224,9 +224,9 @@ Drawer2D::Drawer2D(irr::IrrlichtDevice* device):cCalc(16.f/9.f){
 		pcbk.init(device);
 		pwtcbk.init(device);
 		//polyMatType = EMT_TRANSPARENT_ADD_COLOR;
-		polyMatType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(Poly2DVS, "main", EVST_VS_2_0, Poly2DFS, "main", EPST_PS_2_0, &pwtcbk, EMT_TRANSPARENT_ALPHA_CHANNEL, 0, EGSL_DEFAULT);
+		polyMatType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(Poly2DVS, "main", EVST_VS_2_0, Poly2DFS, "main", EPST_PS_2_0, &pwtcbk, EMT_TRANSPARENT_ALPHA_CHANNEL, 0);
 		std::string finalPoly2DFS = std::string("#define NO_TEXTURE\n").append(Poly2DFS);
-		polyMatNoTexType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(Poly2DVS, "main", EVST_VS_2_0, finalPoly2DFS.c_str(), "main", EPST_PS_2_0, &pcbk, EMT_TRANSPARENT_ALPHA_CHANNEL, 0, EGSL_DEFAULT);
+		polyMatNoTexType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(Poly2DVS, "main", EVST_VS_2_0, finalPoly2DFS.c_str(), "main", EPST_PS_2_0, &pcbk, EMT_TRANSPARENT_ALPHA_CHANNEL, 0);
 		assert(polyMatType>=0 && polyMatNoTexType>=0);
 	}
 	defaultPolyAAValue = 0.f;

@@ -15,6 +15,8 @@ namespace irr
 namespace video
 {
 
+bool COpenGLExtensionHandler::needsDSAFramebufferHack = true;
+
 COpenGLExtensionHandler::COpenGLExtensionHandler() :
 		StencilBuffer(false), TextureCompressionExtension(false), MaxLights(1),
 		MaxAnisotropy(1), MaxUserClipPlanes(0), MaxAuxBuffers(0), MaxIndices(65535),
@@ -22,6 +24,7 @@ COpenGLExtensionHandler::COpenGLExtensionHandler() :
 		MaxTextureLODBias(0.f), Version(0), ShaderLanguageVersion(0),
 		OcclusionQuerySupport(false)
 #ifdef _IRR_OPENGL_USE_EXTPOINTER_
+	,pGlActiveTexture(0)
 	,pGlActiveTextureARB(0), pGlClientActiveTextureARB(0),
 	pGlGenProgramsARB(0), pGlGenProgramsNV(0),
 	pGlBindProgramARB(0), pGlBindProgramNV(0),
@@ -57,6 +60,7 @@ COpenGLExtensionHandler::COpenGLExtensionHandler() :
 	pGlCheckFramebufferStatusEXT(0), pGlFramebufferTexture2DEXT(0),
 	pGlBindRenderbufferEXT(0), pGlDeleteRenderbuffersEXT(0), pGlGenRenderbuffersEXT(0),
 	pGlRenderbufferStorageEXT(0), pGlFramebufferRenderbufferEXT(0), pGlGenerateMipmapEXT(0),
+	pGlActiveStencilFaceEXT(0),
 	// MRTs
 	pGlDrawBuffersARB(0), pGlDrawBuffersATI(0),
 	pGlGenBuffersARB(0), pGlBindBufferARB(0), pGlBufferDataARB(0), pGlDeleteBuffersARB(0),
@@ -78,7 +82,13 @@ COpenGLExtensionHandler::COpenGLExtensionHandler() :
 	pGlEnableIndexedEXT(0), pGlDisableIndexedEXT(0),
 	pGlColorMaskIndexedEXT(0),
 	pGlBlendFuncIndexedAMD(0), pGlBlendFunciARB(0), pGlBlendFuncSeparateIndexedAMD(0), pGlBlendFuncSeparateiARB(0),
-	pGlBlendEquationIndexedAMD(0), pGlBlendEquationiARB(0), pGlBlendEquationSeparateIndexedAMD(0), pGlBlendEquationSeparateiARB(0)
+	pGlBlendEquationIndexedAMD(0), pGlBlendEquationiARB(0), pGlBlendEquationSeparateIndexedAMD(0), pGlBlendEquationSeparateiARB(0),
+	// DSA
+    pGlTextureStorage2D(0), pGlTextureStorage3D(0), pGlTextureSubImage2D(0), pGlNamedFramebufferTexture(0),
+    pGlTextureParameteri(0), pGlCreateTextures(0), pGlCreateFramebuffers(0), pGlBindTextures(0), pGlGenerateTextureMipmap(0),
+    // DSA with EXT or functions to simulate it
+    pGlTextureSubImage2DEXT(0), pGlTextureStorage2DEXT(0), pGlTexStorage2D(0), pGlTextureStorage3DEXT(0),
+    pGlTexStorage3D(0), pGlNamedFramebufferTextureEXT(0), pGlFramebufferTexture(0), pGlGenerateTextureMipmapEXT(0)
 #if defined(GLX_SGI_swap_control)
 	,pGlxSwapIntervalSGI(0)
 #endif
@@ -106,10 +116,10 @@ COpenGLExtensionHandler::COpenGLExtensionHandler() :
 }
 
 
-void COpenGLExtensionHandler::dump() const
+void COpenGLExtensionHandler::dump(ELOG_LEVEL logLevel) const
 {
 	for (u32 i=0; i<IRR_OpenGL_Feature_Count; ++i)
-		os::Printer::log(OpenGLFeatureStrings[i], FeatureAvailable[i]?" true":" false");
+		os::Printer::log(OpenGLFeatureStrings[i], FeatureAvailable[i]?" true":" false", logLevel);
 }
 
 
@@ -247,7 +257,7 @@ void COpenGLExtensionHandler::dumpFramebufferFormats() const
 			{
 				memset(vals,0,sizeof(vals));
 #define tmplog(x,y) os::Printer::log(x, core::stringc(y).c_str())
-				const BOOL res = wglGetPixelFormatAttribiv_ARB(hdc,i,0,nums,atts,vals);
+				const BOOL res = wglGetPixelFormatAttribiv_ARB(hdc,i,0,(UINT)nums,atts,vals);
 				if (FALSE==res)
 					continue;
 				tmplog("Pixel format ",i);
@@ -557,6 +567,26 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 	pGlBlendEquationSeparateIndexedAMD = (PFNGLBLENDEQUATIONSEPARATEINDEXEDAMDPROC) IRR_OGL_LOAD_EXTENSION("glBlendEquationSeparateIndexedAMD");
 	pGlBlendEquationSeparateiARB = (PFNGLBLENDEQUATIONSEPARATEIPROC) IRR_OGL_LOAD_EXTENSION("glBlendEquationSeparateiARB");
 
+    pGlTextureSubImage2D = (PFNGLTEXTURESUBIMAGE2DPROC)IRR_OGL_LOAD_EXTENSION("glTextureSubImage2D");
+    pGlTextureStorage2D = (PFNGLTEXTURESTORAGE2DPROC) IRR_OGL_LOAD_EXTENSION("glTextureStorage2D");
+    pGlTextureStorage3D = (PFNGLTEXTURESTORAGE3DPROC) IRR_OGL_LOAD_EXTENSION("glTextureStorage3D");
+    pGlNamedFramebufferTexture = (PFNGLNAMEDFRAMEBUFFERTEXTUREPROC) IRR_OGL_LOAD_EXTENSION("glNamedFramebufferTexture");
+    pGlTextureParameteri = (PFNGLTEXTUREPARAMETERIPROC) IRR_OGL_LOAD_EXTENSION("glTextureParameteri");
+    pGlCreateTextures = (PFNGLCREATETEXTURESPROC) IRR_OGL_LOAD_EXTENSION("glCreateTextures");
+    pGlCreateFramebuffers = (PFNGLCREATEFRAMEBUFFERSPROC) IRR_OGL_LOAD_EXTENSION("glCreateFramebuffers");
+    pGlBindTextures = (PFNGLBINDTEXTURESPROC) IRR_OGL_LOAD_EXTENSION("glBindTextures");
+    pGlGenerateTextureMipmap = (PFNGLGENERATETEXTUREMIPMAPPROC) IRR_OGL_LOAD_EXTENSION("glGenerateTextureMipmap");
+    //==============================
+    pGlTextureSubImage2DEXT = (PFNGLTEXTURESUBIMAGE2DEXTPROC)IRR_OGL_LOAD_EXTENSION("glTextureSubImage2DEXT");
+    pGlTextureStorage2DEXT = (PFNGLTEXTURESTORAGE2DEXTPROC)IRR_OGL_LOAD_EXTENSION("glTextureStorage2DEXT");
+    pGlTexStorage2D = (PFNGLTEXSTORAGE2DPROC)IRR_OGL_LOAD_EXTENSION("glTexStorage2D");
+    pGlTextureStorage3DEXT = (PFNGLTEXTURESTORAGE3DEXTPROC)IRR_OGL_LOAD_EXTENSION("glTextureStorage3DEXT");
+    pGlTexStorage3D = (PFNGLTEXSTORAGE3DPROC)IRR_OGL_LOAD_EXTENSION("glTexStorage3D");
+    pGlNamedFramebufferTextureEXT = (PFNGLNAMEDFRAMEBUFFERTEXTUREEXTPROC)IRR_OGL_LOAD_EXTENSION("glNamedFramebufferTextureEXT");
+    pGlFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC)IRR_OGL_LOAD_EXTENSION("glFramebufferTexture");
+    pGlActiveTexture = (PFNGLACTIVETEXTUREPROC)IRR_OGL_LOAD_EXTENSION("glActiveTexture");
+    pGlGenerateTextureMipmapEXT = (PFNGLGENERATETEXTUREMIPMAPEXTPROC) IRR_OGL_LOAD_EXTENSION("glGenerateTextureMipmapEXT");
+
 	// get vsync extension
 	#if defined(WGL_EXT_swap_control) && !defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
 		pWglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) IRR_OGL_LOAD_EXTENSION("wglSwapIntervalEXT");
@@ -582,7 +612,7 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 #elif defined(GL_MAX_TEXTURE_UNITS_ARB)
 		glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &num);
 #endif
-		Feature.TextureUnit=static_cast<u8>(num);
+		Feature.MaxTextureUnits=static_cast<u8>(num);	// MULTITEXTURING (fixed function pipeline texture units)
 	}
 #endif
 #if defined(GL_ARB_vertex_shader) || defined(GL_VERSION_2_0)
@@ -594,7 +624,7 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 #elif defined(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS_ARB)
 		glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS_ARB, &num);
 #endif
-		Feature.TextureUnit =core::max_(Feature.TextureUnit,static_cast<u8>(num));
+		Feature.MaxTextureUnits =core::max_(Feature.MaxTextureUnits,static_cast<u8>(num));
 	}
 #endif
 	glGetIntegerv(GL_MAX_LIGHTS, &num);
@@ -694,12 +724,13 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 #ifdef _IRR_OPENGL_USE_EXTPOINTER_
 	if (!pGlActiveTextureARB || !pGlClientActiveTextureARB)
 	{
-		Feature.TextureUnit = 1;
+		Feature.MaxTextureUnits = 1;
 		os::Printer::log("Failed to load OpenGL's multitexture extension, proceeding without.", ELL_WARNING);
 	}
 	else
 #endif
-	Feature.TextureUnit = core::min_(Feature.TextureUnit, static_cast<u8>(MATERIAL_MAX_TEXTURES));
+	Feature.MaxTextureUnits = core::min_(Feature.MaxTextureUnits, static_cast<u8>(MATERIAL_MAX_TEXTURES));
+	Feature.MaxTextureUnits = core::min_(Feature.MaxTextureUnits, static_cast<u8>(MATERIAL_MAX_TEXTURES_USED));
 
 #ifdef GL_ARB_occlusion_query
 	if (FeatureAvailable[IRR_ARB_occlusion_query])
@@ -720,8 +751,10 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 #endif
 		OcclusionQuerySupport=false;
 
-		Feature.BlendOperation = (Version >= 140) || FeatureAvailable[IRR_EXT_blend_minmax] || FeatureAvailable[IRR_EXT_blend_subtract] ||
-		FeatureAvailable[IRR_EXT_blend_logic_op];
+    Feature.BlendOperation = (Version >= 140) ||
+            FeatureAvailable[IRR_EXT_blend_minmax] ||
+            FeatureAvailable[IRR_EXT_blend_subtract] ||
+            FeatureAvailable[IRR_EXT_blend_logic_op];
 
 #ifdef _DEBUG
 	if (FeatureAvailable[IRR_NVX_gpu_memory_info])
@@ -747,6 +780,10 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 		os::Printer::log("Free render buffer memory (kB)", core::stringc(val[0]));
 	}
 #endif
+
+	if (queryFeature(EVDF_TEXTURE_CUBEMAP_SEAMLESS))
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
 #endif
 }
 
@@ -764,7 +801,7 @@ bool COpenGLExtensionHandler::queryFeature(E_VIDEO_DRIVER_FEATURE feature) const
 	case EVDF_HARDWARE_TL:
 		return true; // we cannot tell other things
 	case EVDF_MULTITEXTURE:
-		return Feature.TextureUnit > 1;
+		return Feature.MaxTextureUnits > 1;
 	case EVDF_BILINEAR_FILTER:
 		return true;
 	case EVDF_MIP_MAP:
@@ -824,6 +861,11 @@ bool COpenGLExtensionHandler::queryFeature(E_VIDEO_DRIVER_FEATURE feature) const
 		return FeatureAvailable[IRR_EXT_texture_compression_s3tc];
 	case EVDF_TEXTURE_CUBEMAP:
 		return (Version >= 130) || FeatureAvailable[IRR_ARB_texture_cube_map] || FeatureAvailable[IRR_EXT_texture_cube_map];
+	case EVDF_TEXTURE_CUBEMAP_SEAMLESS:
+		return FeatureAvailable[IRR_ARB_seamless_cube_map];
+	case EVDF_DEPTH_CLAMP:
+		return FeatureAvailable[IRR_NV_depth_clamp] || FeatureAvailable[IRR_ARB_depth_clamp];
+
 	default:
 		return false;
 	};

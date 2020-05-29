@@ -27,6 +27,8 @@ VERSION_RELEASE = 0
 #
 # make win32
 #
+# Or as MinGW by default has CC set to cc - but has no compiler by that name - you might have to do:
+# make CC=gcc win32
 
 #List of object files, separated based on engine architecture
 IRRMESHLOADER = CBSPMeshFileLoader.o CMD2MeshFileLoader.o CMD3MeshFileLoader.o CMS3DMeshFileLoader.o CB3DMeshFileLoader.o C3DSMeshFileLoader.o COgreMeshFileLoader.o COBJMeshFileLoader.o CColladaFileLoader.o CCSMLoader.o CDMFLoader.o CLMTSMeshFileLoader.o CMY3DMeshFileLoader.o COCTLoader.o CXMeshFileLoader.o CIrrMeshFileLoader.o CSTLMeshFileLoader.o CLWOMeshFileLoader.o CPLYMeshFileLoader.o CSMFMeshFileLoader.o CMeshTextureLoader.o
@@ -90,11 +92,12 @@ ifdef EMSCRIPTEN
   else
     CFLAGS := -O3 -DPNG_THREAD_UNSAFE_OK -DPNG_NO_MMX_CODE -DPNG_NO_MNG_FEATURES
   endif
+  ifdef WASM
+    CXXFLAGS += -s WASM=1
+  endif  
 else
   CFLAGS := -O3 -fexpensive-optimizations -DPNG_THREAD_UNSAFE_OK -DPNG_NO_MMX_CODE -DPNG_NO_MNG_FEATURES
 endif
-
-CFLAGS += -Wall
 
 sharedlib sharedlib_osx: CXXFLAGS += -fPIC
 sharedlib sharedlib_osx: CFLAGS += -fPIC
@@ -124,6 +127,7 @@ sharedlib_osx: LDFLAGS += -L/usr/X11R6/lib$(LIBSELECT) -lGL -lXxf86vm
 IRRLICHT_DLL := ../../bin/Win32-gcc/Irrlicht.dll
 sharedlib_win32 staticlib_win32: SYSTEM = Win32-gcc
 sharedlib_win32: LDFLAGS += -lgdi32 -lopengl32 -ld3dx9d -lwinmm -Wl,--add-stdcall-alias
+#sharedlib_win32: LDFLAGS += -lSDL
 #choose either -DIRR_COMPILE_WITH_DX9_DEV_PACK or -DNO_IRR_COMPILE_WITH_DIRECT3D_9_ depending if you need dx9
 #sharedlib_win32 staticlib_win32: CPPFLAGS += -DIRR_COMPILE_WITH_DX9_DEV_PACK
 sharedlib_win32 staticlib_win32: CPPFLAGS += -DNO_IRR_COMPILE_WITH_DIRECTINPUT_JOYSTICK_ -DNO_IRR_COMPILE_WITH_DIRECT3D_9_
@@ -135,15 +139,15 @@ staticlib_emscripten: SYSTEM = emscripten
 
 # You might want to disable features you don't need in Irrlicht here to reduce Irrlicht library.
 # This can also help to reduce the .js size when compiling for emscripten.
-# Note you can also disable the same features by modifying IrrCompileConfig.h which is slightly
-# safer as you have then the same setting when compiling Irrlicht and your project (but needs
+# Note you can also disable the same features by modifying IrrCompileConfig.h which is slightly 
+# safer as you have then the same setting when compiling Irrlicht and your project (but needs 
 # modifying source-code while you can simply copy the Makefile and create your own settings)
 
 # xml - use a lot, but also takes  a lot of space. Check if you have any formats using it.s
 #CXXFLAGS += -DNO_IRR_COMPILE_WITH_XML_ 
 # Get rid of encrypted zip files or bzip encrypted zip's or lzma encrypte zip's - or even all zip-file support.
 #CXXFLAGS += -DNO_IRR_COMPILE_WITH_ZIP_ENCRYPTION_ -DNO_IRR_COMPILE_WITH_BZIP2_ -DNO_IRR_COMPILE_WITH_LZMA_ -DNO_IRR_COMPILE_WITH_ZLIB_
-# Disable mesh writers
+# Disable mesh writers 
 #CXXFLAGS += -DNO_IRR_COMPILE_WITH_IRR_WRITER_ -DNO_IRR_COMPILE_WITH_COLLADA_WRITER_ -DNO_IRR_COMPILE_WITH_STL_WRITER_ 
 #CXXFLAGS += -DNO_IRR_COMPILE_WITH_OBJ_WRITER_ -DNO_IRR_COMPILE_WITH_PLY_WRITER_ -DNO_IRR_COMPILE_WITH_B3D_WRITER_
 # Disable image writers

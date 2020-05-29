@@ -398,7 +398,7 @@ namespace irr
     
 	for (UITouch* touch in touches)
 	{
-        ev.TouchInput.ID = Device->removeTouch((__bridge void*)touch);//(size_t)touch;
+        ev.TouchInput.ID = Device->removeTouch((__bridge void*)touch);//(size_t)touch;//changed
 		CGPoint touchPoint = [touch locationInView:self];
         
         ev.TouchInput.X = touchPoint.x*Scale;
@@ -613,7 +613,7 @@ namespace irr
 		
 		return [delegate isActive];
 #else
- 		return false;
+		return false;
 #endif
     }
     
@@ -624,7 +624,7 @@ namespace irr
 		
 		return [delegate hasFocus];
 #else
- 		return false;
+		return false;
 #endif
     }
     
@@ -635,7 +635,7 @@ namespace irr
 		
 		return ![delegate isActive];
 #else
- 		return false;
+		return false;
 #endif
     }
 
@@ -647,6 +647,7 @@ namespace irr
     void CIrrDeviceiOS::closeDevice()
     {
         CFRunLoopStop(CFRunLoopGetMain());
+		
 		Close = true;
         yield();//changed
     }

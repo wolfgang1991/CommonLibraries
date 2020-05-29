@@ -138,24 +138,44 @@
 #include "CB3DMeshWriter.h"
 #endif
 
+#ifdef _IRR_COMPILE_WITH_CUBE_SCENENODE_
 #include "CCubeSceneNode.h"
+#endif // _IRR_COMPILE_WITH_CUBE_SCENENODE_
+#ifdef _IRR_COMPILE_WITH_SPHERE_SCENENODE_
 #include "CSphereSceneNode.h"
+#endif
 #include "CAnimatedMeshSceneNode.h"
+#ifdef _IRR_COMPILE_WITH_OCTREE_SCENENODE_
 #include "COctreeSceneNode.h"
+#endif // #ifdef _IRR_COMPILE_WITH_OCTREE_SCENENODE_
 #include "CCameraSceneNode.h"
 #include "CLightSceneNode.h"
+#ifdef _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
 #include "CBillboardSceneNode.h"
+#endif // _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
 #include "CMeshSceneNode.h"
 #include "CSkyBoxSceneNode.h"
+#ifdef _IRR_COMPILE_WITH_SKYDOME_SCENENODE_
 #include "CSkyDomeSceneNode.h"
+#endif // _IRR_COMPILE_WITH_SKYDOME_SCENENODE_
+
+#ifdef _IRR_COMPILE_WITH_SHADOW_VOLUME_SCENENODE_
+#include "CShadowVolumeSceneNode.h"
+#else
+#include "IShadowVolumeSceneNode.h"
+#endif // _IRR_COMPILE_WITH_SHADOW_VOLUME_SCENENODE_
 
 #ifdef _IRR_COMPILE_WITH_PARTICLES_
 #include "CParticleSystemSceneNode.h"
 #endif // _IRR_COMPILE_WITH_PARTICLES_
 
 #include "CDummyTransformationSceneNode.h"
+#ifdef _IRR_COMPILE_WITH_WATER_SURFACE_SCENENODE_
 #include "CWaterSurfaceSceneNode.h"
+#endif // _IRR_COMPILE_WITH_WATER_SURFACE_SCENENODE_
+#ifdef _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
 #include "CTerrainSceneNode.h"
+#endif // _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
 #include "CEmptySceneNode.h"
 #include "CTextSceneNode.h"
 #include "CQuake3ShaderSceneNode.h"
@@ -168,7 +188,9 @@
 #include "COctreeTriangleSelector.h"
 #include "CTriangleBBSelector.h"
 #include "CMetaTriangleSelector.h"
+#ifdef _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
 #include "CTerrainTriangleSelector.h"
+#endif // _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
 
 #include "CSceneNodeAnimatorRotation.h"
 #include "CSceneNodeAnimatorFlyCircle.h"
@@ -588,6 +610,7 @@ IMeshSceneNode* CSceneManager::addCubeSceneNode(f32 size, ISceneNode* parent,
 		s32 id, const core::vector3df& position,
 		const core::vector3df& rotation, const core::vector3df& scale)
 {
+#ifdef _IRR_COMPILE_WITH_CUBE_SCENENODE_
 	if (!parent)
 		parent = this;
 
@@ -595,6 +618,9 @@ IMeshSceneNode* CSceneManager::addCubeSceneNode(f32 size, ISceneNode* parent,
 	node->drop();
 
 	return node;
+#else
+	return 0;
+#endif
 }
 
 
@@ -603,6 +629,7 @@ IMeshSceneNode* CSceneManager::addSphereSceneNode(f32 radius, s32 polyCount,
 		ISceneNode* parent, s32 id, const core::vector3df& position,
 		const core::vector3df& rotation, const core::vector3df& scale)
 {
+#ifdef _IRR_COMPILE_WITH_SPHERE_SCENENODE_
 	if (!parent)
 		parent = this;
 
@@ -610,6 +637,9 @@ IMeshSceneNode* CSceneManager::addSphereSceneNode(f32 radius, s32 polyCount,
 	node->drop();
 
 	return node;
+#else
+	return 0;
+#endif // _IRR_COMPILE_WITH_SPHERE_SCENENODE_
 }
 
 
@@ -637,6 +667,7 @@ ISceneNode* CSceneManager::addWaterSurfaceSceneNode(IMesh* mesh, f32 waveHeight,
 	ISceneNode* parent, s32 id, const core::vector3df& position,
 	const core::vector3df& rotation, const core::vector3df& scale)
 {
+#ifdef _IRR_COMPILE_WITH_WATER_SURFACE_SCENENODE_
 	if (!parent)
 		parent = this;
 
@@ -646,6 +677,9 @@ ISceneNode* CSceneManager::addWaterSurfaceSceneNode(IMesh* mesh, f32 waveHeight,
 	node->drop();
 
 	return node;
+#else
+	return 0;
+#endif
 }
 
 
@@ -689,6 +723,7 @@ IOctreeSceneNode* CSceneManager::addOctreeSceneNode(IAnimatedMesh* mesh, ISceneN
 IOctreeSceneNode* CSceneManager::addOctreeSceneNode(IMesh* mesh, ISceneNode* parent,
 		s32 id, s32 minimalPolysPerNode, bool alsoAddIfMeshPointerZero)
 {
+#ifdef _IRR_COMPILE_WITH_OCTREE_SCENENODE_
 	if (!alsoAddIfMeshPointerZero && !mesh)
 		return 0;
 
@@ -704,6 +739,9 @@ IOctreeSceneNode* CSceneManager::addOctreeSceneNode(IMesh* mesh, ISceneNode* par
 	}
 
 	return node;
+#else
+	return 0;
+#endif
 }
 
 
@@ -801,6 +839,7 @@ IBillboardSceneNode* CSceneManager::addBillboardSceneNode(ISceneNode* parent,
 	video::SColor colorTop, video::SColor colorBottom
 	)
 {
+#ifdef _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
 	if (!parent)
 		parent = this;
 
@@ -809,6 +848,9 @@ IBillboardSceneNode* CSceneManager::addBillboardSceneNode(ISceneNode* parent,
 	node->drop();
 
 	return node;
+#else
+	return 0;
+#endif
 }
 
 
@@ -835,6 +877,7 @@ ISceneNode* CSceneManager::addSkyDomeSceneNode(video::ITexture* texture,
 	u32 horiRes, u32 vertRes, f32 texturePercentage,f32 spherePercentage, f32 radius,
 	ISceneNode* parent, s32 id)
 {
+#ifdef _IRR_COMPILE_WITH_SKYDOME_SCENENODE_
 	if (!parent)
 		parent = this;
 
@@ -843,6 +886,9 @@ ISceneNode* CSceneManager::addSkyDomeSceneNode(video::ITexture* texture,
 
 	node->drop();
 	return node;
+#else
+	return 0;
+#endif
 }
 
 
@@ -909,6 +955,7 @@ ITerrainSceneNode* CSceneManager::addTerrainSceneNode(
 	s32 smoothFactor,
 	bool addAlsoIfHeightmapEmpty)
 {
+#ifdef _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
 	if (!parent)
 		parent = this;
 
@@ -933,6 +980,9 @@ ITerrainSceneNode* CSceneManager::addTerrainSceneNode(
 
 	node->drop();
 	return node;
+#else
+	return 0;
+#endif // _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
 }
 
 
@@ -1327,9 +1377,7 @@ u32 CSceneManager::registerNodeForRendering(ISceneNode* node, E_SCENE_NODE_RENDE
 			taken = 0;
 			for (u32 i=0; i<count; ++i)
 			{
-				video::IMaterialRenderer* rnd =
-					Driver->getMaterialRenderer(node->getMaterial(i).MaterialType);
-				if ((rnd && rnd->isTransparent()) || node->getMaterial(i).isTransparent())
+				if (Driver->needsTransparentRenderPass(node->getMaterial(i)))
 				{
 					// register as transparent node
 					TransparentNodeEntry e(node, camWorldPos);
@@ -1696,6 +1744,16 @@ video::SColor CSceneManager::getShadowColor() const
 	return ShadowColor;
 }
 
+IShadowVolumeSceneNode* CSceneManager::createShadowVolumeSceneNode(const IMesh* shadowMesh, ISceneNode* parent, s32 id, bool zfailmethod, f32 infinity)
+{
+#ifdef _IRR_COMPILE_WITH_SHADOW_VOLUME_SCENENODE_
+	return new CShadowVolumeSceneNode(shadowMesh, parent, this, id, zfailmethod, infinity);
+#else
+	return 0;
+#endif
+}
+
+
 
 //! creates a rotation animator, which rotates the attached scene node around itself.
 ISceneNodeAnimator* CSceneManager::createRotationAnimator(const core::vector3df& rotationPerSecond)
@@ -1920,7 +1978,11 @@ IMetaTriangleSelector* CSceneManager::createMetaTriangleSelector()
 ITriangleSelector* CSceneManager::createTerrainTriangleSelector(
 	ITerrainSceneNode* node, s32 LOD)
 {
+#ifdef _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
 	return new CTerrainTriangleSelector(node, LOD);
+#else
+	return 0;
+#endif
 }
 
 

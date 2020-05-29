@@ -164,6 +164,9 @@ namespace video
 		//! Check if the driver supports creating textures with the given color format
 		virtual bool queryTextureFormat(ECOLOR_FORMAT format) const _IRR_OVERRIDE_;
 
+		//! Used by some SceneNodes to check if a material should be rendered in the transparent render pass
+		virtual bool needsTransparentRenderPass(const irr::video::SMaterial& material) const _IRR_OVERRIDE_;
+
 		IDepthBuffer * getDepthBuffer () { return DepthBuffer; }
 		IStencilBuffer * getStencilBuffer () { return StencilBuffer; }
 
@@ -176,6 +179,7 @@ namespace video
 		//bool setTexture(u32 stage, video::ITexture* texture);
 
 		virtual ITexture* createDeviceDependentTexture(const io::path& name, IImage* image) _IRR_OVERRIDE_;
+		virtual ITexture* createDeviceDependentTextureCubemap(const io::path& name, const core::array<IImage*>& image) _IRR_OVERRIDE_;
 
 		video::CImage* BackBuffer;
 		video::IImagePresenter* Presenter;

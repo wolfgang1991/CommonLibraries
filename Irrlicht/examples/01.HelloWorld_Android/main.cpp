@@ -182,7 +182,6 @@ private:
 */
 void mainloop( IrrlichtDevice *device, IGUIStaticText * infoText )
 {
-	IVideoDriver* driver = device->getVideoDriver();
 	u32 loop = 0;	// loop is reset when the app is destroyed unlike runCounter
 	static u32 runCounter = 0;	// static's seem to survive even an app-destroy message (not sure if that's guaranteed).
 	while(device->run())
@@ -199,17 +198,12 @@ void mainloop( IrrlichtDevice *device, IGUIStaticText * infoText )
 			*/
 			if ( infoText )
 			{
-				dimension2d<u32> screenSize = driver->getScreenSize();
 				stringw str = L"FPS:";
 				str += (s32)device->getVideoDriver()->getFPS();
 				str += L" r:";
 				str += runCounter;
 				str += L" l:";
 				str += loop;
-				str += L" w: ";
-				str += screenSize.Width;
-				str += L" h: ";
-				str += screenSize.Height;
 				infoText->setText ( str.c_str() );
 			}
 
@@ -248,7 +242,7 @@ void android_main(android_app* app)
 	SIrrlichtCreationParameters param;
 //	param.DriverType = EDT_OGLES1;				// android:glEsVersion in AndroidManifest.xml should be "0x00010000" (requesting 0x00020000 will also guarantee that ES1 works)
 	param.DriverType = EDT_OGLES2;				// android:glEsVersion in AndroidManifest.xml should be "0x00020000"
-	param.WindowSize = dimension2d<u32>(0,0);	// using 0,0 it will automatically set it to the maximal size
+	param.WindowSize = dimension2d<u32>(300,300);	// using 0,0 it will automatically set it to the maximal size
 	param.PrivateData = app;
 	param.Bits = 24;
 	param.ZBufferBits = 16;

@@ -258,7 +258,6 @@ LOCAL_SRC_FILES := \
 					Irrlicht.cpp \
 					irrXML.cpp \
 					os.cpp	 \
-					utf8.cpp \
 					bzip2/blocksort.c \
 					bzip2/bzcompress.c \
 					bzip2/bzlib.c \

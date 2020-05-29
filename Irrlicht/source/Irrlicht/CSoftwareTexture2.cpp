@@ -70,6 +70,7 @@ CSoftwareTexture2::CSoftwareTexture2(IImage* image, const io::path& name, u32 fl
 							BURNINGSHADER_COLOR_FORMAT
 						);
 
+			OriginalSize = optSize;
 			os::Printer::log ( buf, ELL_WARNING );
 			MipMap[0] = new CImage(BURNINGSHADER_COLOR_FORMAT, optSize);
 
@@ -181,12 +182,11 @@ CSoftwareRenderTarget2::~CSoftwareRenderTarget2()
 		Texture[0]->drop();
 }
 
-void CSoftwareRenderTarget2::setTexture(const core::array<ITexture*>& texture, ITexture* depthStencil)
+void CSoftwareRenderTarget2::setTexture(const core::array<ITexture*>& texture, ITexture* depthStencil, const core::array<E_CUBE_SURFACE>& cubeSurfaces)
 {
 	if (Texture != texture)
 	{
-		if (Texture[0])
-			Texture[0]->drop();
+		ITexture* prevTexture = Texture[0];
 
 		bool textureDetected = false;
 
@@ -201,6 +201,9 @@ void CSoftwareRenderTarget2::setTexture(const core::array<ITexture*>& texture, I
 				break;
 			}
 		}
+
+		if (prevTexture)
+			prevTexture->drop();
 
 		if (!textureDetected)
 			Texture[0] = 0;

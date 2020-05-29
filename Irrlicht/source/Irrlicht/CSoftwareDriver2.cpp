@@ -177,8 +177,8 @@ void CBurningVideoDriver::setCurrentShader()
 	ITexture *texture1 = Material.org.getTexture(1);
 
 	bool zMaterialTest = Material.org.ZBuffer != ECFN_DISABLED &&
-						Material.org.ZWriteEnable &&
-						getWriteZBuffer(Material.org);
+						Material.org.ZWriteEnable != video::EZW_OFF &&
+						( AllowZWriteOnTransparent || !Material.org.isTransparent() );
 
 	EBurningFFShader shader = zMaterialTest ? ETR_TEXTURE_GOURAUD : ETR_TEXTURE_GOURAUD_NOZ;
 
@@ -1885,8 +1885,8 @@ void CBurningVideoDriver::draw2DImage(const video::ITexture* texture, const core
 		core::recti clip=ViewPort;
 		if (ViewPort.getSize().Width != ScreenSize.Width)
 		{
-			dest.X=ViewPort.UpperLeftCorner.X+core::round32(destPos.X*ViewPort.getWidth()/(f32)ScreenSize.Width);
-			dest.Y=ViewPort.UpperLeftCorner.Y+core::round32(destPos.Y*ViewPort.getHeight()/(f32)ScreenSize.Height);
+			dest.X=ViewPort.UpperLeftCorner.X+core::round32_fast(destPos.X*ViewPort.getWidth()/(f32)ScreenSize.Width);
+			dest.Y=ViewPort.UpperLeftCorner.Y+core::round32_fast(destPos.Y*ViewPort.getHeight()/(f32)ScreenSize.Height);
 			if (clipRect)
 			{
 				clip.constrainTo(*clipRect);
@@ -2265,6 +2265,10 @@ ITexture* CBurningVideoDriver::createDeviceDependentTexture(const io::path& name
 	return texture;
 }
 
+ITexture* CBurningVideoDriver::createDeviceDependentTextureCubemap(const io::path& name, const core::array<IImage*>& image)
+{
+	return 0;
+}
 
 //! Returns the maximum amount of primitives (mostly vertices) which
 //! the device is able to render with one drawIndexedTriangleList
@@ -2288,7 +2292,7 @@ void CBurningVideoDriver::drawStencilShadowVolume(const core::array<core::vector
 
 	Material.org.MaterialType = video::EMT_SOLID;
 	Material.org.Lighting = false;
-	Material.org.ZWriteEnable = false;
+	Material.org.ZWriteEnable = video::EZW_OFF;
 	Material.org.ZBuffer = ECFN_LESSEQUAL;
 	LightSpace.Flags &= ~VERTEXTRANSFORM;
 
@@ -2378,6 +2382,11 @@ bool CBurningVideoDriver::queryTextureFormat(ECOLOR_FORMAT format) const
 	return format == BURNINGSHADER_COLOR_FORMAT;
 }
 
+bool CBurningVideoDriver::needsTransparentRenderPass(const irr::video::SMaterial& material) const
+{
+	return CNullDriver::needsTransparentRenderPass(material) || material.isTransparent();
+}
+
 
 } // end namespace video
 } // end namespace irr
@@ -2399,14 +2408,18 @@ struct dreadglobal
 	irr::io::IFileSystem* io;
 	irr::video::IImagePresenter* presenter;
 };
-dreadglobal b;
+
+namespace
+{
+	dreadglobal burning_dread;
+}
 
 DWORD WINAPI dreadFun( void *p)
 {
     printf("Hi This is burning dread\n");
-	b.driver = new irr::video::CBurningVideoDriver(*b.params, b.io, b.presenter);
+	burning_dread.driver = new irr::video::CBurningVideoDriver(*burning_dread.params, burning_dread.io, burning_dread.presenter);
 
-	SetEvent ( b.sync );
+	SetEvent (burning_dread.sync );
 	while ( 1 )
 	{
 		Sleep ( 1000 );
@@ -2427,13 +2440,13 @@ IVideoDriver* createBurningVideoDriver(const irr::SIrrlichtCreationParameters& p
 	#ifdef _IRR_COMPILE_WITH_BURNINGSVIDEO_
 
 	#ifdef _IRR_WINDOWS_
-	b.sync = CreateEventA ( 0, 0, 0, "burnevent0" );
-	b.params = &params;
-	b.io = io;
-	b.presenter = presenter;
-	b.dread = CreateThread ( 0, 0, dreadFun, 0, 0, &b.dreadid );
-	WaitForSingleObject ( b.sync, INFINITE );
-	return b.driver;
+	burning_dread.sync = CreateEventA ( 0, 0, 0, "burnevent0" );
+	burning_dread.params = &params;
+	burning_dread.io = io;
+	burning_dread.presenter = presenter;
+	burning_dread.dread = CreateThread ( 0, 0, dreadFun, 0, 0, &burning_dread.dreadid );
+	WaitForSingleObject (burning_dread.sync, INFINITE );
+	return burning_dread.driver;
 	#else
 	return new CBurningVideoDriver(params, io, presenter);
 	#endif

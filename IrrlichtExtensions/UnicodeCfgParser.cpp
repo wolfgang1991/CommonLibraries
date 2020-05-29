@@ -1,5 +1,6 @@
 #include <UnicodeCfgParser.h>
 #include <StringHelpers.h>
+#include <utf8.h>
 
 #include <irrString.h>
 #include <IReadFile.h>
@@ -70,7 +71,7 @@ bool UnicodeCfgParser::parseFromUTF8File(irr::io::IFileSystem* fsys, const char*
 		buffer[size] = '\0';
 		rf->drop();
 		wchar_t* str = new wchar_t[size+1];
-        irr::core::utf8ToWchar(buffer, str, (irr::u64)((size+1)*sizeof(wchar_t)));
+      UTF8Conversion::utf8ToWchar(buffer, str, (irr::u64)((size+1)*sizeof(wchar_t)));
 		parse(str);
 		delete[] str;
 		delete[] buffer;

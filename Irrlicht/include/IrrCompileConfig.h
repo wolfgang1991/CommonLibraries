@@ -141,7 +141,7 @@
 //changed
 #if !defined(_IRR_ANDROID_PLATFORM_) && !defined(_IRR_IOS_PLATFORM_)
 #define NO_IRR_COMPILE_WITH_OGLES1_
-#define NO_IRR_COMPILE_WITH_OGLES2_
+//#define NO_IRR_COMPILE_WITH_OGLES2_
 #define NO_IRR_COMPILE_WITH_WEBGL1_
 #endif
 //changed end
@@ -154,7 +154,7 @@
 
 
 //! Maximum number of texture an SMaterial can have, up to 8 are supported by Irrlicht.
-#define _IRR_MATERIAL_MAX_TEXTURES_ 4
+#define _IRR_MATERIAL_MAX_TEXTURES_ 8
 
 //! Whether to support XML and XML-based formats (irrmesh, collada...)
 #define _IRR_COMPILE_WITH_XML_
@@ -219,17 +219,27 @@ define out. */
 
 //! Define required options for OpenGL drivers.
 #if defined(_IRR_COMPILE_WITH_OPENGL_)
-#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_)
-#define _IRR_OPENGL_USE_EXTPOINTER_
-#define _IRR_COMPILE_WITH_WGL_MANAGER_
-#elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
-#define _IRR_OPENGL_USE_EXTPOINTER_
-#define _IRR_COMPILE_WITH_GLX_MANAGER_
-#elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
-#define _IRR_COMPILE_WITH_NSOGL_MANAGER_
-#elif defined(_IRR_SOLARIS_PLATFORM_)
-#define _IRR_COMPILE_WITH_GLX_MANAGER_
+	#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_)
+		#define _IRR_OPENGL_USE_EXTPOINTER_
+		#define _IRR_COMPILE_WITH_WGL_MANAGER_
+	#elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
+		#define _IRR_OPENGL_USE_EXTPOINTER_
+		#define _IRR_COMPILE_WITH_GLX_MANAGER_
+	#elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
+		#define _IRR_COMPILE_WITH_NSOGL_MANAGER_
+	#elif defined(_IRR_SOLARIS_PLATFORM_)
+		#define _IRR_COMPILE_WITH_GLX_MANAGER_
+	#elif defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
+		#define _IRR_OPENGL_USE_EXTPOINTER_
+	#endif
 #endif
+
+
+// Debian 10 removed support for GLES1 in mesa.
+// Can't tell about other Linux platforms or a way to test if it's still available,
+// so removing OGLES1 support on Linux now to allow compiling to work by default.
+#if defined(_IRR_LINUX_PLATFORM_) && !defined(_IRR_ANDROID_PLATFORM_)
+#define NO_IRR_COMPILE_WITH_OGLES1_
 #endif
 
 //! Define _IRR_COMPILE_WITH_OGLES1_ to compile the Irrlicht engine with OpenGL ES 1.1.
@@ -285,6 +295,8 @@ define out. */
 #endif
 #endif
 #endif
+
+
 
 //! Define _IRR_COMPILE_WITH_SOFTWARE_ to compile the Irrlicht engine with software driver
 /** If you do not need the software driver, or want to use Burning's Video instead,
@@ -368,7 +380,9 @@ the engine will no longer read .jpeg images. */
 
 //! Define _IRR_USE_NON_SYSTEM_JPEG_LIB_ to let irrlicht use the jpeglib which comes with irrlicht.
 /** If this is commented out, Irrlicht will try to compile using the jpeg lib installed in the system.
-	This is only used when _IRR_COMPILE_WITH_LIBJPEG_ is defined. */
+	This is only used when _IRR_COMPILE_WITH_LIBJPEG_ is defined.
+	NOTE: You will also have to modify the Makefile or project files when changing this default.
+	*/
 #define _IRR_USE_NON_SYSTEM_JPEG_LIB_
 #ifdef NO_IRR_USE_NON_SYSTEM_JPEG_LIB_
 #undef _IRR_USE_NON_SYSTEM_JPEG_LIB_
@@ -384,7 +398,9 @@ the engine will no longer read .png images. */
 
 //! Define _IRR_USE_NON_SYSTEM_LIBPNG_ to let irrlicht use the libpng which comes with irrlicht.
 /** If this is commented out, Irrlicht will try to compile using the libpng installed in the system.
-	This is only used when _IRR_COMPILE_WITH_LIBPNG_ is defined. */
+	This is only used when _IRR_COMPILE_WITH_LIBPNG_ is defined.
+	NOTE: You will also have to modify the Makefile or project files when changing this default.
+	*/
 #define _IRR_USE_NON_SYSTEM_LIB_PNG_
 #ifdef NO_IRR_USE_NON_SYSTEM_LIB_PNG_
 #undef _IRR_USE_NON_SYSTEM_LIB_PNG_
@@ -445,6 +461,54 @@ tool <http://developer.nvidia.com/object/nvperfhud_home.html>. */
 
 //! Uncomment the following line if you want to ignore the deprecated warnings
 //#define IGNORE_DEPRECATED_WARNING
+
+//! Define _IRR_COMPILE_WITH_SHADOW_VOLUME_SCENENODE_ to support ShadowVolumes
+#define _IRR_COMPILE_WITH_SHADOW_VOLUME_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_SHADOW_VOLUME_SCENENODE_
+#undef _IRR_COMPILE_WITH_SHADOW_VOLUME_SCENENODE_
+#endif
+
+//! Define _IRR_COMPILE_WITH_OCTREE_SCENENODE_ to support OctreeSceneNodes
+#define _IRR_COMPILE_WITH_OCTREE_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_OCTREE_SCENENODE_
+#undef _IRR_COMPILE_WITH_OCTREE_SCENENODE_
+#endif
+
+//! Define _IRR_COMPILE_WITH_TERRAIN_SCENENODE_ to support TerrainSceneNodes
+#define _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_TERRAIN_SCENENODE_
+#undef _IRR_COMPILE_WITH_TERRAIN_SCENENODE_
+#endif
+
+//! Define _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_ to support BillboardSceneNodes
+#define _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
+#undef _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
+#endif
+
+//! Define _IRR_COMPILE_WITH_WATER_SURFACE_SCENENODE_ to support WaterSurfaceSceneNodes
+#define _IRR_COMPILE_WITH_WATER_SURFACE_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_WATER_SURFACE_SCENENODE_
+#undef _IRR_COMPILE_WITH_WATER_SURFACE_SCENENODE_
+#endif
+
+//! Define _IRR_COMPILE_WITH_SKYDOME_SCENENODE_ to support SkydomeSceneNodes
+#define _IRR_COMPILE_WITH_SKYDOME_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_SKYDOME_SCENENODE_
+#undef _IRR_COMPILE_WITH_SKYDOME_SCENENODE_
+#endif
+
+//! Define _IRR_COMPILE_WITH_CUBE_SCENENODE_ to support CubeSceneNodes
+#define _IRR_COMPILE_WITH_CUBE_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_CUBE_SCENENODE_
+#undef _IRR_COMPILE_WITH_CUBE_SCENENODE_
+#endif
+
+//! Define _IRR_COMPILE_WITH_SPHERE_SCENENODE_ to support CubeSceneNodes
+#define _IRR_COMPILE_WITH_SPHERE_SCENENODE_
+#ifdef NO_IRR_COMPILE_WITH_SPHERE_SCENENODE_
+#undef _IRR_COMPILE_WITH_SPHERE_SCENENODE_
+#endif
 
 //! Define _IRR_COMPILE_WITH_IRR_SCENE_LOADER_ if you want to be able to load
 /** .irr scenes using ISceneManager::loadScene */
@@ -731,8 +795,10 @@ ones. */
 #endif
 //! Define _IRR_USE_NON_SYSTEM_ZLIB_ to let irrlicht use the zlib which comes with irrlicht.
 /** If this is commented out, Irrlicht will try to compile using the zlib
-installed on the system. This is only used when _IRR_COMPILE_WITH_ZLIB_ is
-defined. */
+	installed on the system. This is only used when _IRR_COMPILE_WITH_ZLIB_ is
+	defined.
+	NOTE: You will also have to modify the Makefile or project files when changing this default.
+ */
 #define _IRR_USE_NON_SYSTEM_ZLIB_
 #ifdef NO_IRR_USE_NON_SYSTEM_ZLIB_
 #undef _IRR_USE_NON_SYSTEM_ZLIB_
@@ -753,7 +819,9 @@ library. */
 //! Define _IRR_USE_NON_SYSTEM_BZLIB_ to let irrlicht use the bzlib which comes with irrlicht.
 /** If this is commented out, Irrlicht will try to compile using the bzlib
 installed on the system. This is only used when _IRR_COMPILE_WITH_BZLIB_ is
-defined. */
+defined.
+NOTE: You will also have to modify the Makefile or project files when changing this default.
+*/
 #define _IRR_USE_NON_SYSTEM_BZLIB_
 #ifdef NO_IRR_USE_NON_SYSTEM_BZLIB_
 #undef _IRR_USE_NON_SYSTEM_BZLIB_
@@ -873,9 +941,8 @@ precision will be lower but speed higher. currently X86 only
 #if defined(__BORLANDC__)
 	#include <tchar.h>
 
-	// Borland 5.5.1 does not have _strcmpi defined
+	// Borland 5.5.1
 	#if __BORLANDC__ == 0x551
-	//    #define _strcmpi strcmpi
 		#undef _tfinddata_t
 		#undef _tfindfirst
 		#undef _tfindnext

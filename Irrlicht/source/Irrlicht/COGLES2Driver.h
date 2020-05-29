@@ -256,8 +256,7 @@ namespace video
 				u32 verticesOut = 0,
 				IShaderConstantSetCallBack* callback = 0,
 				E_MATERIAL_TYPE baseMaterial = video::EMT_SOLID,
-				s32 userData=0,
-				E_GPU_SHADING_LANGUAGE shadingLang = EGSL_DEFAULT) _IRR_OVERRIDE_;
+				s32 userData=0) _IRR_OVERRIDE_;
 
 		//! Returns pointer to the IGPUProgrammingServices interface.
 		virtual IGPUProgrammingServices* getGPUProgrammingServices() _IRR_OVERRIDE_;
@@ -270,6 +269,10 @@ namespace video
 
 		virtual ITexture* addRenderTargetTexture(const core::dimension2d<u32>& size,
 				const io::path& name, const ECOLOR_FORMAT format = ECF_UNKNOWN) _IRR_OVERRIDE_;
+
+		//! Creates a render target texture for a cubemap
+		ITexture* addRenderTargetTextureCubemap(const irr::u32 sideLen,
+				const io::path& name, const ECOLOR_FORMAT format) _IRR_OVERRIDE_;
 
 		virtual bool setRenderTargetEx(IRenderTarget* target, u16 clearFlag, SColor clearColor = SColor(255, 0, 0, 0),
 			f32 clearDepth = 1.f, u8 clearStencil = 0) _IRR_OVERRIDE_;
@@ -307,6 +310,9 @@ namespace video
 
 		//! Check if the driver supports creating textures with the given color format
 		virtual bool queryTextureFormat(ECOLOR_FORMAT format) const _IRR_OVERRIDE_;
+
+		//! Used by some SceneNodes to check if a material should be rendered in the transparent render pass
+		virtual bool needsTransparentRenderPass(const irr::video::SMaterial& material) const _IRR_OVERRIDE_;
 
 		//! Convert E_BLEND_FACTOR to OpenGL equivalent
 		GLenum getGLBlend(E_BLEND_FACTOR factor) const;

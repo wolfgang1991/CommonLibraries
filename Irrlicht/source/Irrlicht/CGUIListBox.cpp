@@ -34,16 +34,17 @@ CGUIListBox::CGUIListBox(IGUIEnvironment* environment, IGUIElement* parent,
 	#endif
 
 	IGUISkin* skin = Environment->getSkin();
-	const s32 s = skin->getSize(EGDS_SCROLLBAR_SIZE);
 
 	ScrollBar = new CGUIScrollBar(false, Environment, this, -1,
-		core::rect<s32>(RelativeRect.getWidth() - s, 0, RelativeRect.getWidth(), RelativeRect.getHeight()),
+		core::recti(0, 0, 1, 1),
 		!clip);
 	ScrollBar->setSubElement(true);
 	ScrollBar->setTabStop(false);
 	ScrollBar->setAlignment(EGUIA_LOWERRIGHT, EGUIA_LOWERRIGHT, EGUIA_UPPERLEFT, EGUIA_LOWERRIGHT);
 	ScrollBar->setVisible(false);
 	ScrollBar->setPos(0);
+
+	updateScrollBarSize(skin->getSize(EGDS_SCROLLBAR_SIZE));
 
 	setNotClipped(!clip);
 
@@ -192,7 +193,6 @@ void CGUIListBox::recalculateItemHeight()
 	else
 		ScrollBar->setVisible(true);
 }
-
 
 //! returns id of selected item. returns -1 if no item is selected.
 s32 CGUIListBox::getSelected() const
@@ -521,6 +521,7 @@ void CGUIListBox::draw()
 	recalculateItemHeight(); // if the font changed
 
 	IGUISkin* skin = Environment->getSkin();
+	updateScrollBarSize(skin->getSize(EGDS_SCROLLBAR_SIZE));
 
 	core::rect<s32>* clipRect = 0;
 
@@ -533,7 +534,7 @@ void CGUIListBox::draw()
 	clientClip.UpperLeftCorner.Y += 1;
 	clientClip.UpperLeftCorner.X += 1;
 	if (ScrollBar->isVisible())
-		clientClip.LowerRightCorner.X = AbsoluteRect.LowerRightCorner.X - skin->getSize(EGDS_SCROLLBAR_SIZE);
+		clientClip.LowerRightCorner.X -= ScrollBar->getRelativePosition().getWidth();
 	clientClip.LowerRightCorner.Y -= 1;
 	clientClip.clipAgainst(AbsoluteClippingRect);
 
@@ -546,7 +547,7 @@ void CGUIListBox::draw()
 	frameRect = AbsoluteRect;
 	frameRect.UpperLeftCorner.X += 1;
 	if (ScrollBar->isVisible())
-		frameRect.LowerRightCorner.X = AbsoluteRect.LowerRightCorner.X - skin->getSize(EGDS_SCROLLBAR_SIZE);
+		frameRect.LowerRightCorner.X -= ScrollBar->getRelativePosition().getWidth();
 
 	frameRect.LowerRightCorner.Y = AbsoluteRect.UpperLeftCorner.Y + ItemHeight;
 
@@ -663,6 +664,14 @@ void CGUIListBox::recalculateScrollPos()
 	}
 }
 
+void CGUIListBox::updateScrollBarSize(s32 size)
+{
+	if ( size != ScrollBar->getRelativePosition().getWidth() )
+	{
+		core::recti r(RelativeRect.getWidth() - size, 0, RelativeRect.getWidth(), RelativeRect.getHeight());
+		ScrollBar->setRelativePosition(r);
+	}
+}
 
 void CGUIListBox::setAutoScrollEnabled(bool scroll)
 {
@@ -746,9 +755,9 @@ void CGUIListBox::deserializeAttributes(io::IAttributes* in, io::SAttributeReadW
 {
 	clear();
 
-	DrawBack        = in->getAttributeAsBool("DrawBack");
-	MoveOverSelect  = in->getAttributeAsBool("MoveOverSelect");
-	AutoScroll      = in->getAttributeAsBool("AutoScroll");
+	DrawBack        = in->getAttributeAsBool("DrawBack", DrawBack);
+	MoveOverSelect  = in->getAttributeAsBool("MoveOverSelect", MoveOverSelect);
+	AutoScroll      = in->getAttributeAsBool("AutoScroll", AutoScroll);
 
 	IGUIListBox::deserializeAttributes(in,options);
 

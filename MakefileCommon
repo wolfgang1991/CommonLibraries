@@ -11,7 +11,7 @@ endif
 CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall -std=c++11
 
 all_linux: CPPFLAGS += -I/usr/X11R6/include
-all_linux: LIBFLAGS += -L$(COMMONLIBPATH)/Irrlicht/lib/Linux -lIrrlicht -L/usr/X11R6/lib -lGL -lXxf86vm -lXext -lX11
+all_linux: LIBFLAGS += -L$(COMMONLIBPATH)/Irrlicht/lib/Linux -lIrrlicht -L/usr/X11R6/lib -lGL -lXxf86vm -lXext -lX11 -lEGL -lGLESv2
 
 all_linux: build_deps $(LINKOBJ)
 	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) -o $(EXECFILE) $(LIBFLAGS)

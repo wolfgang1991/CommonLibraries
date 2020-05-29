@@ -81,7 +81,7 @@ Camera2DParameterCalculator::Camera2DParameterCalculator(irr::f32 aspectRatio, i
 
 void Camera2DParameterCalculator::recalculate(){
 	vf.getTransform(ETS_PROJECTION).buildProjectionMatrixPerspectiveFovLH(core::PI/2.5f, aspectRatio, zNear, zFar);
-	vf.setFrom(vf.getTransform(ETS_PROJECTION));//usually projection*view but since view is the unit matrix here just projection
+	vf.setFrom(vf.getTransform(ETS_PROJECTION), true);//usually projection*view but since view is the unit matrix here just projection
 	params.farLeftUp = vf.getFarLeftUp();
 	params.leftToRight = vf.getFarRightUp() - params.farLeftUp;
 	params.upToDown = vf.getFarLeftDown() - params.farLeftUp;

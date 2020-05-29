@@ -72,7 +72,7 @@ bool COpenGLDriver::initDriver()
 	ContextManager->generateSurface();
 	ContextManager->generateContext();
 	ExposedData = ContextManager->getContext();
-	ContextManager->activateContext(ExposedData);
+	ContextManager->activateContext(ExposedData, false);
 
 	genericDriverInit();
 
@@ -152,8 +152,8 @@ bool COpenGLDriver::genericDriverInit()
 	}
 	else
 		os::Printer::log("GLSL not available.", ELL_INFORMATION);
-	DriverAttributes->setAttribute("MaxTextures", (s32)Feature.TextureUnit);
-	DriverAttributes->setAttribute("MaxSupportedTextures", (s32)Feature.TextureUnit);
+	DriverAttributes->setAttribute("MaxTextures", (s32)Feature.MaxTextureUnits);
+	DriverAttributes->setAttribute("MaxSupportedTextures", (s32)Feature.MaxTextureUnits);
 	DriverAttributes->setAttribute("MaxLights", MaxLights);
 	DriverAttributes->setAttribute("MaxAnisotropy", MaxAnisotropy);
 	DriverAttributes->setAttribute("MaxUserClipPlanes", MaxUserClipPlanes);
@@ -288,7 +288,7 @@ bool COpenGLDriver::beginScene(u16 clearFlag, SColor clearColor, f32 clearDepth,
 	CNullDriver::beginScene(clearFlag, clearColor, clearDepth, clearStencil, videoData, sourceRect);
 
 	if (ContextManager)
-		ContextManager->activateContext(videoData);
+		ContextManager->activateContext(videoData, true);
 
 #if defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
 	if ( DeviceType == EIDT_SDL )
@@ -888,7 +888,7 @@ void COpenGLDriver::drawVertexPrimitiveList(const void* vertices, u32 vertexCoun
 				glVertexPointer(3, GL_FLOAT, sizeof(S3DVertex), 0);
 			}
 
-			if (Feature.TextureUnit > 0 && CacheHandler->getTextureCache()[1])
+			if (Feature.MaxTextureUnits > 0 && CacheHandler->getTextureCache()[1])
 			{
 				CacheHandler->setClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -914,7 +914,7 @@ void COpenGLDriver::drawVertexPrimitiveList(const void* vertices, u32 vertexCoun
 			}
 
 
-			if (Feature.TextureUnit > 0)
+			if (Feature.MaxTextureUnits > 0)
 			{
 				CacheHandler->setClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -939,7 +939,7 @@ void COpenGLDriver::drawVertexPrimitiveList(const void* vertices, u32 vertexCoun
 				glVertexPointer(3, GL_FLOAT, sizeof(S3DVertexTangents), buffer_offset(0));
 			}
 
-			if (Feature.TextureUnit > 0)
+			if (Feature.MaxTextureUnits > 0)
 			{
 				CacheHandler->setClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -960,7 +960,7 @@ void COpenGLDriver::drawVertexPrimitiveList(const void* vertices, u32 vertexCoun
 
 	renderArray(indexList, primitiveCount, pType, iType);
 
-	if (Feature.TextureUnit > 0)
+	if (Feature.MaxTextureUnits > 0)
 	{
 		if (vType==EVT_TANGENTS)
 		{
@@ -1213,7 +1213,7 @@ void COpenGLDriver::draw2DVertexPrimitiveList(const void* vertices, u32 vertexCo
 				glVertexPointer(2, GL_FLOAT, sizeof(S3DVertex), 0);
 			}
 
-			if (Feature.TextureUnit > 0 && CacheHandler->getTextureCache()[1])
+			if (Feature.MaxTextureUnits > 0 && CacheHandler->getTextureCache()[1])
 			{
 				CacheHandler->setClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -1236,7 +1236,7 @@ void COpenGLDriver::draw2DVertexPrimitiveList(const void* vertices, u32 vertexCo
 				glVertexPointer(2, GL_FLOAT, sizeof(S3DVertex2TCoords), buffer_offset(0));
 			}
 
-			if (Feature.TextureUnit > 0)
+			if (Feature.MaxTextureUnits > 0)
 			{
 				CacheHandler->setClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -1264,7 +1264,7 @@ void COpenGLDriver::draw2DVertexPrimitiveList(const void* vertices, u32 vertexCo
 
 	renderArray(indexList, primitiveCount, pType, iType);
 
-	if (Feature.TextureUnit > 0)
+	if (Feature.MaxTextureUnits > 0)
 	{
 		if ((vType!=EVT_STANDARD) || CacheHandler->getTextureCache()[1])
 		{
@@ -1968,9 +1968,9 @@ void COpenGLDriver::drawPixel(u32 x, u32 y, const SColor &color)
 bool COpenGLDriver::disableTextures(u32 fromStage)
 {
 	bool result=true;
-	for (u32 i=fromStage; i<Feature.TextureUnit; ++i)
+	for (u32 i=fromStage; i<Feature.MaxTextureUnits; ++i)
 	{
-		result &= CacheHandler->getTextureCache().set(i, 0);
+		result &= CacheHandler->getTextureCache().set(i, 0, EST_ACTIVE_ON_CHANGE);
 	}
 	return result;
 }
@@ -2024,16 +2024,33 @@ ITexture* COpenGLDriver::createDeviceDependentTextureCubemap(const io::path& nam
 	return texture;
 }
 
+void COpenGLDriver::disableFeature(E_VIDEO_DRIVER_FEATURE feature, bool flag)
+{
+	CNullDriver::disableFeature(feature, flag);
+
+	if ( feature == EVDF_TEXTURE_CUBEMAP_SEAMLESS )
+	{
+		if ( queryFeature(feature) )
+			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+		else if (COpenGLExtensionHandler::queryFeature(feature))
+			glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	}
+}
+
 //! Sets a material. All 3d drawing functions draw geometry now using this material.
 void COpenGLDriver::setMaterial(const SMaterial& material)
 {
 	Material = material;
 	OverrideMaterial.apply(Material);
 
-	for (u32 i = 0; i < Feature.TextureUnit; ++i)
+	for (u32 i = 0; i < Feature.MaxTextureUnits; ++i)
 	{
-		CacheHandler->getTextureCache().set(i, material.getTexture(i));
-		setTransform((E_TRANSFORMATION_STATE)(ETS_TEXTURE_0 + i), material.getTextureMatrix(i));
+		const ITexture* texture = Material.getTexture(i);
+		CacheHandler->getTextureCache().set(i, texture, EST_ACTIVE_ON_CHANGE);
+		if ( texture )
+		{
+			setTransform((E_TRANSFORMATION_STATE)(ETS_TEXTURE_0 + i), material.getTextureMatrix(i));
+		}
 	}
 }
 
@@ -2570,7 +2587,9 @@ void COpenGLDriver::setBasicRenderStates(const SMaterial& material, const SMater
 	}
 
     // Blend Factor
-	if (IR(material.BlendFactor) & 0xFFFFFFFF)
+	if (IR(material.BlendFactor) & 0xFFFFFFFF	// TODO: why the & 0xFFFFFFFF?
+		&& material.MaterialType != EMT_ONETEXTURE_BLEND
+		)
 	{
         E_BLEND_FACTOR srcRGBFact = EBF_ZERO;
         E_BLEND_FACTOR dstRGBFact = EBF_ZERO;
@@ -2595,18 +2614,30 @@ void COpenGLDriver::setBasicRenderStates(const SMaterial& material, const SMater
 	// Polygon Offset
 	if (queryFeature(EVDF_POLYGON_OFFSET) && (resetAllRenderStates ||
 		lastmaterial.PolygonOffsetDirection != material.PolygonOffsetDirection ||
-		lastmaterial.PolygonOffsetFactor != material.PolygonOffsetFactor))
+		lastmaterial.PolygonOffsetFactor != material.PolygonOffsetFactor ||
+		lastmaterial.PolygonOffsetSlopeScale != material.PolygonOffsetSlopeScale ||
+		lastmaterial.PolygonOffsetDepthBias != material.PolygonOffsetDepthBias ))
 	{
 		glDisable(lastmaterial.Wireframe?GL_POLYGON_OFFSET_LINE:lastmaterial.PointCloud?GL_POLYGON_OFFSET_POINT:GL_POLYGON_OFFSET_FILL);
-		if (material.PolygonOffsetFactor)
+		if ( material.PolygonOffsetSlopeScale || material.PolygonOffsetDepthBias )
 		{
-			glDisable(material.Wireframe?GL_POLYGON_OFFSET_LINE:material.PointCloud?GL_POLYGON_OFFSET_POINT:GL_POLYGON_OFFSET_FILL);
 			glEnable(material.Wireframe?GL_POLYGON_OFFSET_LINE:material.PointCloud?GL_POLYGON_OFFSET_POINT:GL_POLYGON_OFFSET_FILL);
+
+			glPolygonOffset(material.PolygonOffsetSlopeScale, material.PolygonOffsetDepthBias);
 		}
-		if (material.PolygonOffsetDirection==EPO_BACK)
-			glPolygonOffset(1.0f, (GLfloat)material.PolygonOffsetFactor);
+		else if (material.PolygonOffsetFactor)
+		{
+			glEnable(material.Wireframe?GL_POLYGON_OFFSET_LINE:material.PointCloud?GL_POLYGON_OFFSET_POINT:GL_POLYGON_OFFSET_FILL);
+
+			if (material.PolygonOffsetDirection==EPO_BACK)
+				glPolygonOffset(1.0f, (GLfloat)material.PolygonOffsetFactor);
+			else
+				glPolygonOffset(-1.0f, (GLfloat)-material.PolygonOffsetFactor);
+		}
 		else
-			glPolygonOffset(-1.0f, (GLfloat)-material.PolygonOffsetFactor);
+		{
+			glPolygonOffset(0.0f, 0.f);
+		}
 	}
 
 	// thickness
@@ -2681,7 +2712,7 @@ void COpenGLDriver::setTextureRenderStates(const SMaterial& material, bool reset
 {
 	// Set textures to TU/TIU and apply filters to them
 
-	for (s32 i = Feature.TextureUnit - 1; i >= 0; --i)
+	for (s32 i = Feature.MaxTextureUnits - 1; i >= 0; --i)
 	{
 		bool fixedPipeline = false;
 
@@ -3260,6 +3291,11 @@ void COpenGLDriver::drawStencilShadowVolume(const core::array<core::vector3df>& 
 #ifdef GL_NV_depth_clamp
 	if (FeatureAvailable[IRR_NV_depth_clamp])
 		glEnable(GL_DEPTH_CLAMP_NV);
+#elif defined(GL_ARB_depth_clamp)
+	if (FeatureAvailable[IRR_ARB_depth_clamp])
+	{
+		glEnable(GL_DEPTH_CLAMP);
+	}
 #endif
 
 	// The first parts are not correctly working, yet.
@@ -3341,6 +3377,11 @@ void COpenGLDriver::drawStencilShadowVolume(const core::array<core::vector3df>& 
 #ifdef GL_NV_depth_clamp
 	if (FeatureAvailable[IRR_NV_depth_clamp])
 		glDisable(GL_DEPTH_CLAMP_NV);
+#elif defined(GL_ARB_depth_clamp)
+	if (FeatureAvailable[IRR_ARB_depth_clamp])
+	{
+		glDisable(GL_DEPTH_CLAMP);
+	}
 #endif
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
@@ -3567,9 +3608,7 @@ void COpenGLDriver::draw3DLine(const core::vector3df& start,
 //! Removes a texture from the texture cache and deletes it, freeing lot of memory.
 void COpenGLDriver::removeTexture(ITexture* texture)
 {
-	if (!texture)
-		return;
-
+	CacheHandler->getTextureCache().remove(texture);
 	CNullDriver::removeTexture(texture);
 }
 
@@ -3581,6 +3620,11 @@ bool COpenGLDriver::queryTextureFormat(ECOLOR_FORMAT format) const
 	GLenum dummyPixelType;
 	void (*dummyConverter)(const void*, s32, void*);
 	return getColorFormatParameters(format, dummyInternalFormat, dummyPixelFormat, dummyPixelType, &dummyConverter);
+}
+
+bool COpenGLDriver::needsTransparentRenderPass(const irr::video::SMaterial& material) const
+{
+	return CNullDriver::needsTransparentRenderPass(material) || material.isAlphaBlendOperation();
 }
 
 //! Only used by the internal engine. Used to notify the driver that
@@ -3699,7 +3743,7 @@ s32 COpenGLDriver::addHighLevelShaderMaterial(
 	u32 verticesOut,
 	IShaderConstantSetCallBack* callback,
 	E_MATERIAL_TYPE baseMaterial,
-	s32 userData, E_GPU_SHADING_LANGUAGE shadingLang)
+	s32 userData)
 {
 	s32 nr = -1;
 
@@ -3742,7 +3786,35 @@ ITexture* COpenGLDriver::addRenderTargetTexture(const core::dimension2d<u32>& si
 		destSize = destSize.getOptimalSize((size == size.getOptimalSize()), false, false);
 	}
 
-	COpenGLTexture* renderTargetTexture = new COpenGLTexture(name, destSize, format, this);
+	COpenGLTexture* renderTargetTexture = new COpenGLTexture(name, destSize, ETT_2D, format, this);
+	addTexture(renderTargetTexture);
+	renderTargetTexture->drop();
+
+	//restore mip-mapping
+	setTextureCreationFlag(ETCF_CREATE_MIP_MAPS, generateMipLevels);
+
+	return renderTargetTexture;
+}
+
+//! Creates a render target texture for a cubemap
+ITexture* COpenGLDriver::addRenderTargetTextureCubemap(const irr::u32 sideLen, const io::path& name, const ECOLOR_FORMAT format)
+{
+	//disable mip-mapping
+	bool generateMipLevels = getTextureCreationFlag(ETCF_CREATE_MIP_MAPS);
+	setTextureCreationFlag(ETCF_CREATE_MIP_MAPS, false);
+
+	bool supportForFBO = (Feature.ColorAttachment > 0);
+
+	const core::dimension2d<u32> size(sideLen, sideLen);
+	core::dimension2du destSize(size);
+
+	if (!supportForFBO)
+	{
+		destSize = core::dimension2d<u32>(core::min_(size.Width, ScreenSize.Width), core::min_(size.Height, ScreenSize.Height));
+		destSize = destSize.getOptimalSize((size == size.getOptimalSize()), false, false);
+	}
+
+	COpenGLTexture* renderTargetTexture = new COpenGLTexture(name, destSize, ETT_CUBEMAP, format, this);
 	addTexture(renderTargetTexture);
 	renderTargetTexture->drop();
 
@@ -3885,7 +3957,8 @@ IImage* COpenGLDriver::createScreenShot(video::ECOLOR_FORMAT format, video::E_RE
 	if (format==video::ECF_UNKNOWN)
 		format=getColorFormat();
 
-	if (IImage::isRenderTargetOnlyFormat(format) || IImage::isCompressedFormat(format) || IImage::isDepthFormat(format))
+	// TODO: Maybe we could support more formats (floating point and some of those beyond ECF_R8), didn't really try yet 
+	if (IImage::isCompressedFormat(format) || IImage::isDepthFormat(format) || IImage::isFloatingPointFormat(format) || format >= ECF_R8)
 		return 0;
 
 	// allows to read pixels in top-to-bottom order
@@ -4123,6 +4196,8 @@ GLenum COpenGLDriver::getZBufferBits() const
 bool COpenGLDriver::getColorFormatParameters(ECOLOR_FORMAT format, GLint& internalFormat, GLenum& pixelFormat,
 	GLenum& pixelType, void(**converter)(const void*, s32, void*)) const
 {
+	// NOTE: Converter variable not used here, but don't remove, it's used in the OGL-ES drivers.
+
 	bool supported = false;
 	internalFormat = GL_RGBA;
 	pixelFormat = GL_RGBA;
@@ -4145,7 +4220,7 @@ bool COpenGLDriver::getColorFormatParameters(ECOLOR_FORMAT format, GLint& intern
 	case ECF_R8G8B8:
 		supported = true;
 		internalFormat = GL_RGB;
-		pixelFormat = GL_BGR;
+		pixelFormat = GL_RGB;
 		pixelType = GL_UNSIGNED_BYTE;
 		break;
 	case ECF_A8R8G8B8:

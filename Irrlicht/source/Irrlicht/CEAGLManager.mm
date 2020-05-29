@@ -243,10 +243,12 @@ bool CEAGLManager::activateContext(const SExposedVideoData& videoData)
 
 	return status;
 }
-    
+
+//changed: ----
 u32 CEAGLManager::getScreenFBO(){
     return FrameBuffer.BufferID;
 }
+//changed end ---
 
 const SExposedVideoData& CEAGLManager::getContext() const
 {

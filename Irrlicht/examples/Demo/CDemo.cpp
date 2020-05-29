@@ -427,7 +427,9 @@ void CDemo::loadSceneData()
 			model1->setMaterialFlag(video::EMF_LIGHTING, false);
 			model1->setMaterialFlag(video::EMF_NORMALIZE_NORMALS, true);
 			model1->setMaterialType(video::EMT_SPHERE_MAP);
-			model1->addShadowVolumeSceneNode();
+			model1->setAutomaticCulling(scene::EAC_OFF); // avoid shadows not updating
+			scene::IShadowVolumeSceneNode * shadVol = model1->addShadowVolumeSceneNode();
+			shadVol->setOptimization(scene::ESV_NONE);	// Sydney has broken shadows otherwise
 		}
 
 		model2 = sm->addAnimatedMeshSceneNode(mesh);
@@ -439,7 +441,9 @@ void CDemo::loadSceneData()
 			model2->setMaterialTexture(0, device->getVideoDriver()->getTexture(mediaPath + "sydney.bmp"));
 			model2->setMaterialFlag(video::EMF_LIGHTING, true);
 			model2->setMaterialFlag(video::EMF_NORMALIZE_NORMALS, true);
-			model2->addShadowVolumeSceneNode();
+			model2->setAutomaticCulling(scene::EAC_OFF); // avoid shadows not updating
+			scene::IShadowVolumeSceneNode * shadVol = model2->addShadowVolumeSceneNode();
+			shadVol->setOptimization(scene::ESV_NONE);	// Sydney has broken shadows otherwise
 		}
 	}
 
@@ -798,7 +802,7 @@ void CDemo::startSound()
 
 	SDL_Init(SDL_INIT_AUDIO);
 
-	if (Mix_OpenAudio(22050, AUDIO_S16, 2, 128))
+	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 4096))
 		return;
 
 	const io::path mediaPath = getExampleMediaPath();
@@ -807,8 +811,8 @@ void CDemo::startSound()
 	if (stream)
 		Mix_PlayMusic(stream, -1);
 
-	ballSound = Mix_LoadWAV(mediaPath + "ball.wav");
-	impactSound = Mix_LoadWAV(mediaPath + "impact.wav");
+	ballSound = Mix_LoadWAV((mediaPath + "ball.wav").c_str());
+	impactSound = Mix_LoadWAV((mediaPath + "impact.wav").c_str());
 }
 
 void CDemo::playSound(Mix_Chunk *sample)

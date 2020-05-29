@@ -47,7 +47,7 @@ COGLES1Driver::COGLES1Driver(const SIrrlichtCreationParameters& params, io::IFil
 	ContextManager->generateSurface();
 	ContextManager->generateContext();
 	ExposedData = ContextManager->getContext();
-	ContextManager->activateContext(ExposedData);
+	ContextManager->activateContext(ExposedData, false);
 
 	windowSize = params.WindowSize;
 
@@ -100,8 +100,8 @@ bool COGLES1Driver::genericDriverInit(const core::dimension2d<u32>& screenSize, 
 
 	StencilBuffer = stencilBuffer;
 
-	DriverAttributes->setAttribute("MaxTextures", (s32)Feature.TextureUnit);
-	DriverAttributes->setAttribute("MaxSupportedTextures", (s32)Feature.TextureUnit);
+	DriverAttributes->setAttribute("MaxTextures", (s32)Feature.MaxTextureUnits);
+	DriverAttributes->setAttribute("MaxSupportedTextures", (s32)Feature.MaxTextureUnits);
 	DriverAttributes->setAttribute("MaxAnisotropy", MaxAnisotropy);
 	DriverAttributes->setAttribute("MaxIndices", (s32)MaxIndices);
 	DriverAttributes->setAttribute("MaxTextureSize", (s32)MaxTextureSize);
@@ -206,7 +206,7 @@ bool COGLES1Driver::beginScene(u16 clearFlag, SColor clearColor, f32 clearDepth,
 	CNullDriver::beginScene(clearFlag, clearColor, clearDepth, clearStencil, videoData, sourceRect);
 
 	if (ContextManager)
-		ContextManager->activateContext(videoData);
+		ContextManager->activateContext(videoData, true);
 
 	clearBuffers(clearFlag, clearColor, clearDepth, clearStencil);
 
@@ -669,7 +669,7 @@ void COGLES1Driver::drawVertexPrimitiveList2d3d(const void* vertices, u32 vertex
 				glVertexPointer(3, GL_FLOAT, sizeof(S3DVertex), 0);
 			}
 
-			if (Feature.TextureUnit > 0 && CacheHandler->getTextureCache().get(1))
+			if (Feature.MaxTextureUnits > 0 && CacheHandler->getTextureCache().get(1))
 			{
 				glClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -695,7 +695,7 @@ void COGLES1Driver::drawVertexPrimitiveList2d3d(const void* vertices, u32 vertex
 				glVertexPointer(3, GL_FLOAT, sizeof(S3DVertex2TCoords), buffer_offset(0));
 			}
 
-			if (Feature.TextureUnit > 0)
+			if (Feature.MaxTextureUnits > 0)
 			{
 				glClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -721,7 +721,7 @@ void COGLES1Driver::drawVertexPrimitiveList2d3d(const void* vertices, u32 vertex
 				glVertexPointer(3, GL_FLOAT, sizeof(S3DVertexTangents), buffer_offset(0));
 			}
 
-			if (Feature.TextureUnit > 0)
+			if (Feature.MaxTextureUnits > 0)
 			{
 				glClientActiveTexture(GL_TEXTURE0 + 1);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -824,7 +824,7 @@ void COGLES1Driver::drawVertexPrimitiveList2d3d(const void* vertices, u32 vertex
 			break;
 	}
 
-	if (Feature.TextureUnit > 0)
+	if (Feature.MaxTextureUnits > 0)
 	{
 		if (vType == EVT_TANGENTS)
 		{
@@ -1431,7 +1431,7 @@ void COGLES1Driver::setMaterial(const SMaterial& material)
 	Material = material;
 	OverrideMaterial.apply(Material);
 
-	for (u32 i = 0; i < Feature.TextureUnit; ++i)
+	for (u32 i = 0; i < Feature.MaxTextureUnits; ++i)
 		setTransform((E_TRANSFORMATION_STATE)(ETS_TEXTURE_0 + i), material.getTextureMatrix(i));
 }
 
@@ -1800,7 +1800,9 @@ void COGLES1Driver::setBasicRenderStates(const SMaterial& material, const SMater
 	}
 
     // Blend Factor
-	if (IR(material.BlendFactor) & 0xFFFFFFFF)
+	if (IR(material.BlendFactor) & 0xFFFFFFFF	// TODO: why the & 0xFFFFFFFF?
+			&& material.MaterialType != EMT_ONETEXTURE_BLEND
+		)
 	{
         E_BLEND_FACTOR srcRGBFact = EBF_ZERO;
         E_BLEND_FACTOR dstRGBFact = EBF_ZERO;
@@ -1821,6 +1823,8 @@ void COGLES1Driver::setBasicRenderStates(const SMaterial& material, const SMater
 			CacheHandler->setBlendFunc(getGLBlend(srcRGBFact), getGLBlend(dstRGBFact));
         }
 	}
+
+	// TODO: Polygon Offset. Not sure if it was left out deliberately or if it won't work with this driver.
 
 	// thickness
 	if (resetAllRenderStates || lastmaterial.Thickness != material.Thickness)
@@ -1879,7 +1883,7 @@ void COGLES1Driver::setTextureRenderStates(const SMaterial& material, bool reset
 {
 	// Set textures to TU/TIU and apply filters to them
 
-	for (s32 i = Feature.TextureUnit - 1; i >= 0; --i)
+	for (s32 i = Feature.MaxTextureUnits - 1; i >= 0; --i)
 	{
 		CacheHandler->getTextureCache().set(i, material.TextureLayer[i].Texture);
 
@@ -2659,8 +2663,7 @@ s32 COGLES1Driver::addHighLevelShaderMaterial(
 	u32 verticesOut,
 	IShaderConstantSetCallBack* callback,
 	E_MATERIAL_TYPE baseMaterial,
-	s32 userData,
-	E_GPU_SHADING_LANGUAGE shadingLang)
+	s32 userData)
 {
 	os::Printer::log("No shader support.");
 	return -1;
@@ -2698,7 +2701,7 @@ ITexture* COGLES1Driver::addRenderTargetTexture(const core::dimension2d<u32>& si
 		destSize = destSize.getOptimalSize((size == size.getOptimalSize()), false, false);
 	}
 
-	COGLES1Texture* renderTargetTexture = new COGLES1Texture(name, destSize, format, this);
+	COGLES1Texture* renderTargetTexture = new COGLES1Texture(name, destSize, ETT_2D, format, this);
 	addTexture(renderTargetTexture);
 	renderTargetTexture->drop();
 
@@ -2708,6 +2711,32 @@ ITexture* COGLES1Driver::addRenderTargetTexture(const core::dimension2d<u32>& si
 	return renderTargetTexture;
 }
 
+ITexture* COGLES1Driver::addRenderTargetTextureCubemap(const irr::u32 sideLen, const io::path& name, const ECOLOR_FORMAT format)
+{
+	//disable mip-mapping
+	bool generateMipLevels = getTextureCreationFlag(ETCF_CREATE_MIP_MAPS);
+	setTextureCreationFlag(ETCF_CREATE_MIP_MAPS, false);
+
+	bool supportForFBO = (Feature.ColorAttachment > 0);
+
+	const core::dimension2d<u32> size(sideLen, sideLen);
+	core::dimension2du destSize(size);
+
+	if (!supportForFBO)
+	{
+		destSize = core::dimension2d<u32>(core::min_(size.Width, ScreenSize.Width), core::min_(size.Height, ScreenSize.Height));
+		destSize = destSize.getOptimalSize((size == size.getOptimalSize()), false, false);
+	}
+
+	COGLES1Texture* renderTargetTexture = new COGLES1Texture(name, destSize, ETT_CUBEMAP, format, this);
+	addTexture(renderTargetTexture);
+	renderTargetTexture->drop();
+
+	//restore mip-mapping
+	setTextureCreationFlag(ETCF_CREATE_MIP_MAPS, generateMipLevels);
+
+	return renderTargetTexture;
+}
 
 //! Returns the maximum amount of primitives
 u32 COGLES1Driver::getMaximalPrimitiveCount() const
@@ -2903,9 +2932,7 @@ IImage* COGLES1Driver::createScreenShot(video::ECOLOR_FORMAT format, video::E_RE
 
 void COGLES1Driver::removeTexture(ITexture* texture)
 {
-	if (!texture)
-		return;
-
+	CacheHandler->getTextureCache().remove(texture);
 	CNullDriver::removeTexture(texture);
 }
 
@@ -3222,6 +3249,11 @@ bool COGLES1Driver::queryTextureFormat(ECOLOR_FORMAT format) const
 	GLenum dummyPixelType;
 	void (*dummyConverter)(const void*, s32, void*);
 	return getColorFormatParameters(format, dummyInternalFormat, dummyPixelFormat, dummyPixelType, &dummyConverter);
+}
+
+bool COGLES1Driver::needsTransparentRenderPass(const irr::video::SMaterial& material) const
+{
+	return CNullDriver::needsTransparentRenderPass(material) || material.isAlphaBlendOperation();
 }
 
 COGLES1CacheHandler* COGLES1Driver::getCacheHandler() const

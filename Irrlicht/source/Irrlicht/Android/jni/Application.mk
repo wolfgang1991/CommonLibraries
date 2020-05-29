@@ -1,2 +1,2 @@
-APP_PLATFORM := android-16
+APP_PLATFORM := android-10
 APP_MODULES := Irrlicht

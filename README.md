@@ -16,7 +16,8 @@ Common: Irrlicht independent useful functions such as:
 * Simple Matrix/Vector Math Implementation
 * etc..
 
-Irrlicht: Fork from the OGLES branch of the Irrlicht 3D Engine (http://irrlicht.sourceforge.net/), some changes have been made for touch screen optimization
+Irrlicht: Fork from the OGLES branch of the Irrlicht 3D Engine (http://irrlicht.sourceforge.net/), some changes have been made for touch screen optimization .
+For simplifying future Irrlicht updates regarding the changes in this fork the svn directory is available in Irrlicht/.svn.tar.gz .
 
 IrrlichtExtensions:
 * FlexibleFont: BMFont loader + Signed Distance Field Font implementation + arbitrary font transformations + effects (SDFF fonts can be created with https://github.com/libgdx/libgdx/wiki/Hiero )

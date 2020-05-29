@@ -127,7 +127,14 @@ void CImage::copyTo(IImage* target, const core::position2d<s32>& pos)
 		return;
 	}
 
-	Blit(BLITTER_TEXTURE, target, 0, &pos, this, 0, 0);
+	if ( !Blit(BLITTER_TEXTURE, target, 0, &pos, this, 0, 0) 
+		&& target && pos.X == 0 && pos.Y == 0 &&
+		CColorConverter::canConvertFormat(Format, target->getColorFormat()) )
+	{
+		// No fast blitting, but copyToScaling uses other color conversions and might work
+		irr::core::dimension2du dim(target->getDimension());
+		copyToScaling(target->getData(), dim.Width, dim.Height, target->getColorFormat(), target->getPitch());
+	}
 }
 
 
@@ -212,17 +219,17 @@ void CImage::copyToScaling(void* target, u32 width, u32 height, ECOLOR_FORMAT fo
 	const f32 sourceXStep = (f32)Size.Width / (f32)width;
 	const f32 sourceYStep = (f32)Size.Height / (f32)height;
 	s32 yval=0, syval=0;
-	f32 sy = 0.0f;
+	f32 sy = 0.5f;	// nearest pixel (used in float-int conversion below)
 	for (u32 y=0; y<height; ++y)
 	{
-		f32 sx = 0.0f;
+		f32 sx = 0.5f;	// nearest pixel (used in float-int conversion below)
 		for (u32 x=0; x<width; ++x)
 		{
 			CColorConverter::convert_viaFormat(Data+ syval + ((s32)sx)*BytesPerPixel, Format, 1, ((u8*)target)+ yval + (x*bpp), format);
 			sx+=sourceXStep;
 		}
 		sy+=sourceYStep;
-		syval=((s32)sy)*Pitch;
+		syval=(s32)(sy)*Pitch;
 		yval+=pitch;
 	}
 }

@@ -184,7 +184,6 @@ private:
 \code
 void mainloop( IrrlichtDevice *device, IGUIStaticText * infoText )
 {
-	IVideoDriver* driver = device->getVideoDriver();
 	u32 loop = 0;	// loop is reset when the app is destroyed unlike runCounter
 	static u32 runCounter = 0;	// static's seem to survive even an app-destroy message (not sure if that's guaranteed).
 	while(device->run())
@@ -201,17 +200,12 @@ void mainloop( IrrlichtDevice *device, IGUIStaticText * infoText )
 			\code
 			if ( infoText )
 			{
-				dimension2d<u32> screenSize = driver->getScreenSize();
 				stringw str = L"FPS:";
 				str += (s32)device->getVideoDriver()->getFPS();
 				str += L" r:";
 				str += runCounter;
 				str += L" l:";
 				str += loop;
-				str += L" w: ";
-				str += screenSize.Width;
-				str += L" h: ";
-				str += screenSize.Height;
 				infoText->setText ( str.c_str() );
 			}
 
@@ -250,7 +244,7 @@ void android_main(android_app* app)
 	SIrrlichtCreationParameters param;
 //	param.DriverType = EDT_OGLES1;				// android:glEsVersion in AndroidManifest.xml should be "0x00010000" (requesting 0x00020000 will also guarantee that ES1 works)
 	param.DriverType = EDT_OGLES2;				// android:glEsVersion in AndroidManifest.xml should be "0x00020000"
-	param.WindowSize = dimension2d<u32>(0,0);	// using 0,0 it will automatically set it to the maximal size
+	param.WindowSize = dimension2d<u32>(300,300);	// using 0,0 it will automatically set it to the maximal size
 	param.PrivateData = app;
 	param.Bits = 24;
 	param.ZBufferBits = 16;
@@ -2650,17 +2644,16 @@ int main()
 	\code
 
 	// create light
-
-	node = smgr->addLightSceneNode(0, core::vector3df(0,0,0),
+	scene::ILightSceneNode * lightNode  = smgr->addLightSceneNode(0, core::vector3df(0,0,0),
 		video::SColorf(1.0f, 0.6f, 0.7f, 1.0f), 800.0f);
 	scene::ISceneNodeAnimator* anim = 0;
-	anim = smgr->createFlyCircleAnimator (core::vector3df(0,150,0),250.0f);
-	node->addAnimator(anim);
+	anim = smgr->createFlyCircleAnimator (core::vector3df(0,150,0),250.0f, 0.0005f);
+	lightNode ->addAnimator(anim);
 	anim->drop();
 
 	// attach billboard to light
 
-	node = smgr->addBillboardSceneNode(node, core::dimension2d<f32>(50, 50));
+	node = smgr->addBillboardSceneNode(lightNode, core::dimension2d<f32>(50, 50));
 	node->setMaterialFlag(video::EMF_LIGHTING, false);
 	node->setMaterialType(video::EMT_TRANSPARENT_ADD_COLOR);
 	node->setMaterialTexture(0, driver->getTexture(mediaPath + "particlewhite.bmp"));
@@ -2797,14 +2790,28 @@ int main()
 	anode->setPosition(core::vector3df(-50,20,-60));
 	anode->setAnimationSpeed(15);
 
+	\endcode  
+	Shadows still have to be drawn even then the node causing them is not visible itself.
+	We have to disable culling if the node is animated or it's transformations change
+	as otherwise the shadow is not updated correctly.
+	If you have many objects and this becomes a speed problem you will have to figure 
+	out some manual culling (for exampling hiding all objects beyond a certain distance).
+	\code
+	anode->setAutomaticCulling(scene::EAC_OFF);
+
 	// add shadow
 	anode->addShadowVolumeSceneNode();
 	smgr->setShadowColor(video::SColor(150,0,0,0));
 
-	// make the model a little bit bigger and normalize its normals
-	// because of the scaling, for correct lighting
+	// make the model a bit bigger 
 	anode->setScale(core::vector3df(2,2,2));
+	// because of the scaling we have to normalize its normals for correct lighting
 	anode->setMaterialFlag(video::EMF_NORMALIZE_NORMALS, true);
+
+	// let the dwarf slowly rotate around it's y axis
+	scene::ISceneNodeAnimator* ra = smgr->createRotationAnimator(irr::core::vector3df(0, 0.1f, 0));
+	anode->addAnimator(ra);
+	ra->drop();
 
 	\endcode 
 	Finally we simply have to draw everything, that's all.
@@ -2882,7 +2889,7 @@ using namespace gui;
 Some global variables used later on
 \code
 IrrlichtDevice *Device = 0;
-core::stringc StartUpModelFile;
+io::path StartUpModelFile;
 core::stringw MessageText;
 core::stringw Caption;
 scene::ISceneNode* Model = 0;
@@ -3019,10 +3026,8 @@ Function loadModel() loads a model and displays it using an
 addAnimatedMeshSceneNode and the scene manager. Nothing difficult. It also
 displays a short message box, if the model could not be loaded.
 \code
-void loadModel(const c8* fn)
+void loadModel(const io::path& filename)
 {
-	io::path filename(fn);
-
 	io::path extension;
 	core::getFileNameExtension(extension, filename);
 	extension.make_lower();
@@ -3293,7 +3298,7 @@ public:
 					// load the model file, selected in the file open dialog
 					IGUIFileOpenDialog* dialog =
 						(IGUIFileOpenDialog*)event.GUIEvent.Caller;
-					loadModel(core::stringc(dialog->getFileName()).c_str());
+					loadModel(dialog->getFileNameP());
 				}
 				break;
 
@@ -4214,21 +4219,17 @@ int main()
 
 		if (UseHighLevelShaders)
 		{
-			// Choose the desired shader type. Default is the native
-			// shader type for the driver
-			const video::E_GPU_SHADING_LANGUAGE shadingLanguage = video::EGSL_DEFAULT;
-
 			// create material from high level shaders (hlsl, glsl)
 
 			newMaterialType1 = gpu->addHighLevelShaderMaterialFromFiles(
 				vsFileName, "vertexMain", video::EVST_VS_1_1,
 				psFileName, "pixelMain", video::EPST_PS_1_1,
-				mcSolid, video::EMT_SOLID, 0, shadingLanguage);
+				mcSolid, video::EMT_SOLID, 0);
 
 			newMaterialType2 = gpu->addHighLevelShaderMaterialFromFiles(
 				vsFileName, "vertexMain", video::EVST_VS_1_1,
 				psFileName, "pixelMain", video::EPST_PS_1_1,
-				mcTransparentAdd, video::EMT_TRANSPARENT_ADD_COLOR, 0 , shadingLanguage);
+				mcTransparentAdd, video::EMT_TRANSPARENT_ADD_COLOR, 0);
 		}
 		else
 		{
@@ -4608,8 +4609,8 @@ int main()
 
 	if (roomMesh)
 	{
-		// The Room mesh doesn't have proper Texture Mapping on the
-		// floor, so we can recreate them on runtime
+		// The room mesh doesn't have proper texture mapping on the
+		// floor, so we can recreate the mapping on runtime.
 		smgr->getMeshManipulator()->makePlanarTextureMapping(
 				roomMesh->getMesh(0), 0.003f);
 
@@ -4634,11 +4635,7 @@ int main()
 
 		if (normalMap)
 			driver->makeNormalMapTexture(normalMap, 9.0f);
-\endcode 
-		// The Normal Map and the displacement map/height map in the alpha channel
-		video::ITexture* normalMap =
-			driver->getTexture(mediaPath + "rockwall_NRM.tga");
-\code
+
 		\endcode 
 		But just setting color and normal map is not everything. The
 		material we want to use needs some additional information per
@@ -4688,7 +4685,7 @@ int main()
 	scene::IAnimatedMesh* earthMesh = smgr->getMesh(mediaPath + "earth.x");
 	if (earthMesh)
 	{
-		//perform various task with the mesh manipulator
+		//perform various tasks with the mesh manipulator
 		scene::IMeshManipulator *manipulator = smgr->getMeshManipulator();
 
 		// create mesh copy with tangent information from original earth.x mesh
@@ -4760,9 +4757,9 @@ int main()
 	\endcode 
 	Now the same again, with the second light. The difference is that we
 	add a particle system to it too. And because the light moves, the
-	particles of the particlesystem will follow. If you want to know more
+	particles of the particle system will follow. If you want to know more
 	about how particle systems are created in Irrlicht, take a look at the
-	specialFx example. Maybe you will have noticed that we only add 2
+	SpecialFX example. Maybe you will have noticed that we only add 2
 	lights, this has a simple reason: The low end version of this material
 	was written in ps1.1 and vs1.1, which doesn't allow more lights. You
 	could add a third light to the scene, but it won't be used to shade the
@@ -4870,9 +4867,7 @@ simple solution for building larger area on small heightmaps -> terrain
 smoothing.
 
 In the beginning there is nothing special. We include the needed header files
-and create an event listener to listen if the user presses a key: The 'W' key
-switches to wireframe mode, the 'P' key to pointcloud mode, and the 'D' key
-toggles between solid and detail mapped material.
+and create an event listener to listen if the user presses certain keys.
 \code
 #include <irrlicht.h>
 #include "driverChoice.h"
@@ -4908,7 +4903,7 @@ public:
 						!Terrain->getMaterial(0).Wireframe);
 				Terrain->setMaterialFlag(video::EMF_POINTCLOUD, false);
 				return true;
-			case irr::KEY_KEY_P: // switch wire frame mode
+			case irr::KEY_KEY_P: // switch point cloud mode
 				Terrain->setMaterialFlag(video::EMF_POINTCLOUD,
 						!Terrain->getMaterial(0).PointCloud);
 				Terrain->setMaterialFlag(video::EMF_WIREFRAME, false);
@@ -4988,7 +4983,7 @@ int main()
 	//set other font
 	env->getSkin()->setFont(env->getFont(mediaPath + "fontlucida.png"));
 
-	// add some help text
+	// add some help text (let's ignore 'P' and 'X' which are more about debugging)
 	env->addStaticText(
 		L"Press 'W' to change wireframe mode\nPress 'D' to toggle detail map\nPress 'S' to toggle skybox/skydome",
 		core::rect<s32>(10,421,250,475), true, true, 0, -1, true);
@@ -5007,13 +5002,13 @@ int main()
 	\endcode 
 	Here comes the terrain renderer scene node: We add it just like any
 	other scene node to the scene using
-	ISceneManager::addTerrainSceneNode(). The only parameter we use is a
+	ISceneManager::addTerrainSceneNode(). The first parameter is a
 	file name to the heightmap we use. A heightmap is simply a gray scale
 	texture. The terrain renderer loads it and creates the 3D terrain from
 	it.
 
-	To make the terrain look more big, we change the scale factor of
-	it to (40, 4.4, 40). Because we don't have any dynamic lights in the
+	To make the terrain look bigger, we change it's scale factor to 
+	(40, 4.4, 40). Because we don't have any dynamic lights in the
 	scene, we switch off the lighting, and we set the file
 	terrain-texture.jpg as texture for the terrain and detailmap3.jpg as
 	second texture, called detail map. At last, we set the scale values for
@@ -5325,11 +5320,13 @@ int main()
  \image latex "013shot.jpg"
 
 This tutorial shows how to render to a texture using Irrlicht. Render to
-texture is a feature with which it is possible to create nice special effects.
+texture is a feature where everything which would usually be rendered to 
+the screen is instead written to a (special) texture. This can be used to 
+create nice special effects.
 In addition, this tutorial shows how to enable specular highlights.
 
 In the beginning, everything as usual. Include the needed headers, ask the user
-for the rendering driver, create the Irrlicht Device:
+for the rendering driver, create the Irrlicht device:
 \code
 
 #include <irrlicht.h>
@@ -5408,27 +5405,36 @@ int main()
 	\code
 
 	// create test cube
-	scene::ISceneNode* test = smgr->addCubeSceneNode(60);
+	scene::ISceneNode* cube = smgr->addCubeSceneNode(60);
 
 	// let the cube rotate and set some light settings
 	scene::ISceneNodeAnimator* anim = smgr->createRotationAnimator(
 		core::vector3df(0.3f, 0.3f,0));
 
-	test->setPosition(core::vector3df(-100,0,-100));
-	test->setMaterialFlag(video::EMF_LIGHTING, false); // disable dynamic lighting
-	test->addAnimator(anim);
+	cube->setPosition(core::vector3df(-100,0,-100));
+	cube->setMaterialFlag(video::EMF_LIGHTING, false); // disable dynamic lighting
+	cube->addAnimator(anim);
 	anim->drop();
 
 	// set window caption
 	device->setWindowCaption(L"Irrlicht Engine - Render to Texture and Specular Highlights example");
 	
 	\endcode 
-	To test out the render to texture feature, we need a render target
-	texture. These are not like standard textures, but need to be created
-	first. To create one, we call IVideoDriver::addRenderTargetTexture()
-	and specify the size of the texture. Please don't use sizes bigger than
-	the frame buffer for this, because the render target shares the zbuffer
-	with the frame buffer.
+	To test out the render to texture feature, we need to define our
+	new rendertarget. The rendertarget will need one texture to receive
+	the result you would otherwise see on screen and one texture
+	which is used as depth-buffer. 
+
+	(Note: If you worked with older Irrlicht versions (before 1.9) you might be 
+	used to only create a rendertarget texture and no explicit rendertarget. While
+	that's still possible, it's no longer recommended.)
+	
+	The rendertarget textures are not like standard textures, but need to be created
+	first. To create them, we call IVideoDriver::addRenderTargetTexture()
+	and specify the size of the texture and the type. 
+	For depth-maps you can use types ECF_D16, ECF_D32 or ECF_D24S8. When ECF_D24S8 
+	you can also use a stencil-buffer. 
+
 	Because we want to render the scene not from the user camera into the
 	texture, we add another fixed camera to the scene. But before we do all
 	this, we check if the current running driver is able to render to
@@ -5437,19 +5443,18 @@ int main()
 
 	// create render target
 	video::IRenderTarget* renderTarget = 0;
-	video::ITexture* renderTargetTex = 0;
 	scene::ICameraSceneNode* fixedCam = 0;
-	
 
 	if (driver->queryFeature(video::EVDF_RENDER_TO_TARGET))
 	{
-		renderTargetTex = driver->addRenderTargetTexture(core::dimension2d<u32>(256, 256), "RTT1", video::ECF_A8R8G8B8);
-		video::ITexture* renderTargetDepth = driver->addRenderTargetTexture(core::dimension2d<u32>(256, 256), "DepthStencil", video::ECF_D16);
+		const core::dimension2d<u32> rtDim(256, 256);	// always use same size for render target texture and it's depth-buffer
+		video::ITexture* renderTargetTex = driver->addRenderTargetTexture(rtDim, "RTT1", video::ECF_A8R8G8B8);
+		video::ITexture* renderTargetDepth = driver->addRenderTargetTexture(rtDim, "DepthStencil", video::ECF_D16); 
 
 		renderTarget = driver->addRenderTarget();
 		renderTarget->setTexture(renderTargetTex, renderTargetDepth);
 
-		test->setMaterialTexture(0, renderTargetTex); // set material of cube to render target
+		cube->setMaterialTexture(0, renderTargetTex); // set material of cube to render target
 
 		// add fixed camera
 		fixedCam = smgr->addCameraSceneNode(0, core::vector3df(10,10,-80),
@@ -5498,22 +5503,21 @@ int main()
 		{
 			// draw scene into render target
 			
-			// set render target texture
+			// set render target
 			driver->setRenderTargetEx(renderTarget, video::ECBF_COLOR | video::ECBF_DEPTH, video::SColor(0,0,0,255));
 
 			// make cube invisible and set fixed camera as active camera
-			test->setVisible(false);
+			cube->setVisible(false);
 			smgr->setActiveCamera(fixedCam);
 
 			// draw whole scene into render buffer
 			smgr->drawAll();
 
-			// set back old render target
-			// The buffer might have been distorted, so clear it
-			driver->setRenderTargetEx(0, 0, video::SColor(0));
+			// set back old render target (the screen)
+			driver->setRenderTargetEx(0, 0);
 
 			// make the cube visible and set the user controlled camera as active one
-			test->setVisible(true);
+			cube->setVisible(true);
 			smgr->setActiveCamera(fpsCamera);
 		}
 		
@@ -10780,7 +10784,7 @@ bool CApp::update()
 	// Figure out delta time since last frame
 	ITimer * timer = Device->getTimer();
 	u32 newTick = timer->getRealTime();
-	f32 deltaTime = RealTimeTick > 0 ? f32(newTick-RealTimeTick)/1000.0 : 0.f;	// in seconds
+	f32 deltaTime = RealTimeTick > 0 ? f32(newTick-RealTimeTick)/1000.f : 0.f;	// in seconds
 	RealTimeTick = newTick;
 
 	if ( Device->isWindowActive() || Config.RenderInBackground )
@@ -12768,4 +12772,1195 @@ int main()
 
 \endcode 
 That's it. Compile and play around with the program.
+**/
+/** \page example027 Tutorial 27: Post Processing
+ \image html "027shot.jpg"
+ \image latex "027shot.jpg"
+
+This tutorial shows how to implement post processing for D3D9 and OpenGL with 
+the engine. In order to do post processing, scene objects are firstly rendered
+to render target. With the help of screen quad, the render target texture
+is then drawn on the quad with shader-defined effects applied.
+
+This tutorial shows how to create a screen quad. It also shows how to create a 
+render target texture and associate it with the quad. Effects are defined as
+shaders which are applied during rendering the quad with the render target 
+texture attached to it.
+
+A simple color inverse example is presented in this tutorial. The effect is 
+written in HLSL and GLSL.
+
+@author Boshen Guan
+
+We include all headers and define necessary variables as we have done before.
+\code
+#include "driverChoice.h"
+#include "exampleHelper.h"
+
+#include <irrlicht.h>
+
+using namespace irr;
+
+#ifdef _MSC_VER
+#pragma comment(lib, "Irrlicht.lib")
+#endif
+
+\endcode 
+We write a class derived from IShaderConstantSetCallBack class and implement
+OnSetConstants callback interface. In this callback, we will set constants 
+used by the shader.
+In this example, our HLSL shader needs texture size as input in its vertex 
+shader. Therefore, we set texture size in OnSetConstants callback using
+setVertexShaderConstant function.
+\code
+
+IrrlichtDevice* device = 0;
+video::ITexture* rt = 0;
+
+class QuadShaderCallBack : public video::IShaderConstantSetCallBack
+{
+public:
+	QuadShaderCallBack() : FirstUpdate(true), TextureSizeID(-1), TextureSamplerID(-1)
+	{ }
+
+    virtual void OnSetConstants(video::IMaterialRendererServices* services,
+            s32 userData)
+    {
+        core::dimension2d<u32> size = rt->getSize();
+
+        // get texture size array
+        f32 textureSize[] = 
+        {
+            (f32)size.Width, (f32)size.Height
+        };
+
+		if ( FirstUpdate )
+		{
+			TextureSizeID = services->getVertexShaderConstantID("TextureSize");
+			TextureSamplerID = services->getPixelShaderConstantID("TextureSampler");
+		}
+
+        // set texture size to vertex shader
+        services->setVertexShaderConstant(TextureSizeID, reinterpret_cast<f32*>(textureSize), 2);
+        
+        // set texture for an OpenGL driver
+        s32 textureLayer = 0;
+        services->setPixelShaderConstant(TextureSamplerID, &textureLayer, 1);
+    }
+
+private:
+	bool FirstUpdate;
+	s32 TextureSizeID;
+	s32 TextureSamplerID;
+};
+
+class ScreenQuad : public IReferenceCounted
+{
+public:
+
+    ScreenQuad(video::IVideoDriver* driver)
+        : Driver(driver)
+    {
+        // --------------------------------> u
+        // |[1](-1, 1)----------[2](1, 1)
+        // | | ( 0, 0)         / | (1, 0)
+        // | |               /   |
+        // | |             /     |
+        // | |           /       |
+        // | |         /         |
+        // | |       /           |
+        // | |     /             |
+        // | |   /               |
+        // | | /                 |
+        // |[0](-1, -1)---------[3](1, -1)
+        // |   ( 0,  1)            (1,  1)
+        // V 
+        // v
+
+        \endcode 
+        A screen quad is composed of two adjacent triangles with 4 vertices.
+        Vertex [0], [1] and [2] create the first triangle and Vertex [0], 
+        [2] and [3] create the second one. To map texture on the quad, UV 
+        coordinates are assigned to the vertices. The origin of UV coordinate 
+        locates on the top-left corner. And the value of UVs range from 0 to 1.
+        \code
+
+        // define vertices array
+
+        Vertices[0] = irr::video::S3DVertex(-1.0f, -1.0f, 0.0f, 1, 1, 0, irr::video::SColor(0,255,255,255), 0.0f, 1.0f);
+        Vertices[1] = irr::video::S3DVertex(-1.0f,  1.0f, 0.0f, 1, 1, 0, irr::video::SColor(0,255,255,255), 0.0f, 0.0f);
+        Vertices[2] = irr::video::S3DVertex( 1.0f,  1.0f, 0.0f, 1, 1, 0, irr::video::SColor(0,255,255,255), 1.0f, 0.0f);
+        Vertices[3] = irr::video::S3DVertex( 1.0f, -1.0f, 0.0f, 1, 1, 0, irr::video::SColor(0,255,255,255), 1.0f, 1.0f);
+
+        // define indices for triangles
+
+        Indices[0] = 0;
+        Indices[1] = 1;
+        Indices[2] = 2;
+        Indices[3] = 0;
+        Indices[4] = 2;
+        Indices[5] = 3;
+
+        // turn off lighting as default
+        Material.setFlag(video::EMF_LIGHTING, false);
+
+        // set texture warp settings to clamp to edge pixel
+        for (u32 i = 0; i < video::MATERIAL_MAX_TEXTURES; i++)
+        {
+            Material.TextureLayer[i].TextureWrapU = video::ETC_CLAMP_TO_EDGE;
+            Material.TextureLayer[i].TextureWrapV = video::ETC_CLAMP_TO_EDGE;
+        }
+    }
+
+    virtual ~ScreenQuad() {}
+
+
+    //! render the screen quad
+    virtual void render()
+    {
+        // set the material of screen quad
+        Driver->setMaterial(Material);
+
+        // set matrices to fit the quad to full viewport
+        Driver->setTransform(video::ETS_WORLD, core::IdentityMatrix);
+        Driver->setTransform(video::ETS_VIEW, core::IdentityMatrix);
+        Driver->setTransform(video::ETS_PROJECTION, core::IdentityMatrix);
+
+        // draw screen quad 
+        Driver->drawVertexPrimitiveList(Vertices, 4, Indices, 2);
+    }
+
+    //! sets a flag of material to a new value
+    virtual void setMaterialFlag(video::E_MATERIAL_FLAG flag, bool newvalue)
+    {
+        Material.setFlag(flag, newvalue);
+    }
+
+    //! sets the texture of the specified layer in material to the new texture.
+    void setMaterialTexture(u32 textureLayer, video::ITexture* texture)
+    {
+        Material.setTexture(textureLayer, texture);
+    }
+
+    //! sets the material type to a new material type.
+    virtual void setMaterialType(video::E_MATERIAL_TYPE newType)
+    {
+        Material.MaterialType = newType;
+    }
+
+private:
+
+    video::IVideoDriver *Driver;
+    video::S3DVertex Vertices[4];
+    u16 Indices[6];
+    video::SMaterial Material;
+};
+
+\endcode 
+We start up the engine just like before. Then shader programs are selected
+according to the driver type.
+\code
+int main()
+{
+    // ask user for driver
+    video::E_DRIVER_TYPE driverType=driverChoiceConsole();
+    if (driverType==video::EDT_COUNT)
+        return 1;
+
+    // create device
+    device = createDevice(driverType, core::dimension2d<u32>(640, 480));
+
+    if (device == 0)
+        return 1; // could not create selected driver.
+
+    video::IVideoDriver* driver = device->getVideoDriver();
+    scene::ISceneManager* smgr = device->getSceneManager();
+
+    \endcode 
+    In this example, high level post processing shaders are loaded for both
+    Direct3D and OpenGL drivers. 
+    File pp_d3d9.hlsl is for Direct3D 9, and pp_opengl.frag/pp_opengl.vert 
+    are for OpenGL.
+    \code
+
+	const io::path mediaPath = getExampleMediaPath();
+    io::path vsFileName; // filename for the vertex shader
+    io::path psFileName; // filename for the pixel shader
+
+    switch(driverType)
+    {
+    case video::EDT_DIRECT3D9:
+        psFileName = mediaPath + "pp_d3d9.hlsl";
+        vsFileName = psFileName; // both shaders are in the same file
+        break;
+
+    case video::EDT_OPENGL:
+        psFileName = mediaPath + "pp_opengl.frag";
+        vsFileName = mediaPath + "pp_opengl.vert";
+        break;
+    }
+
+    \endcode 
+    Check for hardware capability of executing the corresponding shaders
+    on selected renderer. This is not necessary though.
+    \code
+
+    if (!driver->queryFeature(video::EVDF_PIXEL_SHADER_1_1) &&
+        !driver->queryFeature(video::EVDF_ARB_FRAGMENT_PROGRAM_1))
+    {
+        device->getLogger()->log("WARNING: Pixel shaders disabled "\
+            "because of missing driver/hardware support.");
+        psFileName = "";
+    }
+
+    if (!driver->queryFeature(video::EVDF_VERTEX_SHADER_1_1) &&
+        !driver->queryFeature(video::EVDF_ARB_VERTEX_PROGRAM_1))
+    {
+        device->getLogger()->log("WARNING: Vertex shaders disabled "\
+            "because of missing driver/hardware support.");
+        vsFileName = "";
+    }
+
+    \endcode 
+    An animated mesh is loaded to be displayed. As in most examples,
+    we'll take the fairy md2 model.
+    \code
+
+    // load and display animated fairy mesh
+
+    scene::IAnimatedMeshSceneNode* fairy = smgr->addAnimatedMeshSceneNode(
+        smgr->getMesh(mediaPath + "faerie.md2"));
+
+    if (fairy)
+    {
+        fairy->setMaterialTexture(0,
+                driver->getTexture(mediaPath + "faerie2.bmp")); // set diffuse texture
+        fairy->setMaterialFlag(video::EMF_LIGHTING, false); // disable dynamic lighting
+        fairy->setPosition(core::vector3df(-10,0,-100));
+        fairy->setMD2Animation ( scene::EMAT_STAND );
+    }
+
+    // add scene camera
+    smgr->addCameraSceneNode(0, core::vector3df(10,10,-80),
+        core::vector3df(-10,10,-100));
+
+    \endcode 
+    We create a render target texture (RTT) with the same size as frame buffer. 
+    Instead of rendering the scene directly to the frame buffer, we firstly 
+    render it to this RTT. Post processing is then applied based on this RTT.
+    RTT size needs not to be the same with frame buffer though. However in this 
+    example, we expect the result of rendering to RTT to be consistent with the 
+    result of rendering directly to the frame buffer. Therefore, the size of 
+    RTT keeps the same with frame buffer.
+    \code
+
+    // create render target
+
+    if (driver->queryFeature(video::EVDF_RENDER_TO_TARGET))
+    {
+        rt = driver->addRenderTargetTexture(core::dimension2d<u32>(640, 480), "RTT1");
+    }
+    else
+    {
+        device->getLogger()->log("Your hardware or this renderer is not able to use the "\
+            "render to texture feature. RTT Disabled.");
+    }
+
+    \endcode 
+    Post processing is achieved by rendering a screen quad with this RTT (with 
+    previously rendered result) as a texture on the quad. A screen quad is 
+    geometry of flat plane composed of two adjacent triangles covering the 
+    entire area of viewport. In this pass of rendering, RTT works just like 
+    a normal texture and is drawn on the quad during rendering. We can then 
+    take control of this rendering process by applying various shader-defined 
+    materials to the quad. In other words, we can achieve different effect by
+    writing different shaders.
+    This process is called post processing because it normally does not rely 
+    on scene geometry. The inputs of this process are just textures, or in
+    other words, just images. With the help of screen quad, we can draw these 
+    images on the screen with different effects. For example, we can adjust 
+    contrast, make grayscale, add noise, do more fancy effect such as blur, 
+    bloom, ghost, or just like in this example, we invert the color to produce 
+    negative image.
+    Note that post processing is not limited to use only one texture. It can 
+    take multiple textures as shader inputs to provide desired result. In 
+    addition, post processing can also be chained to produce compound result.
+    \code
+
+    // we create a screen quad
+    ScreenQuad *screenQuad = new ScreenQuad(driver);
+
+    // turn off mip maps and bilinear filter since we do not want interpolated result
+    screenQuad->setMaterialFlag(video::EMF_USE_MIP_MAPS, false);
+    screenQuad->setMaterialFlag(video::EMF_BILINEAR_FILTER, false);
+
+    // set quad texture to RTT we just create
+    screenQuad->setMaterialTexture(0, rt);
+
+    \endcode 
+    Let's create material for the quad. Like in other example, we create material
+    using IGPUProgrammingServices and call addShaderMaterialFromFiles, which
+    returns a material type identifier.
+    \code
+
+    // create materials
+
+    video::IGPUProgrammingServices* gpu = driver->getGPUProgrammingServices();
+    s32 ppMaterialType = 0;
+
+    if (gpu)
+    {
+        // We write a QuadShaderCallBack class that implements OnSetConstants 
+        // callback of IShaderConstantSetCallBack class at the beginning of 
+        // this tutorial. We set shader constants in this callback.
+    
+        // create an instance of callback class
+
+        QuadShaderCallBack* mc = new QuadShaderCallBack();
+
+        // create material from post processing shaders
+
+        ppMaterialType = gpu->addHighLevelShaderMaterialFromFiles(
+            vsFileName, "vertexMain", video::EVST_VS_1_1,
+            psFileName, "pixelMain", video::EPST_PS_1_1, mc);
+
+        mc->drop();
+    }
+
+    // set post processing material type to the quad
+    screenQuad->setMaterialType((video::E_MATERIAL_TYPE)ppMaterialType);
+
+    \endcode 
+    Now draw everything. That's all.
+    \code
+
+    int lastFPS = -1;
+
+    while(device->run())
+    {
+        if (device->isWindowActive())
+        {
+            driver->beginScene(true, true, video::SColor(255,0,0,0));
+
+            if (rt)
+            {
+                // draw scene into render target
+
+                // set render target to RTT
+                driver->setRenderTarget(rt, true, true, video::SColor(255,0,0,0));
+
+                // draw scene to RTT just like normal rendering
+                smgr->drawAll();
+
+                // after rendering to RTT, we change render target back
+                driver->setRenderTarget(0, true, true, video::SColor(255,0,0,0));
+
+                // render screen quad to apply post processing
+                screenQuad->render();
+            }
+            else
+            {
+                // draw scene normally
+                smgr->drawAll();
+            }
+
+            driver->endScene();
+
+            int fps = driver->getFPS();
+
+            if (lastFPS != fps)
+            {
+                core::stringw str = L"Irrlicht Engine - Post processing example [";
+                str += driver->getName();
+                str += "] FPS:";
+                str += fps;
+
+                device->setWindowCaption(str.c_str());
+                lastFPS = fps;
+            }
+        }
+    }
+
+    // do not forget to manually drop the screen quad
+
+    screenQuad->drop();
+
+    device->drop();
+
+    return 0;
+}
+
+\endcode 
+**/
+/** \page example028 Tutorial 28: CubeMapping
+ \image html "028shot.jpg"
+ \image latex "028shot.jpg"
+
+Shows usage of cubemap textures and how to do some simple environment mapping.
+Cubemap textures have images for all 6 directions of a cube in a single texture.
+Environment is used to reflect the environment around an object onto the object.
+Cubemaps only work with shader materials which are written to support cube mapping.
+
+@author Michael Zeilfelder, based on EnvCubeMap example from irrSpintz engine.
+
+Start with the usual includes.
+\code
+
+#ifdef _MSC_VER
+#pragma comment(lib, "Irrlicht.lib")
+#endif
+
+#include <irrlicht.h>
+#include "driverChoice.h"
+#include "exampleHelper.h"
+
+using namespace irr;
+
+
+\endcode 
+	A callback class for our cubemap shader.
+	We need a shader material which maps the cubemap texture to
+	the polygon vertices of objects.
+\code
+class CubeMapReflectionCallback : public video::IShaderConstantSetCallBack
+{
+public:
+	CubeMapReflectionCallback(scene::ISceneManager* smgr, int styleUVW)
+		: SceneMgr(smgr)
+		, StyleUVW(styleUVW), Roughness(0.f)
+		, styleUvwID(-1) , worldViewProjID(-1), worldID(-1), cameraPosID(-1)
+	{}
+
+	\endcode 
+		Setting the style to map vertex UV-coordinates to the cubemap textures.
+		- Specular style is typically used for mirrors and highlight reflections.
+		- Diffuse style is commonly used in image based lighting calculations and
+		often in combination with a higher roughness. Think of it as the sum of all
+		light which reaches a point on your object.
+		- Using model vertices directly for UV's is just nice for testing sometimes.
+		Maybe has more uses? Experiment around :-)
+	\code
+	void SetStyleUVW(int style)
+	{
+		StyleUVW = style;
+	}
+
+	int GetStyleUVW() const
+	{
+		return StyleUVW;
+	}
+
+	\endcode 
+     We could also call this sharpness as the rougher a material the less
+	 sharp the reflections of a cubemap are (light for rough materials
+	 spreads out more while smooth materials reflect it more like a mirror).
+	 Roughness is calculated using the mipmaps of the cubemap texture.
+	 Note that rendertarget cubemap textures won't have mipmaps, so unfortunately
+	 it won't work for those.
+	 Also currently only OpenGL is able to interpolate seamless over cubemap borders.
+	 On Direct3D9 you will only smooth per side, but not over side-borders.
+	\code
+	void SetRoughness(float roughness)
+	{
+		Roughness = roughness;
+	}
+
+	float getRoughness() const
+	{
+		return Roughness;
+	}
+
+	\endcode 
+		Typical code which passes a few values from c++ to shader.
+	\code
+	virtual void OnSetMaterial(const video::SMaterial& material)
+	{}
+
+	virtual void OnSetConstants(video::IMaterialRendererServices* services, s32 userData)
+	{
+		video::IVideoDriver* driver = services->getVideoDriver();
+
+		if ( worldViewProjID < 0 )	// first update
+		{
+			styleUvwID = services->getVertexShaderConstantID("StyleUVW");
+			if( driver->getDriverType() == video::EDT_DIRECT3D9 )
+			{
+				worldViewProjID = services->getVertexShaderConstantID("WorldViewProj");
+			}
+			worldID = services->getVertexShaderConstantID("World");
+			cameraPosID = services->getVertexShaderConstantID("CameraPos");
+			roughnessID = services->getPixelShaderConstantID("Roughness");
+		}
+
+		services->setVertexShaderConstant(styleUvwID, &StyleUVW, 1 );
+
+		irr::core::matrix4 world = driver->getTransform(irr::video::ETS_WORLD);
+		services->setVertexShaderConstant(worldID, world.pointer(), 16);
+
+		if( driver->getDriverType() == video::EDT_DIRECT3D9 )
+		{
+			irr::core::matrix4 worldViewProj;
+			worldViewProj = driver->getTransform(irr::video::ETS_PROJECTION);
+			worldViewProj *= driver->getTransform(irr::video::ETS_VIEW);
+			worldViewProj *= world;
+			services->setVertexShaderConstant(worldViewProjID, worldViewProj.pointer(), 16);
+		}
+
+		core::vector3df cameraPos = SceneMgr->getActiveCamera()->getAbsolutePosition();
+		services->setVertexShaderConstant(cameraPosID, &cameraPos.X, 3 );
+		services->setPixelShaderConstant(roughnessID, &Roughness, 1 );
+	}
+
+private:
+	scene::ISceneManager* SceneMgr;
+
+	int StyleUVW;		// 0 = specular, 1=diffuse, 2 = use model vertex coordinates for uvw.
+	float Roughness;	// cubemap 0 = specular ... highest value depends on number of mipmaps in the texture
+
+	irr::s32 styleUvwID;
+	irr::s32 worldViewProjID;
+	irr::s32 worldID;
+	irr::s32 cameraPosID;
+	irr::s32 roughnessID;
+};
+
+\endcode 
+	To keep the example compact our event-receiver acts also like a main
+	application class. So it handles user input, updates the dynamic parts of
+	the UI and it keeps some 3d nodes around.
+\code
+class MyEventReceiver : public IEventReceiver
+{
+public:
+	MyEventReceiver() : Driver(0), Shader(0)
+		,BackgroundSkybox(0), BackgroundCube(0)
+		, CubemapUpdates(2)
+		, CurrentStyleUVW(0), CurrentRoughness(0)
+		, NeedCubemapUpdate(true)
+	{
+		StyleNamesUVW.push_back( L"specular" );
+		StyleNamesUVW.push_back( L"diffuse" );
+		StyleNamesUVW.push_back( L"model coordinates" );
+	}
+
+	// Handle the key input
+	virtual bool OnEvent(const SEvent& event)
+	{
+		if (event.EventType == EET_KEY_INPUT_EVENT && event.KeyInput.PressedDown == false)
+		{
+			switch(event.KeyInput.Key )
+			{
+			case KEY_SPACE:
+				// Switch between different texture mapping styles
+				if ( Shader )
+				{
+					Shader->SetStyleUVW((Shader->GetStyleUVW()+1)%StyleNamesUVW.size());
+					updateStyleUVW();
+				}
+				break;
+			case KEY_KEY_B:
+				// Switch between our 2 different backgrounds
+				if ( BackgroundSkybox && BackgroundCube )
+				{
+					if ( BackgroundSkybox->isVisible() )
+					{
+						BackgroundSkybox->setVisible(false);
+						BackgroundCube->setVisible(true);
+					}
+					else
+					{
+						BackgroundSkybox->setVisible(true);
+						BackgroundCube->setVisible(false);
+					}
+					NeedCubemapUpdate = true;
+				}
+				break;
+			case KEY_KEY_I:
+				// Show/hide the info text nodes
+				for (u32 i=0; i<InfoTextNodes.size(); ++i )
+					InfoTextNodes[i]->setVisible(!InfoTextNodes[i]->isVisible());
+				break;
+			case KEY_KEY_S:
+				// Enable/disable seamless smoothing of mipmaps over cube borders
+				if ( Driver )
+				{
+					Driver->disableFeature(video::EVDF_TEXTURE_CUBEMAP_SEAMLESS, Driver->queryFeature(video::EVDF_TEXTURE_CUBEMAP_SEAMLESS) );
+					updateSeamless();
+				}
+				break;
+			case KEY_KEY_U:
+				// Switch dynamic cubemap updates on/off.
+				CubemapUpdates = (CubemapUpdates+1) % 3;
+				updateCubemapUpdates();
+				break;
+			case KEY_PLUS:
+			case KEY_ADD:
+				// Make material rougher
+				if ( Shader )
+				{
+					Shader->SetRoughness( Shader->getRoughness() + 0.5f );
+					updateRoughness();
+				}
+				break;
+			case KEY_MINUS:
+			case KEY_SUBTRACT:
+			{
+				// Make material smoother
+				if ( Shader )
+				{
+					float roughness = Shader->getRoughness() - 0.5f;
+					if ( roughness >= 0.f )
+					{
+						Shader->SetRoughness(roughness);
+						updateRoughness();
+					}
+				}
+				break;
+			}
+			default:
+				break;
+			}
+		}
+
+		return false;
+	}
+
+	// Some helper functions to update the UI
+	void updateStyleUVW()
+	{
+		if ( CurrentStyleUVW && Shader)
+			CurrentStyleUVW->setText(StyleNamesUVW[Shader->GetStyleUVW()].c_str());
+	}
+
+	void updateRoughness()
+	{
+		if ( CurrentRoughness && Shader )
+		{
+			CurrentRoughness->setText( irr::core::stringw(Shader->getRoughness()).c_str() );
+		}
+	}
+
+	void updateSeamless()
+	{
+		if ( CurrentSeamlessCubemap && Driver )
+		{
+			CurrentSeamlessCubemap->setText( Driver->queryFeature(video::EVDF_TEXTURE_CUBEMAP_SEAMLESS) ? L"ON" : L"OFF" );
+		}
+	}
+
+	void updateCubemapUpdates()
+	{
+		if ( CurrentCubemapUpdates )
+		{
+			switch ( CubemapUpdates )
+			{
+				case 0:	CurrentCubemapUpdates->setText( L"static");	break;
+				case 1:	CurrentCubemapUpdates->setText( L"dynamic" );	break;
+				case 2:	CurrentCubemapUpdates->setText( L"dynamic+mips" );	break;
+			}
+		}
+	}
+
+	// Check if the cubemap textures should be updated with new screenshots
+	// return 0 for no update, 1 for update, 2 for update and fix mip-maps
+	int checkCubemapUpdate()
+	{
+		if ( NeedCubemapUpdate || CubemapUpdates == 2)
+		{
+			NeedCubemapUpdate = false;
+			return 2;
+		}
+
+		return CubemapUpdates;
+	}
+
+	// Add some text-node floating above it's parent node.
+	void addInfoTextNode(irr::gui::IGUIFont* font, const wchar_t* text, irr::scene::ISceneNode* parent)
+	{
+		if ( parent )
+		{
+			const video::SColor infoTextCol(250, 70, 90, 90);
+			core::dimension2du dim(font->getDimension(text));
+			core::dimension2df dimf((f32)dim.Width, (f32)dim.Height);
+			scene::IBillboardTextSceneNode* infoNode = parent->getSceneManager()->addBillboardTextSceneNode( font, text, parent, dimf, core::vector3df(0, 120, 0), -1, infoTextCol, infoTextCol);
+			InfoTextNodes.push_back(infoNode);
+		}
+	}
+
+	irr::video::IVideoDriver* Driver;
+	CubeMapReflectionCallback* Shader;
+
+	scene::ISceneNode* BackgroundSkybox;
+	scene::ISceneNode* BackgroundCube;
+	irr::core::array<scene::ISceneNode*> InfoTextNodes;
+
+	int CubemapUpdates;	// 0 = static, 1 = dynamic, 2 = dynamic with rtt
+
+	irr::core::array<irr::core::stringw> StyleNamesUVW;
+
+	irr::gui::IGUIStaticText* CurrentStyleUVW;
+	irr::gui::IGUIStaticText* CurrentRoughness;
+	irr::gui::IGUIStaticText* CurrentSeamlessCubemap;
+	irr::gui::IGUIStaticText* CurrentCubemapUpdates;
+
+private:
+	bool NeedCubemapUpdate;
+};
+
+\endcode  Workaround for OpenGL's upside-down images.
+ Texture origins (0,0) in OpenGL are usually at the left-bottom instead of the more common left-top image formats.
+ Irrlicht internally uses textures with left-top origin and then corrects the texture-matrices in the fixed-function pipeline.
+ For shader materials it's left to the users to handle those UV-flips for the texture-matrix.
+ Render target textures (RTT's) in OpenGL are rendered with left-bottom origin and Irrlicht can't change that, so all RTT textures
+ in memory are upside-down (unlike all other Irrlicht textures).
+ In the fixed function pipeline Irrlicht handles this by flipping the RTT's texture matrix once more and for shaders it's again
+ left to the users to handle it.
+ Cubemap textures are different from other textures in OpenGL. Each cube side has left-top as the origin. So not flipping Irrlicht textures for those would be fine.
+ Except - OpenGL RTT's still render left-bottom - even when the target is a cubemap RTT.
+ I found no good way around this so far - it just seems messed up as we get a left-handed/right handed coordinate system change that way.
+
+ So... the following 2 defines are two different workarounds I found. Both are ugly, which one is better in reality depends probably on the scene.
+ Only use one of those:
+	CUBEMAP_UPSIDE_DOWN_GL_PROJECTION is relatively fast as it just changes the project matrix. The problem is that changing the projection matrix
+	means changing front/backside culling. So every node rendered has to flip the material flags for those.
+
+	CUBEMAP_USPIDE_DOWN_RTT will change the texture memory itself and flip the image upside-down.
+	While easier to do, this involves texture-locking and is very slow.
+\code
+#define CUBEMAP_UPSIDE_DOWN_GL_PROJECTION
+//#define CUBEMAP_USPIDE_DOWN_RTT
+
+
+// Flip frontface/backface culling for all nodes
+#ifdef CUBEMAP_UPSIDE_DOWN_GL_PROJECTION
+void flipCullingFlags(const core::array<scene::ISceneNode*>& nodes)
+{
+	for ( irr::u32 n=0; n < nodes.size(); ++n )
+	{
+		scene::ISceneNode* node = nodes[n];
+		const irr::u32 matCount = node->getMaterialCount();
+		for ( irr::u32 m=0; m < matCount; ++m)
+		{
+			video::SMaterial& mat = node->getMaterial(m);
+			mat.BackfaceCulling = !mat.BackfaceCulling;
+			mat.FrontfaceCulling = !mat.FrontfaceCulling;
+		}
+	}
+}
+#endif
+
+
+\endcode 
+	Render the environment around a node into a cubemap texture.
+\code
+void renderEnvironmentCubeMap(irr::video::IVideoDriver* driver, irr::scene::ICameraSceneNode* cubeMapCamera, irr::scene::ISceneNode* cubeCenterNode, video::IRenderTarget* cubeMapRT, video::ITexture* dynamicCubeMapRTT, video::ITexture* depthStencilRTT)
+{
+	//	Change to the cubemap camera which has a few specific render-settings
+	scene::ISceneManager* smgr = cubeMapCamera->getSceneManager();
+	scene::ICameraSceneNode * oldCam = smgr->getActiveCamera();
+	smgr->setActiveCamera( cubeMapCamera );
+
+	\endcode 
+		We want to see everything around the center node, so hide the node
+		itself, otherwise it would be in the way.
+		Then set the camera to that node's position.
+	\code
+	cubeCenterNode->setVisible( false );
+	const core::vector3df center( cubeCenterNode->getAbsolutePosition() );
+	cubeMapCamera->setPosition( center );
+
+	\endcode 
+		Render all 6 directions. Which means simple setting the camera target/up
+		vector to all 6 directions and then render the full scene each time.
+		So yeah - updating an environment cube-map means 6 full renders for each
+		object which needs an environment map. In other words - you generally only
+		want to do that in pre-processing, not in realtime.
+	\code
+	const core::vector3df targetVecs[6] = {
+		core::vector3df(1.f, 0.f, 0.f),
+		core::vector3df(-1.f, 0.f, 0.f),
+		core::vector3df(0.f, 1.f, 0.f),
+		core::vector3df(0.f, -1.f, 0.f),
+		core::vector3df(0.f, 0.f, 1.f),
+		core::vector3df(0.f, 0.f, -1.f)
+	};
+
+	const core::vector3df upVecs[6] = {
+		core::vector3df( 0,1,0 ),
+		core::vector3df( 0,1,0 ),
+		core::vector3df( 0,0,-1 ),
+		core::vector3df( 0,0,1 ),
+		core::vector3df( 0,1,0 ),
+		core::vector3df( 0,1,0 )
+	};
+	for ( int s=0; s<6; ++s )
+	{
+		cubeMapCamera->setUpVector( upVecs[s] );
+		cubeMapCamera->setTarget( center + targetVecs[s] );
+		// Here we tell into which side of the cubemap texture we want to write
+		cubeMapRT->setTexture(dynamicCubeMapRTT, depthStencilRTT, (video::E_CUBE_SURFACE)(video::ECS_POSX + s));
+		driver->setRenderTargetEx(cubeMapRT, video::ECBF_ALL);
+		smgr->drawAll();
+
+#ifdef CUBEMAP_USPIDE_DOWN_RTT
+		// This works because the lock for rtt's always flips in Irrlicht.
+		// So in this case lock() unlock will result in a flipped texture
+		// But be warned - it's very, very slow!
+		driver->setRenderTarget(0);	// to avoid accessing active rt
+		dynamicCubeMapRTT->lock(video::ETLM_READ_WRITE, 0, s, video::ETLF_FLIP_Y_UP_RTT);
+		dynamicCubeMapRTT->unlock();
+#endif
+	}
+
+	//dynamicCubeMapRTT->regenerateMipMapLevels();	// Unfortunately we can't seem to have mipmaps for rtt's
+
+	driver->setRenderTarget(0);
+	cubeCenterNode->setVisible( true );
+	smgr->setActiveCamera( oldCam );
+}
+
+\endcode 
+	Typical setup at the main start.
+\code
+int main()
+{
+	// Ask user for driver
+	video::E_DRIVER_TYPE driverType = driverChoiceConsole();
+	if (driverType==video::EDT_COUNT)
+		return 1;
+
+	// Create device
+	MyEventReceiver eventReceiver;
+	const core::dimension2d<u32> dimDevice(1024, 768);
+	IrrlichtDevice* device = createDevice( driverType, dimDevice, 32, false, false, false, &eventReceiver );
+	if (!device)
+		return 1;
+
+	const io::path mediaPath = getExampleMediaPath();
+	video::IVideoDriver* driver = device->getVideoDriver();
+	scene::ISceneManager* smgr = device->getSceneManager();
+	gui::IGUIEnvironment* env = device->getGUIEnvironment();
+	eventReceiver.Driver = driver;
+
+	// Set window title
+	core::stringw strCaption(L"Cubemap example - Irrlicht Engine [");
+	strCaption += driver->getName();
+	strCaption += L"]";
+	device->setWindowCaption(strCaption.c_str());
+
+	// set a nicer font
+	gui::IGUISkin* skin = env->getSkin();
+	gui::IGUIFont* font = env->getFont(mediaPath + "fonthaettenschweiler.bmp");
+	if (font)
+		skin->setFont(font);
+
+	\endcode 
+		Create a shader material for cube mapping
+	\code
+	video::IGPUProgrammingServices* gpu = driver->getGPUProgrammingServices();
+	s32 cubeMapReflectionMaterial = 0;
+	if( gpu )
+	{
+		// Decide on shader to use based on active driver
+		irr::io::path vsFileName;
+		irr::io::path psFileName;
+		switch( driverType )
+		{
+			case video::EDT_DIRECT3D9:
+				vsFileName = mediaPath + "cubeMapReflectionVS.hlsl";
+				psFileName = mediaPath + "cubeMapReflectionPS.hlsl";
+				break;
+
+			case video::EDT_OPENGL:
+				vsFileName = mediaPath + "cubeMapReflection.vert";
+				psFileName = mediaPath + "cubeMapReflection.frag";
+				break;
+		}
+
+		CubeMapReflectionCallback* cubeMapCB = new CubeMapReflectionCallback(smgr, 2);
+		cubeMapReflectionMaterial = gpu->addHighLevelShaderMaterialFromFiles(
+			vsFileName, "VS", video::EVST_VS_1_1,
+			psFileName, "PS", video::EPST_PS_3_0,
+			cubeMapCB, video::EMT_SOLID );
+		if ( cubeMapReflectionMaterial >= 0 )
+			eventReceiver.Shader = cubeMapCB;
+		cubeMapCB->drop();
+	}
+
+	// add fps camera
+	scene::ICameraSceneNode* camera = smgr->addCameraSceneNodeFPS(0, 100.f, 1.f);
+	camera->setPosition( core::vector3df( 0,10,-200 ) );
+	device->getCursorControl()->setVisible(false);
+
+	\endcode 
+		Get 6 images forming a cubemap. The coordinate system used in those images
+		seemed to be different than the one in Irrlicht. I decided to leave it like
+		that because it's pretty common that way. If you get cubemap textures which
+		seem to have x/y/z axis named different you'll just have to experiment until
+		you figured out the correct order.
+	\code
+	core::array<video::IImage*> cubeMapImages;
+	cubeMapImages.push_back(driver->createImageFromFile( mediaPath + "cubemap_posx.jpg" ));
+	cubeMapImages.push_back(driver->createImageFromFile( mediaPath + "cubemap_negx.jpg" ));
+	cubeMapImages.push_back(driver->createImageFromFile( mediaPath + "cubemap_posy.jpg" ));
+	cubeMapImages.push_back(driver->createImageFromFile( mediaPath + "cubemap_negy.jpg" ));
+	cubeMapImages.push_back(driver->createImageFromFile( mediaPath + "cubemap_posz.jpg" ));
+	cubeMapImages.push_back(driver->createImageFromFile( mediaPath + "cubemap_negz.jpg" ));
+
+	\endcode  Create a cubemap texture from those images. Note that 6 images become a single texture now. \code
+	video::ITexture* cubeMapStaticTex = 0;
+	cubeMapStaticTex = driver->addTextureCubemap("cm", cubeMapImages[0], cubeMapImages[1], cubeMapImages[2], cubeMapImages[3], cubeMapImages[4], cubeMapImages[5]);
+	for ( u32 i=0; i<cubeMapImages.size(); ++i )
+		if ( cubeMapImages[i] )
+			cubeMapImages[i]->drop();
+	cubeMapImages.clear();
+
+	\endcode  Create a render target, cubemap render-target-textures and a camera with settings for cube mapping \code
+	video::IRenderTarget* cubeMapRT = driver->addRenderTarget();
+	video::ITexture* dynamicCubeMapRTT = 0;
+	video::ITexture* depthStencilRTT = 0;
+	video::ITexture* dynamicCubeMapRTT_intermediate = 0;	// just for rendering, but not used in material
+	video::ITexture* dynamicCubeMapTex = 0;					// dynamic and with mipmaps
+	scene::ICameraSceneNode* cubeMapCamera = 0;
+	if( driver->queryFeature( video::EVDF_RENDER_TO_TARGET ) )
+	{
+		// Create cube map textures and render target cubemap textures.
+		const u32 dynamicCubeMapSize = 512;
+		dynamicCubeMapRTT = driver->addRenderTargetTextureCubemap(dynamicCubeMapSize, "cube_rtr");
+		depthStencilRTT = driver->addRenderTargetTexture(irr::core::dimension2du(dynamicCubeMapSize, dynamicCubeMapSize), "cubemap_ds", irr::video::ECF_D24S8);
+
+		dynamicCubeMapRTT_intermediate = driver->addRenderTargetTextureCubemap(dynamicCubeMapSize, "cube_rtr");
+		dynamicCubeMapTex = driver->addTextureCubemap(dynamicCubeMapSize, "cube_tex");
+
+		// Camera for creating an environment cubemap
+		cubeMapCamera = smgr->addCameraSceneNode();
+		cubeMapCamera->setFOV(core::PI* 0.5f);	// 90° view angle
+		cubeMapCamera->setAspectRatio(1.f);	// it's a cube... all sides have the same length
+		smgr->setActiveCamera( camera );
+	}
+
+	\endcode 
+		Add sphere-nodes which will be using the cubemaps as materials.
+		You may also want to experiment with other node-types here!
+	\code
+
+	scene::ISceneNode* sphereNode = 0;
+	scene::ISceneNode* sphereNode2 = 0;
+	scene::ISceneNode* sphereNode3 = 0;
+	scene::IMesh* sphereMesh = smgr->getGeometryCreator()->createSphereMesh(100.f);
+	if( sphereMesh )
+	{
+		// Nothing really special here except they need the shader material to display cubemaps.
+		sphereNode = smgr->addMeshSceneNode( sphereMesh );
+		sphereNode->setPosition( core::vector3df(-250,0,0) );
+		sphereNode->updateAbsolutePosition();
+		sphereNode->setMaterialFlag( video::EMF_LIGHTING, false );
+		sphereNode->setMaterialTexture( 0, dynamicCubeMapRTT );
+		sphereNode->setMaterialType( (video::E_MATERIAL_TYPE)cubeMapReflectionMaterial );
+		eventReceiver.addInfoTextNode(font, L"Cubemap dynamic rtt, no mip-maps", sphereNode);
+
+		if ( dynamicCubeMapTex )
+		{
+			sphereNode3 = smgr->addMeshSceneNode( sphereMesh );
+			sphereNode3->setPosition( core::vector3df(0,0,250) );
+			sphereNode3->updateAbsolutePosition();
+			sphereNode3->setMaterialFlag( video::EMF_LIGHTING, false );
+			sphereNode3->setMaterialTexture( 0, dynamicCubeMapTex );
+			sphereNode3->getMaterial(0).TextureLayer[0].TrilinearFilter = false; // this is default anyway. It would be faster - but you can only access integer mip-levels - no filtering between mip-levels.
+			sphereNode3->setMaterialType( (video::E_MATERIAL_TYPE)cubeMapReflectionMaterial );
+			eventReceiver.addInfoTextNode(font, L"Cubemap dynamic with mip-maps", sphereNode3);
+		}
+
+		if ( cubeMapStaticTex )
+		{
+			sphereNode2 = smgr->addMeshSceneNode( sphereMesh );
+			sphereNode2->setPosition( core::vector3df(250,0,0) );
+			sphereNode2->updateAbsolutePosition();
+			sphereNode2->setMaterialFlag( video::EMF_LIGHTING, false );
+			sphereNode2->setMaterialTexture( 0, cubeMapStaticTex );
+			sphereNode2->getMaterial(0).TextureLayer[0].TrilinearFilter = true;		// this way smoothing happens between different mip-levels.
+			sphereNode2->setMaterialType( (video::E_MATERIAL_TYPE)cubeMapReflectionMaterial );
+			eventReceiver.addInfoTextNode(font, L"Cubemap fixed images", sphereNode2);
+		}
+
+		sphereMesh->drop();
+	}
+
+	\endcode  Add some background which will show up in the environment maps.
+	   For first one we use the same textures as used in the spheres.
+	   Note the difference between a skybox and a cubemap is that the skybox really uses 6 different
+	   textures. While the cubemap uses a single texture created from 6 images. \code
+	eventReceiver.BackgroundSkybox = smgr->addSkyBoxSceneNode(
+		driver->getTexture(mediaPath + "cubemap_posy.jpg"), // top
+		driver->getTexture(mediaPath + "cubemap_negy.jpg"),	// bottom
+		driver->getTexture(mediaPath + "cubemap_posz.jpg"),	// left
+		driver->getTexture(mediaPath + "cubemap_negz.jpg"), // right
+		driver->getTexture(mediaPath + "cubemap_posx.jpg"), // front
+		driver->getTexture(mediaPath + "cubemap_negx.jpg")); // back
+
+
+
+	\endcode  Another background for comparison and to make it more obvious
+	when the spheres reflect the environment and when they use static cubemaps. \code
+	scene::IMesh * cubeMesh = smgr->getGeometryCreator()->createCubeMesh( core::vector3df(10.f, 10.f, 10.f), scene::ECMT_6BUF_4VTX_NP);
+	smgr->getMeshManipulator()->scale(cubeMesh, core::vector3df(-1, 1, 1));
+	if( cubeMesh )
+	{
+		smgr->getMeshManipulator()->setVertexColors( cubeMesh->getMeshBuffer(0), video::SColor(255, 240, 10, 10) );
+		smgr->getMeshManipulator()->setVertexColors( cubeMesh->getMeshBuffer(1), video::SColor(255, 240, 130, 10) );
+		smgr->getMeshManipulator()->setVertexColors( cubeMesh->getMeshBuffer(2), video::SColor(255, 50, 250, 10)  );
+		smgr->getMeshManipulator()->setVertexColors( cubeMesh->getMeshBuffer(3), video::SColor(255, 70, 10, 250) );
+		smgr->getMeshManipulator()->setVertexColors( cubeMesh->getMeshBuffer(4), video::SColor(255, 240, 250, 10) );
+		smgr->getMeshManipulator()->setVertexColors( cubeMesh->getMeshBuffer(5), video::SColor(255, 85, 250, 250)  );
+
+		eventReceiver.BackgroundCube = smgr->addMeshSceneNode( cubeMesh );
+		cubeMesh->drop();
+
+		eventReceiver.BackgroundCube->setScale( core::vector3df( 200, 200, 200 ) );
+		eventReceiver.BackgroundCube->setMaterialFlag( video::EMF_LIGHTING, false );
+		eventReceiver.BackgroundCube->setVisible(false);
+	}
+
+#ifdef CUBEMAP_UPSIDE_DOWN_GL_PROJECTION
+	if ( driverType == video::EDT_OPENGL )
+	{
+		// Flip projection matrix (note this also flips front/backface culling)
+		core::matrix4 matProj = cubeMapCamera->getProjectionMatrix();
+		matProj[4] = -matProj[4];
+		matProj[5] = -matProj[5];
+		matProj[6] = -matProj[6];
+		matProj[7] = -matProj[7];
+		cubeMapCamera->setProjectionMatrix(matProj);
+	}
+#endif
+
+	\endcode 
+		Add some moving node to show the difference between static/dynamic environment maps
+	\code
+	scene::IMeshSceneNode * movingNode = smgr->addCubeSceneNode(30.f);
+	movingNode->getMaterial(0).Lighting = false;
+	smgr->getMeshManipulator()->setVertexColors( movingNode->getMesh()->getMeshBuffer(0), video::SColor(255, 230, 200, 150));
+	scene::ISceneNodeAnimator* circleAnimator = smgr->createFlyCircleAnimator(core::vector3df(-125, -50.f, 125), 300.f, 0.0005f);
+	movingNode->addAnimator(circleAnimator);
+	circleAnimator->drop();
+
+	\endcode  Add some UI \code
+	if ( eventReceiver.Shader )
+	{
+		skin->setColor(gui::EGDC_3D_FACE, video::SColor(50, 160, 120, 120));
+
+		u32 top = dimDevice.Height - 200;
+		const u32 left = dimDevice.Width - 350;
+		const u32 right = dimDevice.Width - 10;
+		irr::gui::IGUIStaticText * stextUVW = env->addStaticText(L" Style of generating texture coordinates:\n Change with (space)", core::recti(left, top, right, top+35), false, true, 0, -1, true);
+		top += 40;
+		stextUVW->setTextAlignment(gui::EGUIA_UPPERLEFT, gui::EGUIA_UPPERLEFT);
+		eventReceiver.CurrentStyleUVW = env->addStaticText(L"", core::recti(240,0, 400, 20), false, false, stextUVW);
+		eventReceiver.updateStyleUVW();
+
+		irr::gui::IGUIStaticText * stextRoughness = env->addStaticText(L" Roughness:\n Change with (+) and (-)", core::recti(left, top, right, top+35), false, true, 0, -1, true);
+		top += 40;
+		eventReceiver.CurrentRoughness = env->addStaticText( L"", core::recti(240,0, 400, 20), false, false, stextRoughness);
+		eventReceiver.updateRoughness();
+
+		irr::gui::IGUIStaticText * stextSeamlessCupemap = env->addStaticText(L" Seamless cubemap (with roughness):\n Change with (s)", core::recti(left, top, right, top+35), false, true, 0, -1, true);
+		top += 40;
+		eventReceiver.CurrentSeamlessCubemap = env->addStaticText( L"", core::recti(240,0, 400, 20), false, false, stextSeamlessCupemap);
+		eventReceiver.updateSeamless();
+
+		irr::gui::IGUIStaticText * stextUpdates = env->addStaticText(L" Cubemap updates:\n Change with (u)", core::recti(left, top, right, top+35), false, true, 0, -1, true);
+		top += 40;
+		eventReceiver.CurrentCubemapUpdates = env->addStaticText( L"", core::recti(240,0, 400, 20), false, false, stextUpdates);
+		eventReceiver.updateCubemapUpdates();
+
+		env->addStaticText(L" Change background with (b)", core::recti(left, top, right, top+15), false, true, 0, -1, true);
+		top += 20;
+
+		env->addStaticText(L" Show/hide info nodes with (i)", core::recti(left, top, right, top+15), false, true, 0, -1, true);
+	}
+
+
+	\endcode  Main loop \code
+	while(device->run())
+	{
+		if (device->isWindowActive())
+		{
+			driver->beginScene(true, true, video::SColor(255, 127, 127, 255));
+
+			\endcode  Check if we want to update the environment maps.
+			   Usually not something you'll do every frame, but either once at the star
+			   or maybe updating an environment map once in a while.
+			\code
+			int updateCubemaps = eventReceiver.checkCubemapUpdate();
+			if( dynamicCubeMapRTT && sphereNode && updateCubemaps > 0 )
+			{
+#ifdef CUBEMAP_UPSIDE_DOWN_GL_PROJECTION
+				core::array<scene::ISceneNode*> allNodes;
+				if ( driverType == video::EDT_OPENGL )
+				{
+					\endcode 
+						Flipping projection matrix flips front/backface culling.
+						We only have a skybox so in this case this still would be fast, with more objects it's getting more ugly.
+					\code
+					smgr->getSceneNodesFromType(scene::ESNT_ANY, allNodes);
+					flipCullingFlags(allNodes);
+				}
+#endif
+				\endcode 
+					If rendered just once then this node has still a white (or even undefined) texture at this point
+					Just hiding it and render the background when rendering the cubemap for the other node is less noticable
+					than having a big white dot in the environment texture.
+					Render order can matter if you want several environment maps in your scene.
+				\code
+				if (sphereNode3)
+					sphereNode3->setVisible(false);
+
+				renderEnvironmentCubeMap(driver, cubeMapCamera, sphereNode, cubeMapRT, dynamicCubeMapRTT, depthStencilRTT);
+
+				if ( sphereNode3)
+				{
+					if ( updateCubemaps == 2 )
+					{
+						\endcode 
+							Our rtt's unfortunately don't have mipmaps (sorry, not sure if we can get that somehow...)
+							So if we want mipmaps in the dynamic cubemap we have to copy it to a non-rtt texture.
+							Warning: Very, very slow. Far slower than just creating an environment map as this
+							will copy the texture from GPU to main memory - copy it to a new texture, create mip-maps and
+							upload the result back to the GPU.
+						 \code
+						renderEnvironmentCubeMap(driver, cubeMapCamera, sphereNode3, cubeMapRT, dynamicCubeMapRTT_intermediate, depthStencilRTT);
+						for ( int i=0; i<6; ++i)
+						{
+							void * rtData = dynamicCubeMapRTT_intermediate->lock(video::ETLM_READ_ONLY, 0, i, video::ETLF_NONE);
+							void * tData = dynamicCubeMapTex->lock(video::ETLM_READ_WRITE, 0, i);
+							memcpy(tData, rtData, dynamicCubeMapTex->getPitch()*dynamicCubeMapTex->getSize().Width);
+							dynamicCubeMapRTT_intermediate->unlock();
+							dynamicCubeMapTex->unlock();
+							dynamicCubeMapTex->regenerateMipMapLevels();
+						}
+					}
+					sphereNode3->setVisible(true);
+				}
+
+#ifdef CUBEMAP_UPSIDE_DOWN_GL_PROJECTION
+				if ( driverType == video::EDT_OPENGL )
+				{
+					flipCullingFlags(allNodes);
+				}
+#endif
+			}
+
+			smgr->drawAll();
+			env->drawAll();
+
+			driver->endScene();
+		}
+	}
+
+	device->drop();
+
+	return 0;
+}
+
+\endcode 
 **/

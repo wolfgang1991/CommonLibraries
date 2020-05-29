@@ -460,10 +460,11 @@
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;opengl32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>..\..\bin\Win64-visualstudio\Irrlicht.dll</OutputFile>
       <IgnoreSpecificDefaultLibraries>libci.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <ImportLibrary>..\..\lib\Win64-visualstudio\Irrlicht.lib</ImportLibrary>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - Fast FPU|Win32'">
@@ -843,6 +844,7 @@
     <ClInclude Include="..\..\include\IAnimatedMeshMD3.h" />
     <ClInclude Include="..\..\include\IEventReceiver.h" />
     <ClInclude Include="..\..\include\ILogger.h" />
+    <ClInclude Include="..\..\include\IOctreeSceneNode.h" />
     <ClInclude Include="..\..\include\IOSOperator.h" />
     <ClInclude Include="..\..\include\IProfiler.h" />
     <ClInclude Include="..\..\include\IRandomizer.h" />
@@ -891,6 +893,7 @@
     <ClInclude Include="..\..\include\position2d.h" />
     <ClInclude Include="..\..\include\quaternion.h" />
     <ClInclude Include="..\..\include\rect.h" />
+    <ClInclude Include="..\..\include\SOverrideMaterial.h" />
     <ClInclude Include="..\..\include\SSharedMeshBuffer.h" />
     <ClInclude Include="..\..\include\triangle3d.h" />
     <ClInclude Include="..\..\include\vector2d.h" />

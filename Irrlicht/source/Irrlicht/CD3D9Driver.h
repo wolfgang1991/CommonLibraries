@@ -266,6 +266,10 @@ namespace video
 		virtual ITexture* addRenderTargetTexture(const core::dimension2d<u32>& size,
 				const io::path& name, const ECOLOR_FORMAT format = ECF_UNKNOWN) _IRR_OVERRIDE_;
 
+		//! Creates a render target texture for a cubemap
+		ITexture* addRenderTargetTextureCubemap(const irr::u32 sideLen,
+				const io::path& name, const ECOLOR_FORMAT format) _IRR_OVERRIDE_;
+
 		virtual void clearBuffers(u16 flag, SColor color = SColor(255,0,0,0), f32 depth = 1.f, u8 stencil = 0) _IRR_OVERRIDE_;
 
 		//! Returns an image created from the last rendered frame.
@@ -296,6 +300,9 @@ namespace video
 		//! Check if the driver supports creating textures with the given color format
 		virtual bool queryTextureFormat(ECOLOR_FORMAT format) const _IRR_OVERRIDE_;
 
+		//! Used by some SceneNodes to check if a material should be rendered in the transparent render pass
+		virtual bool needsTransparentRenderPass(const irr::video::SMaterial& material) const _IRR_OVERRIDE_;
+
 		//! Get the current color format of the color buffer
 		/** \return Color format of the color buffer as D3D color value. */
 		D3DFORMAT getD3DColorFormat() const;
@@ -317,7 +324,7 @@ namespace video
 
 	private:
 
-		//! enumeration for rendering modes such as 2d and 3d for minizing the switching of renderStates.
+		//! enumeration for rendering modes such as 2d and 3d for minimizing the switching of renderStates.
 		enum E_RENDER_MODE
 		{
 			ERM_NONE = 0,	// no render state has been set yet.
@@ -349,6 +356,9 @@ namespace video
 		//! resets the device
 		bool reset();
 
+		//! Try to get back a lost device
+		bool retrieveDevice(int numTries, int msSleepBetweenTries=100);
+
 		virtual ITexture* createDeviceDependentTexture(const io::path& name, IImage* image) _IRR_OVERRIDE_;
 
 		virtual ITexture* createDeviceDependentTextureCubemap(const io::path& name, const core::array<IImage*>& image) _IRR_OVERRIDE_;
@@ -357,7 +367,7 @@ namespace video
 		//! vertex shaders to render geometry.
 		s32 addShaderMaterial(const c8* vertexShaderProgram, const c8* pixelShaderProgram,
 			IShaderConstantSetCallBack* callback,
-			E_MATERIAL_TYPE baseMaterial, s32 userData);
+			E_MATERIAL_TYPE baseMaterial, s32 userData) _IRR_OVERRIDE_;
 
 		//! Adds a new material renderer to the VideoDriver, based on a high level shading
 		//! language.
@@ -376,8 +386,7 @@ namespace video
 			u32 verticesOut = 0,
 			IShaderConstantSetCallBack* callback = 0,
 			E_MATERIAL_TYPE baseMaterial = video::EMT_SOLID,
-			s32 userData = 0,
-			E_GPU_SHADING_LANGUAGE shadingLang = EGSL_DEFAULT) _IRR_OVERRIDE_;
+			s32 userData = 0) _IRR_OVERRIDE_;
 
 		void createMaterialRenderers();
 
@@ -409,7 +418,7 @@ namespace video
 		bool Transformation3DChanged;
 		const ITexture* CurrentTexture[MATERIAL_MAX_TEXTURES];
 		bool LastTextureMipMapsAvailable[MATERIAL_MAX_TEXTURES];
-		core::matrix4 Matrices[ETS_COUNT]; // matrizes of the 3d mode we need to restore when we switch back from the 2d mode.
+		core::matrix4 Matrices[ETS_COUNT]; // matrices of the 3d mode we need to restore when we switch back from the 2d mode.
 
 		HINSTANCE D3DLibrary;
 		IDirect3D9* pID3D;
@@ -453,7 +462,7 @@ namespace video
 		bool AlphaToCoverageSupport;
 	};
 
-	//! This bridge between Irlicht pseudo D3D9 calls
+	//! This bridge between Irrlicht pseudo D3D9 calls
 	//! and true D3D9 calls.
 
 	class CD3D9CallBridge

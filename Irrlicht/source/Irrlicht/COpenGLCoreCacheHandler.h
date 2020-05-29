@@ -17,6 +17,13 @@ namespace irr
 namespace video
 {
 
+enum ESetTextureActive
+{
+	EST_ACTIVE_ALWAYS,		// texture unit always active after set call
+	EST_ACTIVE_ON_CHANGE	// texture unit only active after call when texture changed in cache
+};
+
+
 template <class TOpenGLDriver, class TOpenGLTexture>
 class COpenGLCoreCacheHandler
 {
@@ -53,7 +60,7 @@ class COpenGLCoreCacheHandler
 			return 0;
 		}
 
-		bool set(u32 index, const ITexture* texture)
+		bool set(u32 index, const ITexture* texture, ESetTextureActive esa=EST_ACTIVE_ALWAYS)
 		{
 			bool status = false;
 
@@ -61,12 +68,16 @@ class COpenGLCoreCacheHandler
 
 			if (index < MATERIAL_MAX_TEXTURES && index < TextureCount)
 			{
-				CacheHandler.setActiveTexture(GL_TEXTURE0 + index);
+				if ( esa == EST_ACTIVE_ALWAYS )
+					CacheHandler.setActiveTexture(GL_TEXTURE0 + index);
 
 				const TOpenGLTexture* prevTexture = Texture[index];
 
 				if (texture != prevTexture)
 				{
+					if ( esa == EST_ACTIVE_ON_CHANGE )
+						CacheHandler.setActiveTexture(GL_TEXTURE0 + index);
+
 					if (texture)
 					{
 						type = texture->getDriverType();
@@ -83,12 +94,12 @@ class COpenGLCoreCacheHandler
 							{
 								glBindTexture(prevTextureType, 0);
 
-#if (defined(IRR_OPENGL_VERSION) && IRR_OPENGL_VERSION < 20) || (defined(IRR_OPENGL_ES_VERSION) && IRR_OPENGL_ES_VERSION < 20)
+#if ( defined(IRR_COMPILE_GL_COMMON) || defined(IRR_COMPILE_GLES_COMMON) )
 								glDisable(prevTextureType);
 								glEnable(curTextureType);
 #endif
 							}
-#if (defined(IRR_OPENGL_VERSION) && IRR_OPENGL_VERSION < 20) || (defined(IRR_OPENGL_ES_VERSION) && IRR_OPENGL_ES_VERSION < 20)
+#if ( defined(IRR_COMPILE_GL_COMMON) || defined(IRR_COMPILE_GLES_COMMON) )
 							else if (!prevTexture)
 								glEnable(curTextureType);
 #endif
@@ -111,7 +122,7 @@ class COpenGLCoreCacheHandler
 
 						glBindTexture(prevTextureType, 0);
 
-#if (defined(IRR_OPENGL_VERSION) && IRR_OPENGL_VERSION < 20) || (defined(IRR_OPENGL_ES_VERSION) && IRR_OPENGL_ES_VERSION < 20)
+#if ( defined(IRR_COMPILE_GL_COMMON) || defined(IRR_COMPILE_GLES_COMMON) )
 						glDisable(prevTextureType);
 #endif
 					}
@@ -175,7 +186,7 @@ public:
 #pragma warning(push)
 #pragma warning(disable: 4355)	// Warning: "'this' : used in base member initializer list. ". It's OK, we don't use the reference in STextureCache constructor.
 #endif
-		TextureCache(STextureCache(*this, driver->getDriverType(), driver->getFeature().TextureUnit)),
+		TextureCache(STextureCache(*this, driver->getDriverType(), driver->getFeature().MaxTextureUnits)),
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
@@ -230,7 +241,7 @@ public:
 
 		Driver->irrGlActiveTexture(ActiveTexture);
 
-#if (defined(IRR_OPENGL_VERSION) && IRR_OPENGL_VERSION < 20) || (defined(IRR_OPENGL_ES_VERSION) && IRR_OPENGL_ES_VERSION < 20)
+#if ( defined(IRR_COMPILE_GL_COMMON) || defined(IRR_COMPILE_GLES_COMMON) )
 		glDisable(GL_TEXTURE_2D);
 #endif
 
@@ -486,6 +497,11 @@ public:
 		}
 	}
 
+    void getDepthTest(bool& enable)
+    {
+        enable = DepthTest;
+    }
+
 	void setDepthTest(bool enable)
 	{
 		if (DepthTest != enable)
@@ -571,7 +587,7 @@ public:
 
 	//! Compare material to current cache and update it when there are differences
 	// Some material renderers do change the cache beyond the original material settings
-	// This correct the material to represent the current cache state again.
+	// This corrects the material to represent the current cache state again.
 	void correctCacheMaterial(irr::video::SMaterial& material)
 	{
 		// Fix textures which got removed

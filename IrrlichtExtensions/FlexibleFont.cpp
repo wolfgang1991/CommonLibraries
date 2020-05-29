@@ -183,8 +183,8 @@ FlexibleFontManager::FlexibleFontManager(irr::IrrlichtDevice* device):
 	IVideoDriver* driver = device->getVideoDriver();
 	stringc fsFontWithShadows = stringc("#define SHADOWS\n").append(OGLFontFS);
 	if(driver->getDriverType()==EDT_OPENGL || driver->getDriverType()==EDT_OGLES2){
-		sdffType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(OGLFontVS, "main", EVST_VS_2_0, OGLFontFS, "main", EPST_PS_2_0, this, EMT_TRANSPARENT_ALPHA_CHANNEL, 0, EGSL_DEFAULT);
-		sdffWithShadowsType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(OGLFontVS, "main", EVST_VS_2_0, fsFontWithShadows.c_str(), "main", EPST_PS_2_0, this, EMT_TRANSPARENT_ALPHA_CHANNEL, 0, EGSL_DEFAULT);
+		sdffType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(OGLFontVS, "main", EVST_VS_2_0, OGLFontFS, "main", EPST_PS_2_0, this, EMT_TRANSPARENT_ALPHA_CHANNEL, 0);
+		sdffWithShadowsType = (E_MATERIAL_TYPE)driver->getGPUProgrammingServices()->addHighLevelShaderMaterial(OGLFontVS, "main", EVST_VS_2_0, fsFontWithShadows.c_str(), "main", EPST_PS_2_0, this, EMT_TRANSPARENT_ALPHA_CHANNEL, 0);
 	}else{//currently only opengl and opengl es supported
 		sdffWithShadowsType = sdffType = EMT_TRANSPARENT_ALPHA_CHANNEL;
 	}

@@ -324,9 +324,10 @@ bool CPLYMeshFileLoader::readVertex(const SPLYElement &Element, scene::CDynamicM
 			vert.Normal.Y = getFloat(t);
 			result=true;
 		}
-		else if (Element.Properties[i].Name == "u")
+		 // there isn't a single convention for the UV, some software like Blender or Assimp uses "st" instead of "uv"
+		else if (Element.Properties[i].Name == "u" || Element.Properties[i].Name == "s")
 			vert.TCoords.X = getFloat(t);
-		else if (Element.Properties[i].Name == "v")
+		else if (Element.Properties[i].Name == "v" || Element.Properties[i].Name == "t")
 			vert.TCoords.Y = getFloat(t);
 		else if (Element.Properties[i].Name == "red")
 		{
@@ -571,7 +572,7 @@ c8* CPLYMeshFileLoader::getNextLine()
 	StartPointer = LineEndPointer + 1;
 
 	// crlf split across buffer move
-	if (StartPointer<EndPointer && *StartPointer == '\n')
+	if (*StartPointer == '\n')
 	{
 		*StartPointer = '\0';
 		++StartPointer;
@@ -582,7 +583,7 @@ c8* CPLYMeshFileLoader::getNextLine()
 	while (pos < EndPointer && *pos && *pos != '\r' && *pos != '\n')
 		++pos;
 
-	if ( (pos+1) < EndPointer && ( *(pos+1) == '\r' || *(pos+1) == '\n') )
+	if ( pos < EndPointer && ( *(pos+1) == '\r' || *(pos+1) == '\n') )
 	{
 		*pos = '\0';
 		++pos;

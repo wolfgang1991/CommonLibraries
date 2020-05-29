@@ -84,8 +84,8 @@ public:
 	CTRStencilShadow(CBurningVideoDriver* driver);
 
 	//! draws an indexed triangle list
-	virtual void drawTriangle ( const s4DVertex *a,const s4DVertex *b,const s4DVertex *c );
-	virtual void setParam ( u32 index, f32 value);
+	virtual void drawTriangle ( const s4DVertex *a,const s4DVertex *b,const s4DVertex *c ) _IRR_OVERRIDE_;
+	virtual void setParam ( u32 index, f32 value) _IRR_OVERRIDE_;
 
 private:
 	// fragment shader
@@ -169,8 +169,8 @@ void CTRStencilShadow::fragment_zfail_decr ()
 #endif
 
 	// apply top-left fill-convention, left
-	xStart = core::ceil32( line.x[0] );
-	xEnd = core::ceil32( line.x[1] ) - 1;
+	xStart = core::ceil32_fast( line.x[0] );
+	xEnd = core::ceil32_fast( line.x[1] ) - 1;
 
 	dx = xEnd - xStart;
 
@@ -326,8 +326,8 @@ void CTRStencilShadow::fragment_zfail_incr()
 #endif
 
 	// apply top-left fill-convention, left
-	xStart = core::ceil32( line.x[0] );
-	xEnd = core::ceil32( line.x[1] ) - 1;
+	xStart = core::ceil32_fast( line.x[0] );
+	xEnd = core::ceil32_fast( line.x[1] ) - 1;
 
 	dx = xEnd - xStart;
 
@@ -559,8 +559,8 @@ void CTRStencilShadow::drawTriangle ( const s4DVertex *a,const s4DVertex *b,cons
 #endif
 
 		// apply top-left fill convention, top part
-		yStart = core::ceil32( a->Pos.y );
-		yEnd = core::ceil32( b->Pos.y ) - 1;
+		yStart = core::ceil32_fast( a->Pos.y );
+		yEnd = core::ceil32_fast( b->Pos.y ) - 1;
 
 #ifdef SUBTEXEL
 		subPixel = ( (f32) yStart ) - a->Pos.y;
@@ -766,8 +766,8 @@ void CTRStencilShadow::drawTriangle ( const s4DVertex *a,const s4DVertex *b,cons
 #endif
 
 		// apply top-left fill convention, top part
-		yStart = core::ceil32( b->Pos.y );
-		yEnd = core::ceil32( c->Pos.y ) - 1;
+		yStart = core::ceil32_fast( b->Pos.y );
+		yEnd = core::ceil32_fast( c->Pos.y ) - 1;
 
 #ifdef SUBTEXEL
 

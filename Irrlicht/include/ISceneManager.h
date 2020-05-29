@@ -19,6 +19,7 @@
 #include "SceneParameters.h"
 #include "IGeometryCreator.h"
 #include "ISkinnedMesh.h"
+#include "IXMLWriter.h"
 
 namespace irr
 {
@@ -70,12 +71,12 @@ namespace scene
 		/** This value will never be returned by
 		ISceneManager::getSceneNodeRenderPass(). The scene manager
 		will determine by itself if an object is transparent or solid
-		and register the object as SNRT_TRANSPARENT or SNRT_SOLD
+		and register the object as ESNRT_TRANSPARENT or ESNRP_SOLID
 		automatically if you call registerNodeForRendering with this
 		value (which is default). Note that it will register the node
 		only as ONE type. If your scene node has both solid and
 		transparent material types register it twice (one time as
-		SNRT_SOLID, the other time as SNRT_TRANSPARENT) and in the
+		ESNRP_SOLID, the other time as ESNRT_TRANSPARENT) and in the
 		render() method call getSceneNodeRenderPass() to find out the
 		current render pass and render only the corresponding parts of
 		the node. */
@@ -120,6 +121,7 @@ namespace scene
 	class ISceneNodeAnimatorFactory;
 	class ISceneNodeFactory;
 	class ISceneUserDataSerializer;
+	class IShadowVolumeSceneNode;
 	class ITerrainSceneNode;
 	class ITextSceneNode;
 	class ITriangleSelector;
@@ -1084,7 +1086,7 @@ namespace scene
 		/** \param type: Type of scene node to find (ESNT_ANY will return all child nodes).
 		\param outNodes: results will be added to this array (outNodes is not cleared).
 		\param start: Scene node to start from. This node and all children of this scene
-		node are checked (recursively, so also children of children, etc). If null is specified, 
+		node are checked (recursively, so also children of children, etc). If null is specified,
 		the root scene node is taken as start-node. */
 		virtual void getSceneNodesFromType(ESCENE_NODE_TYPE type,
 				core::array<scene::ISceneNode*>& outNodes,
@@ -1106,6 +1108,11 @@ namespace scene
 
 		//! Get the current color of shadows.
 		virtual video::SColor getShadowColor() const = 0;
+
+		//! Create a shadow volume scene node to be used with custom nodes
+		/** Use this if you implement your own SceneNodes and need shadow volumes in them.
+		Otherwise you should generally use addShadowVolumeSceneNode functions from IMeshSceneNode or IAnimatedMeshSceneNode.*/
+		virtual IShadowVolumeSceneNode* createShadowVolumeSceneNode(const IMesh* shadowMesh, ISceneNode* parent, s32 id, bool zfailmethod, f32 infinity) = 0;
 
 		//! Registers a node for rendering it at a specific time.
 		/** This method should only be used by SceneNodes when they get a

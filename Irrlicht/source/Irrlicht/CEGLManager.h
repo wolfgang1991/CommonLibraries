@@ -9,11 +9,7 @@
 
 #ifdef _IRR_COMPILE_WITH_EGL_MANAGER_
 
-#if defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_) || defined(_IRR_COMPILE_WITH_FB_DEVICE_) || defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h>
-#else
-#include <GLES/egl.h>
-#endif
 
 #include "SIrrCreationParameters.h"
 #include "SExposedVideoData.h"
@@ -69,7 +65,7 @@ namespace video
 
 		virtual const SExposedVideoData& getContext() const _IRR_OVERRIDE_;
 
-		virtual bool activateContext(const SExposedVideoData& videoData) _IRR_OVERRIDE_;
+		virtual bool activateContext(const SExposedVideoData& videoData, bool restorePrimaryOnZero) _IRR_OVERRIDE_;
 
 		// Swap buffers.
 		virtual bool swapBuffers() _IRR_OVERRIDE_;

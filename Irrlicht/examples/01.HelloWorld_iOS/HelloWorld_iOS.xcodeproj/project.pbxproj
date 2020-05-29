@@ -118,8 +118,6 @@
 				TargetAttributes = {
 					5E6AC1671C1DA6CF00DADD92 = {
 						CreatedOnToolsVersion = 7.1.1;
-						DevelopmentTeam = USMX8QCVTS;
-						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -254,16 +252,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = USMX8QCVTS;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../include";
 				INFOPLIST_FILE = "$(SRCROOT)/../../media/info_ios.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/../../lib/iOS";
-				OTHER_LDFLAGS = "-v";
-				PRODUCT_BUNDLE_IDENTIFIER = de.vhf.HelloWorld;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.irrlicht.-8-HelloWorld-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Debug;
 		};
@@ -272,16 +266,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = USMX8QCVTS;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../include";
 				INFOPLIST_FILE = "$(SRCROOT)/../../media/info_ios.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/../../lib/iOS";
-				OTHER_LDFLAGS = "-v";
-				PRODUCT_BUNDLE_IDENTIFIER = de.vhf.HelloWorld;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.irrlicht.-8-HelloWorld-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Release;
 		};
