@@ -37,10 +37,12 @@ bool BeautifulGUIButton::OnEvent(const irr::SEvent& event){
 		if(pressed && m.Event==EMIE_LMOUSE_LEFT_UP){
 			pressed = false;
 			if(AbsoluteRect.isPointInside(mPos)){
-				if(!AggregateGUIElement::OnEvent(event)){//event must be finished before issuing the button event which may lead to the destruction of the BeautifulGUIButton
+				//if(!AggregateGUIElement::OnEvent(event)){//event must be finished before issuing the button event which may lead to the destruction of the BeautifulGUIButton
+				if(Parent){
 					Parent->OnEvent(buttonEvent);
-					return true;
+					return true;//Parent may decide to delete itself or this element on button event, therefore the mouse event must not be processed further by a potential non exisitng parent
 				}
+				//}
 			}
 		}else if(!pressed && m.Event==EMIE_LMOUSE_PRESSED_DOWN){
 			pressed = AbsoluteRect.isPointInside(mPos);

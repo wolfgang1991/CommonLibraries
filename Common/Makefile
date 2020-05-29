@@ -6,7 +6,7 @@ _C_LINKOBJ = serial.o
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj
 CPPFLAGS = -Wall -I. -D_DEBUG=$(DEBUG)
-CFLAGS = -Wall -I. -D_DEBUG=$(DEBUG)
+CFLAGS = $(CPPFLAGS)
 STATIC_LIB = libCommon.a
 USEROPTIM = 
 
