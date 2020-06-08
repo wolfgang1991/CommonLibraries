@@ -30,6 +30,11 @@ class AParallelFunction{
 		FunctionParams(AParallelFunction* object);
 		
 		~FunctionParams();
+		
+		private:
+		
+		FunctionParams();
+		
 	};
 	
 	FunctionParams* params;
