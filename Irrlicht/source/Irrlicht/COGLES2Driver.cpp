@@ -2583,6 +2583,17 @@ COGLES2Driver::~COGLES2Driver()
 			p2 -= pitch;
 		}
 		delete [] tmpBuffer;
+		
+		//changed
+		//switch back mixed up color channels
+		//TODO What's the reason why they are mixed up in the first place? Perhaps there's a bug somewhere?
+		for(u32 x=0; x<ScreenSize.Width; x++){
+			for(u32 y=0; y<ScreenSize.Height; y++){
+				SColor c = newImage->getPixel(x,y);
+				newImage->setPixel(x,y,SColor(c.getAlpha(), c.getBlue(), c.getGreen(), c.getRed()));
+			}
+		}
+		//changed end
 
 		if (testGLError(__LINE__))
 		{

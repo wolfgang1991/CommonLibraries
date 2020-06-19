@@ -39,7 +39,7 @@ namespace irr
 {
 
 CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
-	: CIrrDeviceStub(param), Accelerometer(0), Gyroscope(0), Focused(false), Initialized(false), InitAborted(false), Paused(true), JNIEnvAttachedToVM(0)
+	: CIrrDeviceStub(param), Accelerometer(0), Gyroscope(0), Focused(false), Initialized(false), InitAborted(false), Paused(true), Stopped(false), IsSplitScreen(false), JNIEnvAttachedToVM(0)//changed
 {
 	//changed
 	// see below for init (NULL here to indicate "not init" and to avoid problems with events)
@@ -71,6 +71,36 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 
 	Operator = new COSOperator(linuxversion);
 	//os::Printer::log(linuxversion.c_str(), ELL_INFORMATION);
+	
+	{//check if in splitscreen mode
+		JavaVMAttachArgs attachArgs;
+		attachArgs.version = JNI_VERSION_1_6;
+		attachArgs.name = 0;
+		attachArgs.group = NULL;
+
+		// Not a big problem calling it each time - it's a no-op when the thread already is attached.
+		jint result = Android->activity->vm->AttachCurrentThread(&JNIEnvAttachedToVM, &attachArgs);
+		if(result == JNI_ERR){
+			os::Printer::log("AttachCurrentThread for the JNI environment failed.", ELL_WARNING);
+			JNIEnvAttachedToVM = 0;
+		}else{
+			jclass Activity = JNIEnvAttachedToVM->FindClass("android/app/Activity");
+			if(!Activity){
+				os::Printer::log("android/app/Activity not found", ELL_ERROR);
+			}else{
+				jmethodID isInMultiWindowMode = JNIEnvAttachedToVM->GetMethodID(Activity, "isInMultiWindowMode", "()Z");
+				if(!isInMultiWindowMode){
+					os::Printer::log("isInMultiWindowMode method not found", ELL_ERROR);
+				}else{
+					IsSplitScreen = JNIEnvAttachedToVM->CallBooleanMethod(Android->activity->clazz, isInMultiWindowMode);
+					core::stringc msg("IsSplitScreen: ");
+					msg += (int)IsSplitScreen;
+					os::Printer::log(msg.c_str(), ELL_ERROR);
+				}
+			}
+		}
+	}
+	
 	//changed end
 	
 	__android_log_print(ANDROID_LOG_ERROR, "Irrlicht:", "start");
@@ -96,7 +126,7 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 		s32 Events = 0;
 		android_poll_source* Source = 0;
 
-		while ((ALooper_pollAll(((Focused && !Paused) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)
+		while ((ALooper_pollAll(((Focused && !Paused) || (!Stopped && IsSplitScreen) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)//changed
 		{
 			if(Source)
 				Source->process(Android, Source);
@@ -146,7 +176,7 @@ bool CIrrDeviceAndroid::run()
 	s32 Events = 0;
 	android_poll_source* Source = 0;
 
-	while ((id = ALooper_pollAll(((Focused && !Paused) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)
+	while ((id = ALooper_pollAll(((Focused && !Paused) || (!Stopped && IsSplitScreen) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)//changed
 	{
 		if(Source)
 			Source->process(Android, Source);
@@ -225,17 +255,17 @@ bool CIrrDeviceAndroid::present(video::IImage* surface, void* windowId, core::re
 
 bool CIrrDeviceAndroid::isWindowActive() const
 {
-	return (Focused && !Paused);
+	return !Stopped;//changed: may be splitscreen if not focused //(Focused && !Paused);
 }
 
 bool CIrrDeviceAndroid::isWindowFocused() const
 {
-	return Focused;
+	return !Paused;//changed //Focused;
 }
 
 bool CIrrDeviceAndroid::isWindowMinimized() const
 {
-	return !Focused;
+	return Stopped;//changed !Focused;
 }
 
 void CIrrDeviceAndroid::closeDevice()
@@ -305,6 +335,7 @@ void CIrrDeviceAndroid::handleAndroidCommand(android_app* app, int32_t cmd)
 		break;
 		case APP_CMD_START:
 			os::Printer::log("Android command APP_CMD_START", ELL_DEBUG);
+			device->Stopped = false;//changed
 		break;
 		case APP_CMD_INIT_WINDOW:
 			os::Printer::log("Android command APP_CMD_INIT_WINDOW", ELL_DEBUG);
@@ -364,10 +395,12 @@ void CIrrDeviceAndroid::handleAndroidCommand(android_app* app, int32_t cmd)
 			break;
 		case APP_CMD_STOP:
 			os::Printer::log("Android command APP_CMD_STOP", ELL_DEBUG);
+			device->Stopped = true;//changed
 			break;
 		case APP_CMD_RESUME:
 			os::Printer::log("Android command APP_CMD_RESUME", ELL_DEBUG);
 			device->Paused = false;
+			device->Stopped = false;//changed
 			break;
 		default:
 			break;

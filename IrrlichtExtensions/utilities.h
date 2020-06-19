@@ -27,6 +27,9 @@ bool isOverlayedByGUIElements(irr::gui::IGUIElement* root, const irr::core::vect
 
 irr::video::SColor getInterpolatedColor(irr::video::IImage* img, double sx, double sy);
 
+//! moves a rectange in a way that it is always inside limiting
+irr::core::rect<irr::s32> limitRect(irr::core::rect<irr::s32> r, const irr::core::rect<irr::s32>& limiting);
+
 //! fills a container with fillWithValue until it reaches the desired size. The ctr reference is returned again.
 template <typename TContainer>
 TContainer& fillToSize(TContainer& ctr, uint32_t desiredSize, typename TContainer::value_type fillWithValue = 0){

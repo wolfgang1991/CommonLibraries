@@ -85,6 +85,17 @@ std::string& IniFile::get(const std::string& section, const std::string& key){
 	return data[section][key];
 }
 
+const std::string& IniFile::get(const std::string& section, const std::string& key, const std::string& defaultValue) const{
+	auto it = data.find(section);
+	if(it!=data.end()){
+		auto it2 = it->second.find(key);
+		if(it2!=it->second.end()){
+			return it2->second;
+		}
+	}
+	return defaultValue;
+}
+
 void IniFile::set(const std::string& section, const std::string& key, const std::string& value){
 	data[section][key] = value;
 }

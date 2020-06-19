@@ -16,38 +16,6 @@ using namespace video;
 using namespace io;
 using namespace gui;
 
-static inline irr::core::rect<irr::s32> limitRect(irr::core::rect<irr::s32> r, const irr::core::rect<irr::s32>& limiting){
-	//resize if to big for limiting
-	int dw = r.getWidth()-limiting.getWidth(), dh = r.getHeight()-limiting.getWidth();
-	if(dw>0){
-		r.UpperLeftCorner.X += dw/2;
-		r.LowerRightCorner.X -= dw/2;
-	}else if(dh>0){
-		r.UpperLeftCorner.Y += dh/2;
-		r.LowerRightCorner.Y -= dh/2;
-	}
-	//move when outside limiting
-	vector2d<s32> dup = r.UpperLeftCorner-limiting.UpperLeftCorner;
-	vector2d<s32> dlow = r.LowerRightCorner-limiting.LowerRightCorner;
-	if(dup.X<0){
-		r.UpperLeftCorner.X -= dup.X;
-		r.LowerRightCorner.X -= dup.X;
-	}
-	if(dlow.X>0){
-		r.UpperLeftCorner.X -= dlow.X;
-		r.LowerRightCorner.X -= dlow.X;
-	}
-	if(dup.Y<0){
-		r.UpperLeftCorner.Y -= dup.Y;
-		r.LowerRightCorner.Y -= dup.Y;
-	}
-	if(dlow.Y>0){
-		r.UpperLeftCorner.Y -= dlow.Y;
-		r.LowerRightCorner.Y -= dlow.Y;
-	}
-	return r;
-}
-
 CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr::f32 maxH, const wchar_t* positive, const wchar_t* negative, irr::s32 posId, irr::s32 negId, bool modal, irr::gui::EGUI_ALIGNMENT horizontal, irr::gui::EGUI_ALIGNMENT vertical):
 	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)){
 	env = device->getGUIEnvironment();

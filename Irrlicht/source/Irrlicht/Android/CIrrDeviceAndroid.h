@@ -94,6 +94,8 @@ namespace irr
 		bool Initialized;
 		bool InitAborted;//true if init aborted before driver init (required to prevent splash screen hangs) //changed 
 		bool Paused;
+		bool Stopped;//changed
+		bool IsSplitScreen;
 
 		JNIEnv* JNIEnvAttachedToVM;
 
