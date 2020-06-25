@@ -84,18 +84,29 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 			os::Printer::log("AttachCurrentThread for the JNI environment failed.", ELL_WARNING);
 			JNIEnvAttachedToVM = 0;
 		}else{
-			jclass Activity = JNIEnvAttachedToVM->FindClass("android/app/Activity");
-			if(!Activity){
-				os::Printer::log("android/app/Activity not found", ELL_ERROR);
-			}else{
-				jmethodID isInMultiWindowMode = JNIEnvAttachedToVM->GetMethodID(Activity, "isInMultiWindowMode", "()Z");
-				if(!isInMultiWindowMode){
-					os::Printer::log("isInMultiWindowMode method not found", ELL_ERROR);
+			jclass versionClass = JNIEnvAttachedToVM->FindClass("android/os/Build$VERSION");
+			bool success = versionClass!=NULL;
+			jfieldID sdkIntFieldID = success?JNIEnvAttachedToVM->GetStaticFieldID(versionClass, "SDK_INT", "I"):NULL;
+			success = sdkIntFieldID!=NULL;
+			jint sdkInt = 0;
+			if(success){
+			  sdkInt = JNIEnvAttachedToVM->GetStaticIntField(versionClass, sdkIntFieldID);
+			  __android_log_print(ANDROID_LOG_VERBOSE, "native", "sdkInt = %d", sdkInt);
+			}
+			if(success && sdkInt>=24){
+				jclass Activity = JNIEnvAttachedToVM->FindClass("android/app/Activity");
+				if(!Activity){
+					os::Printer::log("android/app/Activity not found", ELL_ERROR);
 				}else{
-					IsSplitScreen = JNIEnvAttachedToVM->CallBooleanMethod(Android->activity->clazz, isInMultiWindowMode);
-					core::stringc msg("IsSplitScreen: ");
-					msg += (int)IsSplitScreen;
-					os::Printer::log(msg.c_str(), ELL_ERROR);
+					jmethodID isInMultiWindowMode = JNIEnvAttachedToVM->GetMethodID(Activity, "isInMultiWindowMode", "()Z");
+					if(!isInMultiWindowMode){
+						os::Printer::log("isInMultiWindowMode method not found", ELL_ERROR);
+					}else{
+						IsSplitScreen = JNIEnvAttachedToVM->CallBooleanMethod(Android->activity->clazz, isInMultiWindowMode);
+						core::stringc msg("IsSplitScreen: ");
+						msg += (int)IsSplitScreen;
+						os::Printer::log(msg.c_str(), ELL_ERROR);
+					}
 				}
 			}
 		}

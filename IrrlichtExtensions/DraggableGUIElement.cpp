@@ -103,12 +103,13 @@ bool DraggableGUIElement::OnEvent(const irr::SEvent& event){
 			setChildrenVisibility();
 			Parent->updateAbsolutePosition();
 		}
-		//std::cout << "state: " << state << std::endl;
 	}
 	return irr::gui::IGUIElement::OnEvent(event);
 }
 
 void DraggableGUIElement::moveTo(DragPlaceGUIElement* place){
+	selectChild()->setNotClipped(false);
+	state = NOTHING;
 	if(Parent!=place){
 		grab();
 		((DragPlaceGUIElement*)Parent)->removeChild();
@@ -116,31 +117,26 @@ void DraggableGUIElement::moveTo(DragPlaceGUIElement* place){
 		if(toReplace){toReplace->moveToOrigin();}
 		place->setChild(this);
 		drop();
-		if(cbk){cbk->OnDrop(place, this);}
-		selectChild()->setNotClipped(false);
-		setChildrenVisibility();
 	}
+	if(cbk){cbk->OnDrop(place, this);}
+	setChildrenVisibility();
 }
 
 void DraggableGUIElement::moveToOrigin(){
+	selectChild()->setNotClipped(false);
+	state = NOTHING;
 	if(Parent!=origin){
 		grab();
 		((DragPlaceGUIElement*)Parent)->removeChild();
 		origin->removeChild();
 		origin->setChild(this);
 		drop();
-		setChildrenVisibility();
-		if(cbk){cbk->OnMoveToOrigin(origin, this);}
 	}
+	if(cbk){cbk->OnMoveToOrigin(origin, this);}
+	setChildrenVisibility();
 }
 
-//void DraggableGUIElement::OnRemoveFromPlace(){
-//	origin->removeChild();
-//	origin->setChild(this);
-//}
-
 void DraggableGUIElement::updateAbsolutePosition(){
-	//std::cout << "updateAbsolutePosition: " << RelativeRect.UpperLeftCorner.X << ", " << RelativeRect.UpperLeftCorner.Y << ", " << RelativeRect.LowerRightCorner.X << ", " << RelativeRect.LowerRightCorner.Y << std::endl;
 	if(state!=DRAGGING){
 		recalculateAbsolutePosition(false);
 		for(irr::core::list<IGUIElement*>::Iterator it = Children.begin(); it != Children.end(); ++it){
