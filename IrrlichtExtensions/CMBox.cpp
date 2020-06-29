@@ -16,6 +16,13 @@ using namespace video;
 using namespace io;
 using namespace gui;
 
+void bringToFrontRecursive(irr::gui::IGUIElement* ele){
+	while(ele->getParent()){
+		ele->getParent()->bringToFront(ele);
+		ele = ele->getParent();
+	}
+}
+
 CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr::f32 maxH, const wchar_t* positive, const wchar_t* negative, irr::s32 posId, irr::s32 negId, bool modal, irr::gui::EGUI_ALIGNMENT horizontal, irr::gui::EGUI_ALIGNMENT vertical):
 	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)){
 	env = device->getGUIEnvironment();
@@ -52,11 +59,7 @@ CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr:
 		pos = env->addButton(rect<s32>(10+textW/2-buttonWidth/2, padding+textH+padding, 10+textW/2+buttonWidth/2, padding+textH+padding+finalButtonHeight), win, posId, finalPositive.c_str(), NULL);
 	}
 	env->setFocus(pos?(IGUIElement*)pos:(IGUIElement*)win);
-	IGUIElement* ele = win;
-	while(ele->getParent()){
-		ele->getParent()->bringToFront(ele);
-		ele = ele->getParent();
-	}
+	bringToFrontRecursive(win);
 }
 
 CMBox::~CMBox(){
