@@ -106,3 +106,38 @@ std::string getHumanReadableTime(uint64_t time, bool showDays){
 	ss << std::setw(2) << std::setfill('0') << hours << ':' << std::setw(2) << std::setfill('0') << mins << ':' << std::setw(2) << std::setfill('0') << secs;
 	return ss.str();
 }
+
+bool isGlobalPath(std::string path){
+	bool isGlobal = false;
+	if(path.size()>0){
+		if(path[0]=='/'){
+			isGlobal = true;//linux
+		}else if(path.size()>2){
+			isGlobal = path[1]==':' && (path[2]=='\\' || path[2]=='/');//windows
+		}
+	}
+	return isGlobal;
+}
+
+std::string getAppHomePathFromArgV0(const char* argv0){
+	std::string apphome("./");
+	std::string p(argv0);
+	int lastSlash = -1;
+	for(int i=p.size()-1; i>=0; i--){
+		char c = p[i];
+		if(c=='/' || c=='\\'){
+			lastSlash = i;
+			break;
+		}
+	}
+	if(lastSlash>=0){
+		if(isGlobalPath(p)){
+			apphome = p.substr(0,lastSlash+1);
+		}else if(isPrefixEqual(p, "./")){
+			apphome.append(p.substr(2,lastSlash+1-2));
+		}else{
+			apphome.append(p.substr(0,lastSlash+1));
+		}
+	}
+	return apphome;
+}

@@ -73,4 +73,9 @@ std::string getHumanReadableSpace(uint64_t space);
 //! time in seconds
 std::string getHumanReadableTime(uint64_t time, bool showDays = true);
 
+bool isGlobalPath(std::string path);
+
+//! returns the path prefix (including trailing slash) to access file in the same folder as the executable
+std::string getAppHomePathFromArgV0(const char* argv0);
+
 #endif
