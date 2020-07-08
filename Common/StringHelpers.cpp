@@ -92,6 +92,29 @@ std::string getHumanReadableSpace(uint64_t space){
 	return round(lessGB?(lessMB?double(space)/(1000.0):double(space)/(1000.0*1000.0)):(double(space)/(1000.0*1000.0*1000.0)),2).append(lessGB?(lessMB?"KB":"MB"):"GB");
 }
 
+//! returns -1 if not available
+static int32_t findLastSlashPos(const std::string& str){
+	for(int32_t i=str.size()-1; i>=0; i--){
+		char c = str[i];
+		if(c=='/' || c=='\\'){return i;}
+	}
+	return -1;
+}
+
+std::string stripDir(const std::string& str){
+	int32_t sp = findLastSlashPos(str);
+	return str.substr(sp+1, std::string::npos);
+}
+
+std::string stripFile(const std::string& path){
+	int32_t sp = findLastSlashPos(path);
+	if(sp>=0){
+		return path.substr(0, sp+1);
+	}else{
+		return "";
+	}
+}
+
 std::string getHumanReadableTime(uint64_t time, bool showDays){
 	uint64_t secs = time%60;
 	uint64_t mins = (time%3600)/60;

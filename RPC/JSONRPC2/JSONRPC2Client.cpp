@@ -87,6 +87,8 @@ void* JSONRPC2Client::clientMain(void* p){
 		while(read>0){
 			//std::cout << "raw: " << std::string(buffer, read) << std::endl << std::flush;
 			//std::cout << "before curlyBracketCount: " << curlyBracketCount << " squareBracketCount: " << squareBracketCount << " stringState: " << stringState << " read: " << read << std::endl;
+			std::cout << "START---: read: " << read << std::endl;
+			double testbefore = getSecs();
 			for(uint32_t i=0; i<read; i++){
 				char c = buffer[i];
 				if(curlyBracketCount>0 || squareBracketCount>0 || c=='[' || c=='{'){//check to omit crap between valid json e.g. {valid_json} ... crap ... [{valid_json}]
@@ -127,6 +129,7 @@ void* JSONRPC2Client::clientMain(void* p){
 			//std::cout << "curlyBracketCount: " << curlyBracketCount << " squareBracketCount: " << squareBracketCount << " stringState: " << stringState << std::endl;
 			read = client->socket->recv(buffer, bufferSize);
 			lastReceived = getSecs();
+			std::cout << "some byted read, lastReceived-testbefore=" << (lastReceived-testbefore) << std::endl;
 		}
 		//Send stuff & ping:
 		if(!client->clientToSend.empty()){lastPingSent = t;}

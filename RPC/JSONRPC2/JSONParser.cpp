@@ -164,7 +164,7 @@ class JSONStringParser : public JSONParserWithResult{
 				state = 1;
 			}
 		}else if(state==3){
-			if(!isWhitespace(c)){state = 5;}
+			if(!isWhitespace(c)){state = 4;}//5
 		}else if(state>=5 && state<=8){
 			hexDigits[state-5] = c>='0'&&c<='9'?(c-'0'):(c>='a'&&c<='f'?(c-'a'+10):(c-'A'+10));
 			state++;
@@ -259,11 +259,12 @@ class JSONNumberParser : public JSONParserWithResult{
 	public:
 	
 	IJSONParser::State parse(char c, char lookahead){
-		ss << c;
 		if(state==0){
 			if(isSign(c) || isDigit(c)){
+				ss << c;
 				state = 2;
 			}else if(c=='.'){
+				ss << c;
 				isFloat = true;
 				state = 3;
 			}else{
@@ -272,31 +273,41 @@ class JSONNumberParser : public JSONParserWithResult{
 			}
 		}else if(state==2){
 			if(c=='.'){
+				ss << c;
 				isFloat = true;
 				state = 3;
 			}else if(isExp(c)){
+				ss << c;
 				isFloat = true;
 				state = 4;
-			}else if(!isDigit(c)){
+			}else if(isDigit(c)){
+				ss << c;
+			}else{
 				state = 1;
 				deleteResult();
 			}
 		}else if(state==3){
 			if(isExp(c)){
+				ss << c;
 				state = 4;
-			}else if(!isDigit(c)){
+			}else if(isDigit(c)){
+				ss << c;
+			}else{
 				state = 1;
 				deleteResult();
 			}
 		}else if(state==4){
 			if(isSign(c) || isDigit(c)){
+				ss << c;
 				state = 5;
 			}else{
 				state = 1;
 				deleteResult();
 			}
 		}else if(state==5){
-			if(!isDigit(c)){
+			if(isDigit(c)){
+				ss << c;
+			}else{
 				state = 1;
 				deleteResult();
 			}
@@ -456,7 +467,12 @@ class JSONObjectParser : public JSONParserWithResult{
 		}else if(state==5){
 			if(c==':'){
 				state = 6;
-				delete valueParser; valueParser = new JSONParser();
+				//delete valueParser; valueParser = new JSONParser();
+				if(valueParser){
+					valueParser->reset();
+				}else{
+					valueParser = new JSONParser();
+				}
 			}else if(!isWhitespace(c)){
 				deleteResult();
 				state = 3;
@@ -554,7 +570,7 @@ IJSONParser::State JSONParser::parse(char c, char lookahead){
 	}
 	if(state==1){
 		IJSONParser::State res = IJSONParser::ERROR;
-		for(uint32_t i=0; i<subParser.size(); i++){
+		for(uint32_t i=0; i<subParser.size() && res!=IJSONParser::SUCCESS; i++){
 			IJSONParser::State s = subParser[i]->parse(c, lookahead);
 			if(s<res){res = s;}
 		}

@@ -5,6 +5,12 @@
 #include <sstream>
 #include <list>
 
+//! returns filename from a path
+std::string stripDir(const std::string& str);
+
+//! returns the path without filename but with trailing slash
+std::string stripFile(const std::string& path);
+
 //! Convert some value to a string
 template <typename T>
 inline std::string convertToString(T Number){
