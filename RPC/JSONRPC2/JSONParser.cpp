@@ -1,6 +1,7 @@
 #include <JSONParser.h>
 #include <StringHelpers.h>
 #include <utf8.h>
+#include <timing.h>
 
 #include <cstring>
 #include <sstream>
@@ -140,42 +141,49 @@ class JSONStringParser : public JSONParserWithResult{
 	}
 	
 	IJSONParser::State parse(char c, char lookahead){
-		if(state==0){
-			if(c=='\"'){
-				state = 1;
-			}else if(!isWhitespace(c)){
-				deleteResult();
-				state = 4;
-			}
-		}else if(state==1){
-			if(c=='\\'){
-				state=2;
-			}else if(c=='\"'){
-				state=3;
-				replaceResult(new StringValue(ss.str()));
-			}else{
-				ss << c;
-			}
-		}else if(state==2){
-			if(c=='u'){
-				state = 5;
-			}else{
-				ss << (c=='b'?'\b':(c=='f'?'\f':(c=='n'?'\n':(c=='r'?'\r':(c=='t'?'\t':c)))));
-				state = 1;
-			}
-		}else if(state==3){
-			if(!isWhitespace(c)){state = 4;}//5
-		}else if(state>=5 && state<=8){
-			hexDigits[state-5] = c>='0'&&c<='9'?(c-'0'):(c>='a'&&c<='f'?(c-'a'+10):(c-'A'+10));
-			state++;
-			if(state==9){
-				state = 1;
-				uint32_t value = (((uint32_t)hexDigits[0]) << 12) | ((uint32_t)hexDigits[1]) << 8 | ((uint32_t)hexDigits[2]) << 4 | ((uint32_t)hexDigits[3]);
-				uint64_t len = maxUTF8CharLen;
-				char* utfCharPtr = utf8Char;
-				memset(&utf8Char,0,maxUTF8CharLen);
-				utf8fromcodepoint(value, &utfCharPtr, &len);
-				ss << std::string(utf8Char);
+		switch(state){
+			case 0:{
+				if(c=='\"'){
+					state = 1;
+				}else if(!isWhitespace(c)){
+					deleteResult();
+					state = 4;
+				}
+				break;
+			}case 1:{
+				if(c=='\\'){
+					state=2;
+				}else if(c=='\"'){
+					state=3;
+					replaceResult(new StringValue(ss.str()));
+				}else{
+					ss << c;
+				}
+				break;
+			}case 2:{
+				if(c=='u'){
+					state = 5;
+				}else{
+					ss << (c=='b'?'\b':(c=='f'?'\f':(c=='n'?'\n':(c=='r'?'\r':(c=='t'?'\t':c)))));
+					state = 1;
+				}
+				break;
+			}case 3:{
+				if(!isWhitespace(c)){state = 4;}
+				break;
+			}case 5: case 6: case 7: case 8:{
+				hexDigits[state-5] = c>='0'&&c<='9'?(c-'0'):(c>='a'&&c<='f'?(c-'a'+10):(c-'A'+10));
+				state++;
+				if(state==9){
+					state = 1;
+					uint32_t value = (((uint32_t)hexDigits[0]) << 12) | ((uint32_t)hexDigits[1]) << 8 | ((uint32_t)hexDigits[2]) << 4 | ((uint32_t)hexDigits[3]);
+					uint64_t len = maxUTF8CharLen;
+					char* utfCharPtr = utf8Char;
+					memset(&utf8Char,0,maxUTF8CharLen);
+					utf8fromcodepoint(value, &utfCharPtr, &len);
+					ss << std::string(utf8Char);
+				}
+				break;
 			}
 		}
 		//std::cout << "state: " << state << std::endl;
@@ -259,57 +267,64 @@ class JSONNumberParser : public JSONParserWithResult{
 	public:
 	
 	IJSONParser::State parse(char c, char lookahead){
-		if(state==0){
-			if(isSign(c) || isDigit(c)){
-				ss << c;
-				state = 2;
-			}else if(c=='.'){
-				ss << c;
-				isFloat = true;
-				state = 3;
-			}else{
-				state = 1;
-				deleteResult();
-			}
-		}else if(state==2){
-			if(c=='.'){
-				ss << c;
-				isFloat = true;
-				state = 3;
-			}else if(isExp(c)){
-				ss << c;
-				isFloat = true;
-				state = 4;
-			}else if(isDigit(c)){
-				ss << c;
-			}else{
-				state = 1;
-				deleteResult();
-			}
-		}else if(state==3){
-			if(isExp(c)){
-				ss << c;
-				state = 4;
-			}else if(isDigit(c)){
-				ss << c;
-			}else{
-				state = 1;
-				deleteResult();
-			}
-		}else if(state==4){
-			if(isSign(c) || isDigit(c)){
-				ss << c;
-				state = 5;
-			}else{
-				state = 1;
-				deleteResult();
-			}
-		}else if(state==5){
-			if(isDigit(c)){
-				ss << c;
-			}else{
-				state = 1;
-				deleteResult();
+		switch(state){
+			case 0:{
+				if(isSign(c) || isDigit(c)){
+					ss << c;
+					state = 2;
+				}else if(c=='.'){
+					ss << c;
+					isFloat = true;
+					state = 3;
+				}else{
+					state = 1;
+					deleteResult();
+				}
+				break;
+			}case 2:{
+				if(c=='.'){
+					ss << c;
+					isFloat = true;
+					state = 3;
+				}else if(isExp(c)){
+					ss << c;
+					isFloat = true;
+					state = 4;
+				}else if(isDigit(c)){
+					ss << c;
+				}else{
+					state = 1;
+					deleteResult();
+				}
+				break;
+			}case 3:{
+				if(isExp(c)){
+					ss << c;
+					state = 4;
+				}else if(isDigit(c)){
+					ss << c;
+				}else{
+					state = 1;
+					deleteResult();
+				}
+				break;
+			}case 4:{
+				if(isSign(c) || isDigit(c)){
+					ss << c;
+					state = 5;
+				}else{
+					state = 1;
+					deleteResult();
+				}
+				break;
+			}case 5:{
+				if(isDigit(c)){
+					ss << c;
+				}else{
+					state = 1;
+					deleteResult();
+				}
+				break;
 			}
 		}
 		bool finished = !(isDigit(lookahead)||isSign(lookahead)||isExp(lookahead)||lookahead=='.') && state!=0 && state!=1;
@@ -345,20 +360,34 @@ class JSONArrayParser : public JSONParserWithResult{
 	public:
 	
 	IJSONParser::State parse(char c, char lookahead){
-		if(state==0){
-			if(c=='['){
-				assert(valueParser==NULL);
-				valueParser = new JSONParser();
-				state = 5;
-			}else if(!isWhitespace(c)){
-				state = 4;
-				deleteResult();
-			}
-		}else if(state==5){
-			if(c==']'){
-				replaceResult(new ArrayValue());
-				state = 3;
-			}else if(!isWhitespace(c)){
+		switch(state){
+			case 0:{
+				if(c=='['){
+					if(valueParser==NULL){valueParser = new JSONParser();}
+					state = 5;
+				}else if(!isWhitespace(c)){
+					state = 4;
+					deleteResult();
+				}
+				break;
+			}case 5:{
+				if(c==']'){
+					replaceResult(new ArrayValue());
+					state = 3;
+				}else if(!isWhitespace(c)){
+					IJSONParser::State s = valueParser->parse(c, lookahead);
+					if(s==IJSONParser::SUCCESS){
+						state = 2;
+						results.push_back(valueParser->stealResult());
+					}else if(s==IJSONParser::ERROR){
+						state = 4;
+						deleteResult();
+					}else{
+						state = 1;
+					}
+				}
+				break;
+			}case 1:{
 				IJSONParser::State s = valueParser->parse(c, lookahead);
 				if(s==IJSONParser::SUCCESS){
 					state = 2;
@@ -366,38 +395,30 @@ class JSONArrayParser : public JSONParserWithResult{
 				}else if(s==IJSONParser::ERROR){
 					state = 4;
 					deleteResult();
-				}else{
-					state = 1;
 				}
-			}
-		}else if(state==1){
-			IJSONParser::State s = valueParser->parse(c, lookahead);
-			if(s==IJSONParser::SUCCESS){
-				state = 2;
-				results.push_back(valueParser->stealResult());
-			}else if(s==IJSONParser::ERROR){
-				state = 4;
-				deleteResult();
-			}
-		}else if(state==2){
-			if(c==','){
-				valueParser->reset();
-				state = 5;
-			}else if(c==']'){
-				state = 3;
-				ArrayValue* array = new ArrayValue();
-				array->values = std::vector<IRPCValue*>(results.begin(), results.end());
-				replaceResult(array);
-				results.clear();
-				//std::cout << "finished: " << convertRPCValueToJSONString(*array) << std::endl;
-			}else if(!isWhitespace(c)){
-				state = 4;
-				deleteResult();
-			}
-		}else if(state==3){
-			if(!isWhitespace(c)){
-				state = 4;
-				deleteResult();
+				break;
+			}case 2:{
+				if(c==','){
+					valueParser->reset();
+					state = 5;
+				}else if(c==']'){
+					state = 3;
+					ArrayValue* array = new ArrayValue();
+					array->values = std::vector<IRPCValue*>(results.begin(), results.end());
+					replaceResult(array);
+					results.clear();
+					//std::cout << "finished: " << convertRPCValueToJSONString(*array) << std::endl;
+				}else if(!isWhitespace(c)){
+					state = 4;
+					deleteResult();
+				}
+				break;
+			}case 3:{
+				if(!isWhitespace(c)){
+					state = 4;
+					deleteResult();
+				}
+				break;
 			}
 		}
 		//std::cout << "c: " << c << " state: " << state << std::endl;
@@ -411,13 +432,13 @@ class JSONArrayParser : public JSONParserWithResult{
 	
 	~JSONArrayParser(){
 		reset();
+		delete valueParser;
 	}
 	
 	void reset(){
 		JSONParserWithResult::reset();
 		state = 0;
-		delete valueParser;
-		valueParser = NULL;
+		if(valueParser){valueParser->reset();}
 		for(IRPCValue* r:results){delete r;}
 		results.clear();
 	}
@@ -435,82 +456,92 @@ class JSONObjectParser : public JSONParserWithResult{
 	public:
 	
 	IJSONParser::State parse(char c, char lookahead){
-		if(state==0){
-			if(c=='{'){
-				replaceResult(new ObjectValue());
-				state = 1;
-			}else if(!isWhitespace(c)){
-				deleteResult();
-				state = 3;
-			}
-		}else if(state==1){
-			if(c=='}'){
-				state = 2;
-			}else if(c=='\"'){
-				keyParser.reset();
-				auto s = keyParser.parse(c, lookahead);
-				assert(s==IJSONParser::PARSING);
-				state = 4;
-			}else if(!isWhitespace(c)){
-				deleteResult();
-				state = 3;
-			}
-		}else if(state==4){
-			auto s = keyParser.parse(c, lookahead);
-			if(s==IJSONParser::SUCCESS){
-				state = 5;
-				assert(keyParser.getResult()!=NULL);
-			}else if(s==IJSONParser::ERROR){
-				deleteResult();
-				state = 3;
-			}
-		}else if(state==5){
-			if(c==':'){
-				state = 6;
-				//delete valueParser; valueParser = new JSONParser();
-				if(valueParser){
-					valueParser->reset();
-				}else{
-					valueParser = new JSONParser();
-				}
-			}else if(!isWhitespace(c)){
-				deleteResult();
-				state = 3;
-			}
-		}else if(state==6){
-			auto s = valueParser->parse(c, lookahead);
-			if(s==IJSONParser::SUCCESS){
-				state = 7;
-				std::map<std::string, IRPCValue*>& values = static_cast<ObjectValue*>(JSONParserWithResult::result)->values;
-				std::string& key = static_cast<StringValue*>(keyParser.getResult())->value;
-				if(values.find(key)==values.end()){
-					values[key] = valueParser->stealResult();
-				}else{//duplicate key
+		switch(state){
+			case 0:{
+				if(c=='{'){
+					replaceResult(new ObjectValue());
+					state = 1;
+				}else if(!isWhitespace(c)){
 					deleteResult();
-					state = 3;	
+					state = 3;
 				}
-			}else if(s==IJSONParser::ERROR){
-				deleteResult();
-				state = 3;
-			}
-		}else if(state==7){
-			if(c=='}'){
-				state = 2;	
-			}else if(c==','){
-				state = 8;
-			}else if(!isWhitespace(c)){
-				deleteResult();
-				state = 3;
-			}
-		}else if(state==8){
-			if(c=='\"'){
-				keyParser.reset();
+				break;
+			}case 1:{
+				if(c=='}'){
+					state = 2;
+				}else if(c=='\"'){
+					keyParser.reset();
+					auto s = keyParser.parse(c, lookahead);
+					assert(s==IJSONParser::PARSING);
+					state = 4;
+				}else if(!isWhitespace(c)){
+					deleteResult();
+					state = 3;
+				}
+				break;
+			}case 4:{
 				auto s = keyParser.parse(c, lookahead);
-				assert(s==IJSONParser::PARSING);
-				state = 4;
-			}else if(!isWhitespace(c)){
-				deleteResult();
-				state = 3;
+				if(s==IJSONParser::SUCCESS){
+					state = 5;
+					assert(keyParser.getResult()!=NULL);
+				}else if(s==IJSONParser::ERROR){
+					deleteResult();
+					state = 3;
+				}
+				break;
+			}case 5:{
+				if(c==':'){
+					state = 6;
+					//delete valueParser; valueParser = new JSONParser();
+					if(valueParser){
+						valueParser->reset();
+					}else{
+						valueParser = new JSONParser();
+					}
+				}else if(!isWhitespace(c)){
+					deleteResult();
+					state = 3;
+				}
+				break;
+			}case 6:{
+				auto s = valueParser->parse(c, lookahead);
+				if(s==IJSONParser::SUCCESS){
+					state = 7;
+					std::map<std::string, IRPCValue*>& values = static_cast<ObjectValue*>(JSONParserWithResult::result)->values;
+					std::string& key = static_cast<StringValue*>(keyParser.getResult())->value;
+					if(values.find(key)==values.end()){
+						values[key] = valueParser->stealResult();
+					}else{//duplicate key
+						deleteResult();
+						state = 3;	
+					}
+				}else if(s==IJSONParser::ERROR){
+					deleteResult();
+					state = 3;
+				}
+				break;
+			}
+			case 7:{
+				if(c=='}'){
+					state = 2;	
+				}else if(c==','){
+					state = 8;
+				}else if(!isWhitespace(c)){
+					deleteResult();
+					state = 3;
+				}
+				break;
+			}case 8:{
+				if(c=='\"'){
+					keyParser.reset();
+					auto s = keyParser.parse(c, lookahead);
+					assert(s==IJSONParser::PARSING);
+					state = 4;
+				}else if(!isWhitespace(c)){
+					deleteResult();
+					state = 3;
+				}
+				break;
 			}
 		}
 		return state==2?(IJSONParser::SUCCESS):(state==3?(IJSONParser::ERROR):(IJSONParser::PARSING));
@@ -536,7 +567,7 @@ class JSONObjectParser : public JSONParserWithResult{
 };
 
 JSONParser::JSONParser(){
-	state = 0;
+	state = -1;
 	subParser = {
 		new JSONStringParser(),
 		new JSONSpecialTokenParser("true", [](){return new BooleanValue(true);}),
@@ -555,46 +586,55 @@ JSONParser::~JSONParser(){
 }
 	
 void JSONParser::reset(){
-	state = 0;
+	state = -1;
 	for(IJSONParser* p:subParser){
 		p->reset();
 	}
 }
 
 IJSONParser::State JSONParser::parse(char c, char lookahead){
-	//state: 0 start, 1 subparsers, 2 success, 3 error
-	if(state==0){
+	//state: -3 success -2 error, -1 start, else parsing subParser state
+	if(state==-1){
+		if(isWhitespace(c)){
+			return IJSONParser::PARSING;//remain in state
+		}else if(c=='.' || c=='-' || (c>='0' && c<='9')){
+			state = 4;
+		}else{
+			switch(c){
+				case '{': state=6; break;
+				case '[': state=5; break;
+				case 'n': state=3; break;
+				case 'f': state=2; break;
+				case 't': state=1; break;
+				case '\"': state=0; break;
+				default: state=-1; return IJSONParser::ERROR;
+			}
+		}
+		IJSONParser::State res = subParser[state]->parse(c, lookahead);
+		if(res==IJSONParser::SUCCESS){state = -3;}
+		return res;
+	}else if(state==-3){
 		if(!isWhitespace(c)){
-			state = 1;
+			state = -2;
+			return IJSONParser::ERROR;
 		}
+		return IJSONParser::SUCCESS;
+	}else if(state>=0){
+		IJSONParser::State res = subParser[state]->parse(c, lookahead);
+		if(res==IJSONParser::SUCCESS){state = -3;}
+		return res;
 	}
-	if(state==1){
-		IJSONParser::State res = IJSONParser::ERROR;
-		for(uint32_t i=0; i<subParser.size() && res!=IJSONParser::SUCCESS; i++){
-			IJSONParser::State s = subParser[i]->parse(c, lookahead);
-			if(s<res){res = s;}
-		}
-		if(res==IJSONParser::SUCCESS){
-			state = 2;
-		}else if(res==IJSONParser::ERROR){
-			//std::cout << (uint64_t)this << ": all error" << std::endl;
-			state = 3;
-		}
-	}else if(state==2){
-		if(!isWhitespace(c)){
-			state = 3;
-		}
-	}
-	//std::cout << (uint64_t)this << ": parsed: " << c << " outer state: " << state << std::endl;
-	return state==2?(IJSONParser::SUCCESS):(state==3?(IJSONParser::ERROR):(IJSONParser::PARSING));
+	return IJSONParser::ERROR;
 }
 
 IJSONParser::State JSONParser::parse(const std::string& s){
+	double time = getSecs();
 	IJSONParser::State res;
 	const char* cstr = s.c_str();
 	for(uint32_t i=0; i<s.size(); i++){
 		res = parse(cstr[i], cstr[i+1]);
 	}
+	std::cout << "needed: " << (getSecs()-time) << std::endl;
 	return res;
 }
 

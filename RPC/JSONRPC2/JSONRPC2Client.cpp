@@ -386,7 +386,7 @@ void JSONRPC2Client::update(){
 	unlockMutex(mutexSync);
 	//Process received stuff
 	for(auto it = mainToReceive.begin(); it != mainToReceive.end(); ++it){
-		std::cout << "Handling: " << convertRPCValueToJSONString(**it) << std::endl;
+		//std::cout << "Handling: " << convertRPCValueToJSONString(**it) << std::endl;
 		handleEntity(*it);
 	}
 	mainToReceive.clear();

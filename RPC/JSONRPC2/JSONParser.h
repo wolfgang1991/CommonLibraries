@@ -38,6 +38,12 @@ class IJSONParser{
 	
 };
 
+class JSONStringParser;
+class JSONSpecialTokenParser;
+class JSONNumberParser;
+class JSONArrayParser;
+class JSONObjectParser;
+
 //! A JSON Parser consists of different sub-parsers for different JSON sub sets
 //! It effectively parses a "value" as defined in https://www.json.org/json-en.html
 class JSONParser : public IJSONParser{
@@ -45,7 +51,8 @@ class JSONParser : public IJSONParser{
 	protected:
 	
 	std::vector<IJSONParser*> subParser;
-	int state;//0: start
+	
+	int state;
 	
 	public:
 	
