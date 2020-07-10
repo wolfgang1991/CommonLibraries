@@ -1,7 +1,7 @@
 #include <JSONParser.h>
 #include <StringHelpers.h>
 #include <utf8.h>
-#include <timing.h>
+//#include <timing.h>
 
 #include <cstring>
 #include <sstream>
@@ -628,13 +628,13 @@ IJSONParser::State JSONParser::parse(char c, char lookahead){
 }
 
 IJSONParser::State JSONParser::parse(const std::string& s){
-	double time = getSecs();
+	//double time = getSecs();
 	IJSONParser::State res;
 	const char* cstr = s.c_str();
 	for(uint32_t i=0; i<s.size(); i++){
 		res = parse(cstr[i], cstr[i+1]);
 	}
-	std::cout << "needed: " << (getSecs()-time) << std::endl;
+	//std::cout << "needed: " << (getSecs()-time) << std::endl;
 	return res;
 }
 

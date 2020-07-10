@@ -36,17 +36,6 @@ std::string makeJSONRPCRequest(const std::string& procedure, const std::vector<I
 static const char* jsonPing = "{\"jsonrpc\": \"2.0\", \"method\": \"rc:ping\", \"params\": [], \"id\": 0}\n";
 static const uint32_t jsonPingSize = strlen(jsonPing);
 
-static IRPCValue* parseJSON(JSONParser* parser, const std::string& s){
-	IRPCValue* res = NULL;
-	if(parser->parse(s)==IJSONParser::SUCCESS){
-		res = parser->stealResult();
-	}else{
-		std::cerr << "Error while parsing JSON: " << s << std::endl;
-	}
-	parser->reset();
-	return res;
-}
-
 void* JSONRPC2Client::clientMain(void* p){
 	JSONRPC2Client* client = (JSONRPC2Client*)p;
 	const double pingTimeout = ((double)client->pingTimeout)/1000.0;
@@ -64,9 +53,9 @@ void* JSONRPC2Client::clientMain(void* p){
 	unlockMutex(client->mutexSync);
 	const uint32_t bufferSize = 4096;
 	char* buffer = new char[bufferSize];
-	std::stringstream jsonRPCStuff;//everything where {} and [] are balanced
 	int32_t curlyBracketCount = 0, squareBracketCount = 0;
-	int stringState = 0;//0: outside string, 1: inside string, 2: inside string but escape character read
+	int state = 0;//0:start, 1:{ first read/parsing json rpc, 2: inside string, 3: inside string but escape character read
+	char lastChar = '\0';
 	double lastReceived = getSecs();
 	double lastPingSent = lastReceived-pingTimeout;
 	while(runThread){
@@ -86,50 +75,74 @@ void* JSONRPC2Client::clientMain(void* p){
 		}
 		while(read>0){
 			//std::cout << "raw: " << std::string(buffer, read) << std::endl << std::flush;
-			//std::cout << "before curlyBracketCount: " << curlyBracketCount << " squareBracketCount: " << squareBracketCount << " stringState: " << stringState << " read: " << read << std::endl;
-			std::cout << "START---: read: " << read << std::endl;
-			double testbefore = getSecs();
 			for(uint32_t i=0; i<read; i++){
 				char c = buffer[i];
-				if(curlyBracketCount>0 || squareBracketCount>0 || c=='[' || c=='{'){//check to omit crap between valid json e.g. {valid_json} ... crap ... [{valid_json}]
-					jsonRPCStuff << c;
-				}
-				if(stringState==1){
-					if(c=='\\'){
-						stringState = 2;
-					}else if(c=='\"'){
-						stringState = 0;
-					}
-				}else if(stringState==2){
-					stringState = 1;
-				}else{
-					if(c=='{'){
-						curlyBracketCount++;
-					}else if(c=='}'){
-						curlyBracketCount--;
-						if(curlyBracketCount==0 && squareBracketCount==0){
-							IRPCValue* res = parseJSON(client->parser, jsonRPCStuff.str());
-							if(res){client->clientToReceive.push_back(res);}
-							jsonRPCStuff.str("");
+				//std::cout << c << " state: " << state << " curlyBracketCount: " << curlyBracketCount << " squareBracketCount: " << squareBracketCount << std::endl;
+				switch(state){
+					case 0:{
+						if(c=='{'){
+							state = 1;
+							lastChar = '{';
+							curlyBracketCount++;
+						}else if(c=='['){
+							state = 1;
+							lastChar = '[';
+							squareBracketCount++;
 						}
-					}else if(c=='['){
-						squareBracketCount++;
-					}else if(c==']'){
-						squareBracketCount--;
-						if(curlyBracketCount==0 && squareBracketCount==0){
-							IRPCValue* res = parseJSON(client->parser, jsonRPCStuff.str());
-							if(res){client->clientToReceive.push_back(res);}
-							jsonRPCStuff.str("");
+						break;
+					}case 1:{
+						client->parser->parse(lastChar, c);
+						lastChar = c;
+						switch(c){
+							case '{':
+								curlyBracketCount++;
+								break;
+							case '[':
+								squareBracketCount++;
+								break;
+							case '}':
+								curlyBracketCount--;
+								break;
+							case ']':
+								squareBracketCount--;
+								break;
+							case '\"':
+								state = 2;
+								break;
 						}
-					}else if(c=='\"'){
-						stringState = 1;
+						if(curlyBracketCount==0 && squareBracketCount==0){
+							IJSONParser::State s = client->parser->parse(lastChar, '\0');
+							if(s==IJSONParser::SUCCESS){
+								client->clientToReceive.push_back(client->parser->stealResult());
+							}else{
+								std::cerr << "Error while parsing JSON." << std::endl;
+							}
+							client->parser->reset();
+							state = 0;
+						}
+						break;
+					}case 2:{
+						client->parser->parse(lastChar, c);
+						lastChar = c;
+						switch(c){
+							case '\\':
+								state = 3;
+								break;
+							case '\"':
+								state = 1;
+								break;
+						}
+						break;
+					}case 3:{
+						client->parser->parse(lastChar, c);
+						lastChar = c;
+						state = 2;
+						break;
 					}
 				}
 			}
-			//std::cout << "curlyBracketCount: " << curlyBracketCount << " squareBracketCount: " << squareBracketCount << " stringState: " << stringState << std::endl;
 			read = client->socket->recv(buffer, bufferSize);
 			lastReceived = getSecs();
-			std::cout << "some byted read, lastReceived-testbefore=" << (lastReceived-testbefore) << std::endl;
 		}
 		//Send stuff & ping:
 		if(!client->clientToSend.empty()){lastPingSent = t;}
