@@ -1,9 +1,9 @@
 LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
 
 ifeq ($(DEBUG),1)
-OPTIM = $(USEROPTIM) -g
+OPTIM = $(USEROPTIM) -g -DDEBUG=1
 else ifeq ($(DEBUG),2)
-OPTIM = $(USEROPTIM) -fsanitize=address -fno-omit-frame-pointer -g3
+OPTIM = $(USEROPTIM) -fsanitize=address -fno-omit-frame-pointer -g3 -DDEBUG=2
 else
 OPTIM = $(USEROPTIM) -O3 -DNDEBUG
 endif

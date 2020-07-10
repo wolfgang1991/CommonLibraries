@@ -9,6 +9,10 @@
 #include <iostream>
 #include <csignal>
 
+#ifdef DEBUG
+#define PRINT_COMMUNICATION
+#endif
+
 using namespace std;
 
 std::string convertRPCValueToJSONResult(const IRPCValue& value, uint32_t jsonId){
@@ -67,6 +71,17 @@ void* JSONRPC2Client::clientMain(void* p){
 		client->clientToSend.splice(client->clientToSend.end(), client->syncToSend);
 		client->syncToReceive.splice(client->syncToReceive.end(), client->clientToReceive);
 		unlockMutex(client->mutexSync);
+		//Send stuff
+		if(!client->clientToSend.empty()){
+			lastPingSent = t;
+			for(auto it = client->clientToSend.begin(); it != client->clientToSend.end(); ++it){
+				#ifdef PRINT_COMMUNICATION
+				std::cout << "sending: " << *it << std::endl;
+				#endif
+				client->socket->send(it->c_str(), it->size());
+			}
+			client->clientToSend.clear();
+		}
 		//Receive stuff & Timeout:
 		uint32_t read = client->socket->recv(buffer, bufferSize);
 		if(read==0 && t-lastReceived>pingTimeout){
@@ -74,7 +89,9 @@ void* JSONRPC2Client::clientMain(void* p){
 			std::cout << "Ping Timeout: " << (t-lastReceived) << "s" << std::endl;
 		}
 		while(read>0){
-			//std::cout << "raw: " << std::string(buffer, read) << std::endl << std::flush;
+			#ifdef PRINT_COMMUNICATION
+			std::cout << "raw: " << std::string(buffer, read) << std::endl << std::flush;
+			#endif
 			for(uint32_t i=0; i<read; i++){
 				char c = buffer[i];
 				//std::cout << c << " state: " << state << " curlyBracketCount: " << curlyBracketCount << " squareBracketCount: " << squareBracketCount << std::endl;
@@ -142,19 +159,13 @@ void* JSONRPC2Client::clientMain(void* p){
 				}
 			}
 			read = client->socket->recv(buffer, bufferSize);
-			lastReceived = getSecs();
+			lastReceived = t = getSecs();
+			if(sendPing && t-lastPingSent>pingSendPeriod){lastPingSent = t; client->socket->send(jsonPing, jsonPingSize);}//Send ping if required
+			lockMutex(client->mutexSync);
+			client->lastReceived = lastReceived;
+			unlockMutex(client->mutexSync);
 		}
-		//Send stuff & ping:
-		if(!client->clientToSend.empty()){lastPingSent = t;}
-		for(auto it = client->clientToSend.begin(); it != client->clientToSend.end(); ++it){
-			//std::cout << "sending: " << *it << std::endl;
-			client->socket->send(it->c_str(), it->size());
-		}
-		if(sendPing && t-lastPingSent>pingSendPeriod){
-			lastPingSent = t;
-			client->socket->send(jsonPing, jsonPingSize);
-		}
-		client->clientToSend.clear();
+		if(sendPing && t-lastPingSent>pingSendPeriod){lastPingSent = t; client->socket->send(jsonPing, jsonPingSize);}//Send ping if required
 		delay(1);
 	}
 	std::cout << "JSONRPC2Client Thread exiting..." << std::endl;
