@@ -336,6 +336,9 @@ class IRPCClient : public IRPC{
 	//! gets the time of the last reception in seconds (compatible to getSecs() output)
 	virtual double getLastReceiveTime() = 0;
 	
+	//! blocks until all pending stuff as been sent
+	virtual void flush() = 0;
+	
 };
 
 #endif

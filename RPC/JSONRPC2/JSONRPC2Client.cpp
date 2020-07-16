@@ -70,6 +70,7 @@ void* JSONRPC2Client::clientMain(void* p){
 		runThread = !client->syncExit;
 		client->clientToSend.splice(client->clientToSend.end(), client->syncToSend);
 		client->syncToReceive.splice(client->syncToReceive.end(), client->clientToReceive);
+		client->areTherePendingSends = !client->clientToSend.empty();
 		unlockMutex(client->mutexSync);
 		//Send stuff
 		if(!client->clientToSend.empty()){
@@ -81,6 +82,9 @@ void* JSONRPC2Client::clientMain(void* p){
 				client->socket->send(it->c_str(), it->size());
 			}
 			client->clientToSend.clear();
+			lockMutex(client->mutexSync);
+			client->areTherePendingSends = false;
+			unlockMutex(client->mutexSync);
 		}
 		//Receive stuff & Timeout:
 		uint32_t read = client->socket->recv(buffer, bufferSize);
@@ -185,7 +189,7 @@ void* JSONRPC2Client::clientMain(void* p){
 }
 
 JSONRPC2Client::JSONRPC2Client(){
-	syncExit = false;
+	areTherePendingSends = syncExit = false;
 	initMutex(mutexSync);
 	parser = new JSONParser();
 	socket = NULL;
@@ -438,4 +442,14 @@ void JSONRPC2Client::disconnect(){
 
 double JSONRPC2Client::getLastReceiveTime(){
 	return syncedLastReceived;
+}
+
+void JSONRPC2Client::flush(){
+	bool mustWait = true;
+	while(mustWait){
+		lockMutex(mutexSync);
+		mustWait = areTherePendingSends || !syncToSend.empty();
+		unlockMutex(mutexSync);
+		if(mustWait){delay(10);}
+	}
 }

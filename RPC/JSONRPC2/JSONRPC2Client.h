@@ -47,6 +47,7 @@ class JSONRPC2Client : public IRPCClient{
 	
 	//for synchronization:
 	Mutex mutexSync;
+	bool areTherePendingSends;
 	double lastReceived;//time in s
 	ClientState state;
 	bool syncExit;
@@ -97,7 +98,9 @@ class JSONRPC2Client : public IRPCClient{
 	void removeProcedureCaller(IRemoteProcedureCaller* caller);
 	
 	double getLastReceiveTime();
-
+	
+	void flush();
+	
 };
 
 #endif
