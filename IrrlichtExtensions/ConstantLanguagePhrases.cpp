@@ -71,7 +71,7 @@ const std::wstring& ConstantLanguagePhrases::getPhrase(const std::wstring& key, 
 	auto it = phrases.find(key);
 	if(it==phrases.end()){
 		if(defaultPhrases==NULL){
-			return emptyResult;
+			return key;
 		}else{
 			return defaultPhrases->getPhrase(key, NULL);
 		}
