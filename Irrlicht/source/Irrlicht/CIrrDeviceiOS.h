@@ -129,12 +129,12 @@ namespace irr
 #endif
             }
             
-            virtual const core::position2d<s32>& getPosition(){
+            virtual const core::position2d<s32>& getPosition(bool updateCursor=true){
                 curPos = core::position2d<s32>(mevent.MouseInput.X-refrect.UpperLeftCorner.X, mevent.MouseInput.Y-refrect.UpperLeftCorner.Y);
                 return curPos;
             }
             
-            virtual core::position2d<f32> getRelativePosition(){
+            virtual core::position2d<f32> getRelativePosition(bool updateCursor=true){
                 return core::position2d<f32>((f32)(mevent.MouseInput.X-refrect.UpperLeftCorner.X)/refrect.getWidth(), (f32)(mevent.MouseInput.Y-refrect.UpperLeftCorner.Y)/refrect.getHeight());
             }
             

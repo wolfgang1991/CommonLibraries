@@ -20,10 +20,13 @@ class EfficientLowPassFilter{
 	//! The low pass filter is set up that after dT the weight of the new sample is weightAfterDT (continuous version of oldSample*weightAfterDT+newSample*(1-weightAfterDT) after each dT)
 	//! minSamplePeriod should be small but large enough to avoid rounding errors.
 	EfficientLowPassFilter(double weightAfterDT, TTime dT, TTime minSamplePeriod, TSample unitializedSample = static_cast<TSample>(0)){
-		init = false;
+		setWeightParameters(weightAfterDT, dT, minSamplePeriod);
+		reset(unitializedSample);
+	}
+	
+	void setWeightParameters(double weightAfterDT, TTime dT, TTime minSamplePeriod){
 		b = -log(weightAfterDT)/static_cast<double>(dT);
 		this->minSamplePeriod = minSamplePeriod;
-		value = unitializedSample;//just in case it is used without initialization (missing first sample)
 	}
 	
 	void reset(TSample unitializedSample = static_cast<TSample>(0)){
