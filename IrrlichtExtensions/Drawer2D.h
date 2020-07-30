@@ -83,7 +83,7 @@ class Drawer2D{
 	void setFiltering(bool bilinear = true,bool trilinear = true, int anisotropic = 16);
 
 	//! Set all vertex colors for Images, Lines and Arcs (Polys have their own color)
-	void setColor(irr::video::SColor color);
+	void setColor(irr::video::SColor color = irr::video::SColor(255,255,255,255));
 
 	//! Set 4 different vertex colors for Images, Lines and Arcs (Polys have their own color)
 	void setColors(irr::video::SColor* colors);
@@ -94,7 +94,7 @@ class Drawer2D{
 	irr::video::E_MATERIAL_TYPE getMaterialType();
 
 	//! Mirror UV Coordinates for Images
-	void setMirroring(bool horizontal, bool vertical);
+	void setMirroring(bool horizontal = false, bool vertical = false);
 	
 	void drawRectWithCorner(const irr::core::rect<irr::f32>& rectangle, irr::f32 uvCornerSize, irr::f32 realCornerSize, irr::video::ITexture* tex, irr::video::SColor color = irr::video::SColor(255,255,255,255), const irr::core::rect<irr::s32>* clip = NULL);
 	
