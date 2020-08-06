@@ -90,6 +90,18 @@ irr::core::rect<B> convertRectangle(const irr::core::rect<A>& r){
 	return irr::core::rect<B>((A)r.UpperLeftCorner.X, (A)r.UpperLeftCorner.Y, (A)r.LowerRightCorner.X, (A)r.LowerRightCorner.Y);
 }
 
+//! converts a vector2d by casting it's elements
+template <typename A, typename B>
+irr::core::vector2d<B> convertVector2D(const irr::core::vector2d<A>& v){
+	return irr::core::vector2d<B>((A)v.X, (A)v.Y);
+}
+
+//! converts a vector3d by casting it's elements
+template <typename A, typename B>
+irr::core::vector3d<B> convertVector3D(const irr::core::vector3d<A>& v){
+	return irr::core::vector3d<B>((A)v.X, (A)v.Y, (A)v.Z);
+}
+
 template <typename TValue>
 TValue Angle0to360(TValue phi){
 	phi = fmod(phi, (TValue)360.0);

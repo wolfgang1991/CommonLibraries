@@ -85,7 +85,4 @@ TValue parseNextCSVTo(size_t& offset, const std::string& csvLine){
 	return convertStringTo<TValue>(parseNextCSV(offset, csvLine));
 }
 
-//TODO: createPathTransformFromStringRepresentation
-//TODO createPathTransformFromPoints(sourcepoints, measuredPoints) (fall back if not enough points for selected transformations)
-
 #endif

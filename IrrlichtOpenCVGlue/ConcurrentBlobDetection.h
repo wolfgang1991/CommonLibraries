@@ -1,17 +1,17 @@
 #ifndef ConcurrentBlobDetection_H_INCLUDED
 #define ConcurrentBlobDetection_H_INCLUDED
 
-#include <Threading.h>
 #include <ForwardDeclarations.h>
 
 #include <vector2d.h>
 
 #include <vector>
 
-struct BlobDetectionParameters;
+class ConcurrentBlobDetectionPrivate;
 
 //! Useful to avoid the low framerate caused by serial execution of rendering and blob detection.
 class ConcurrentBlobDetection{
+	friend class ConcurrentBlobDetectionPrivate;
 	
 	public:
 	
@@ -23,17 +23,7 @@ class ConcurrentBlobDetection{
 	
 	private:
 	
-	ThreadPool pool;
-	
-	//may only be changed by the blob thread or if it is idle:
-	bool isNew;
-	std::vector<Blob>* intermediateBlobs;
-	
-	BlobDetectionParameters* params;
-	
-	std::vector<Blob>* currentBlobs;
-	
-	static void* detectBlobs(void* params);
+	ConcurrentBlobDetectionPrivate* prv;
 	
 	public:
 	
@@ -52,6 +42,50 @@ class ConcurrentBlobDetection{
 	//! The image is provided to the thread via pointer and dropped after done, therefore the reference counter should be 1 here. The image must not be used simultaneously by anything else for thread safety.
 	//TODO: other blob detection parameters
 	void requestBlobDetection(irr::video::IImage* img);
+	
+	//! returns [0-1]: 0 dark blobs, 1: light blobs
+	irr::f32 getIntensity() const;
+	
+	void setIntensity(irr::f32 intensity);
+	
+	void setFilterIntensityEnabled(bool enabled);
+	
+	bool isFilterIntensityEnabled() const;
+	
+	irr::f32 getMinCircularity() const;
+	
+	irr::f32 getMaxCircularity() const;
+	
+	bool isFilterCircularityEnabled() const;
+	
+	void setCircularity(irr::f32 minValue, irr::f32 maxValue);
+	
+	void setFilterCircularityEnabled(bool enabled);
+	
+	irr::f32 getMinInertia() const;
+	
+	irr::f32 getMaxInertia() const;
+	
+	bool isFilterInertiaEnabled() const;
+	
+	void setInertia(irr::f32 minValue, irr::f32 maxValue);
+	
+	void setFilterInertiaEnabled(bool enabled);
+	
+	irr::f32 getMinConvexity() const;
+	
+	irr::f32 getMaxConvexity() const;
+	
+	bool isFilterConvexityEnabled() const;
+	
+	void setConvexity(irr::f32 minValue, irr::f32 maxValue);
+	
+	void setFilterConvexityEnabled(bool enabled);
+	
+	//! if false: black on white
+	void setWhiteOnBlack(bool whiteOnBlack);
+	
+	bool isWhiteOnBlack() const;
 	
 };
 
