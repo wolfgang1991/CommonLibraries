@@ -28,6 +28,7 @@ class Matrix{
 	public:
 	
 	typedef TScalar Scalar;
+	typedef TScalar value_type;
 	static constexpr uint32_t rowCount = TRowCount;
 	static constexpr uint32_t columnCount = TColumnCount;
 	static constexpr bool isMatrix = true;
@@ -78,6 +79,7 @@ class TransposeMatrix{
 	public:
 	
 	typedef typename TParentMatrix::Scalar Scalar;
+	typedef typename TParentMatrix::Scalar value_type;
 	static constexpr uint32_t rowCount = TParentMatrix::columnCount;
 	static constexpr uint32_t columnCount = TParentMatrix::rowCount;
 	static constexpr bool isMatrix = TParentMatrix::isMatrix;
@@ -116,6 +118,7 @@ class SubMatrix{
 	public:
 	
 	typedef typename TParentMatrix::Scalar Scalar;
+	typedef typename TParentMatrix::Scalar value_type;
 	static constexpr uint32_t rowCount = TRowCount;
 	static constexpr uint32_t columnCount = TColumnCount;
 	static constexpr bool isMatrix = TParentMatrix::isMatrix;
@@ -165,6 +168,7 @@ class SubMatrixIJ{
 	public:
 	
 	typedef typename TParentMatrix::Scalar Scalar;
+	typedef typename TParentMatrix::Scalar value_type;
 	static constexpr uint32_t rowCount = TParentMatrix::rowCount-1;
 	static constexpr uint32_t columnCount = TParentMatrix::columnCount-1;
 	static constexpr bool isMatrix = TParentMatrix::isMatrix;

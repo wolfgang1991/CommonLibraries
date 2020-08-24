@@ -636,7 +636,14 @@ class FillMeshBufferCharacterCallback : public ICharacterCallback{
 
 void FlexibleFont::fillMeshBuffer(irr::scene::SMeshBuffer& mb, const wchar_t* text, irr::s32 tabSize, bool newLinesCentered, irr::video::SColor color, irr::f32 italicGradient, irr::core::matrix4* transformation, irr::video::E_MATERIAL_TYPE materialType, bool filteringEnabled, bool recalcBB) const{
 	size_t textLen = wcslen(text);
-	assert(mb.Vertices.size()+textLen*4<=65536);
+	if(mb.Vertices.size()+textLen*4>65536){
+		text = L"Text too long for meshbuffer.";
+		textLen = wcslen(text);
+		if(mb.Vertices.size()+textLen*4>65536){
+			std::cerr << "Meshbuffer full: Cannot even fill error message." << std::endl;
+			return;
+		}
+	}
 	mb.Vertices.reallocate(mb.Vertices.size()+textLen*4);
 	mb.Indices.reallocate(mb.Indices.size()+textLen*6);
 	FillMeshBufferCharacterCallback cbk(mb, transformation, color, italicGradient, newLinesCentered?getDimensionWithTabs(text, tabSize).Width:0);

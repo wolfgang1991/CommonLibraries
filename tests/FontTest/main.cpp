@@ -4,9 +4,11 @@
 #include <Transformation2DHelpers.h>
 #include <utilities.h>
 #include <mathUtils.h>
+#include <CMBox.h>
 
 #include <irrlicht.h>
 
+#include <sstream>
 #include <iostream>
 
 using namespace irr;
@@ -89,6 +91,10 @@ int main(int argc, char *argv[]){
 	Drawer2D* drawer = new Drawer2D(device);
 	
 	ITexture* tex = driver->getTexture("../../Irrlicht/media/rsptnback.jpg");
+	
+	std::wstringstream ss;
+	for(uint32_t i=0; i<8192; i++){ss << L"t ";}
+	new CMBox(device, ss.str().c_str());
 	
 	//TODO: simultaneous tests for fatness, italic, scale, border
 	while(device->run()){

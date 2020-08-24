@@ -22,7 +22,7 @@ class IPathTransform{
 	};
 	
 	typedef typename TPath::value_type Vector;
-	typedef typename Vector::Scalar Scalar;
+	typedef typename Vector::value_type Scalar;
 	
 	virtual ~IPathTransform(){}
 	
