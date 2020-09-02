@@ -234,10 +234,10 @@ Matrix<TMatrixA::rowCount, TMatrixB::columnCount, typename ResultScalar<TMatrixA
 }
 
 //! visit all elements of a matrix
-template <typename Matrix>
-void visitMatrix(Matrix& matrix, const std::function<void(uint32_t,uint32_t,typename Matrix::Scalar&)>& f){
-	for(uint32_t i=0; i<Matrix::rowCount; i++){
-		for(uint32_t j=0; j<Matrix::columnCount; j++){
+template <typename TMatrix>
+void visitMatrix(TMatrix& matrix, const std::function<void(uint32_t,uint32_t,typename TMatrix::Scalar&)>& f){
+	for(uint32_t i=0; i<TMatrix::rowCount; i++){
+		for(uint32_t j=0; j<TMatrix::columnCount; j++){
 			f(i,j,matrix.get(i,j));
 		}
 	}
@@ -466,6 +466,26 @@ template<typename TVectorA, typename TVectorB, typename std::enable_if<TVectorA:
 typename ResultScalar<TVectorA,TVectorB>::type calcDotProduct(const TVectorA& a, const TVectorB& b){
 	typename ResultScalar<TVectorA,TVectorB>::type res = 0;
 	for(uint32_t i=0; i<TVectorA::rowCount; i++){res += a.get(i)*b.get(i);}
+	return res;
+}
+
+//! Calculates a numerical jacobi matrix for a given function f (does only make sense with equal floating point scalars) using the provided parameters +/- delta
+template<uint32_t TInVectorSize, uint32_t TOutVectorSize, typename TScalar>
+Matrix<TOutVectorSize,TInVectorSize,TScalar> calcNumericalJacobiMatrix(	const std::function<Vector<TOutVectorSize,TScalar>(const Vector<TInVectorSize,TScalar>&)>& f,
+																											const Vector<TInVectorSize,TScalar>& parameters,
+																											const Vector<TInVectorSize,TScalar>& delta){
+	Matrix<TOutVectorSize,TInVectorSize,TScalar> res;
+	for(uint32_t j=0; j<TInVectorSize; j++){
+		Vector<TInVectorSize,TScalar> p = parameters;
+		p[j] = parameters[j] + delta[j];
+		Vector<TOutVectorSize,TScalar> first = f(p);
+		p[j] = parameters[j] - delta[j];
+		Vector<TOutVectorSize,TScalar> second = f(p);
+		Vector<TOutVectorSize,TScalar> column = (first-second)/(2.0*delta[j]);
+		for(uint32_t i=0; i<TOutVectorSize; i++){
+			res.set(i,j,column.get(i,0));
+		}
+	}
 	return res;
 }
 
