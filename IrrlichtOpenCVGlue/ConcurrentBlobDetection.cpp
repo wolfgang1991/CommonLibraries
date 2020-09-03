@@ -34,12 +34,13 @@ class ConcurrentBlobDetectionPrivate{
 	
 	cv::SimpleBlobDetector::Params paramsToCopy;
 	bool whiteOnBlackToCopy;
+	irr::f32 minArea, maxArea;
 	
 	std::vector<ConcurrentBlobDetection::Blob>* currentBlobs;
 	
 	static void* detectBlobs(void* params);
 	
-	ConcurrentBlobDetectionPrivate():pool(1),isNew(false),intermediateBlobs(new std::vector<ConcurrentBlobDetection::Blob>()),params(NULL),paramsToCopy(),whiteOnBlackToCopy(false),currentBlobs(new std::vector<ConcurrentBlobDetection::Blob>()){}
+	ConcurrentBlobDetectionPrivate():pool(1),isNew(false),intermediateBlobs(new std::vector<ConcurrentBlobDetection::Blob>()),params(NULL),paramsToCopy(),whiteOnBlackToCopy(false),minArea(3.17891e-05),maxArea(0.0625),currentBlobs(new std::vector<ConcurrentBlobDetection::Blob>()){}
 	
 	~ConcurrentBlobDetectionPrivate(){
 		while(pool.hasRunningThreads()){//wait until all is done
@@ -81,7 +82,31 @@ void ConcurrentBlobDetection::requestBlobDetection(irr::video::IImage* img){
 	assert(img->getReferenceCount()==1);
 	if(prv->params){prv->params->img->drop();}
 	delete prv->params;//delete old request
+	u32 totalArea = img->getDimension().getArea();
+	prv->paramsToCopy.minArea = prv->minArea*totalArea;
+	prv->paramsToCopy.maxArea = prv->maxArea*totalArea;
 	prv->params = new ConcurrentBlobDetectionPrivate::BlobDetectionParameters{this, img, prv->paramsToCopy, prv->whiteOnBlackToCopy};
+}
+
+irr::f32 ConcurrentBlobDetection::getMinAreaProportion() const{
+	return prv->minArea;
+}
+
+irr::f32 ConcurrentBlobDetection::getMaxAreaProportion() const{
+	return prv->maxArea;
+}
+
+void ConcurrentBlobDetection::setAreaProportion(irr::f32 minValue, irr::f32 maxValue){
+	prv->minArea = minValue;
+	prv->maxArea = maxValue;
+}
+
+bool ConcurrentBlobDetection::isFilterAreaEnabled() const{
+	return prv->paramsToCopy.filterByArea;
+}
+
+void ConcurrentBlobDetection::setFilterAreaEnabled(bool enabled){
+	prv->paramsToCopy.filterByArea = enabled;
 }
 
 void* ConcurrentBlobDetectionPrivate::detectBlobs(void* params){

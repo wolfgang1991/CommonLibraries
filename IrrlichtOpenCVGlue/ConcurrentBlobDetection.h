@@ -43,6 +43,16 @@ class ConcurrentBlobDetection{
 	//TODO: other blob detection parameters
 	void requestBlobDetection(irr::video::IImage* img);
 	
+	irr::f32 getMinAreaProportion() const;
+	
+	irr::f32 getMaxAreaProportion() const;
+	
+	bool isFilterAreaEnabled() const;
+	
+	void setFilterAreaEnabled(bool enabled);
+	
+	void setAreaProportion(irr::f32 minValue, irr::f32 maxValue);
+	
 	//! returns [0-1]: 0 dark blobs, 1: light blobs
 	irr::f32 getIntensity() const;
 	
