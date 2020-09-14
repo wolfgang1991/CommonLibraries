@@ -63,7 +63,7 @@ class Matrix{
 	
 	//Init internal array directly
 	template <typename... T> 
-	Matrix(T... ts):data{ts...} {}
+	Matrix(T... ts):data{static_cast<TScalar>(ts)...} {}
    
 	template<typename TMatrix>
 	Matrix& operator=(const TMatrix& matrix){
