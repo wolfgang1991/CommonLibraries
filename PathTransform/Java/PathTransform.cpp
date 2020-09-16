@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-typedef std::vector<Vector3D<int64_t>> Path;
+typedef std::vector<Vector3D<double>> Path;
 typedef double PathFloat;
 typedef IPathTransform<Path> PathTransform;
 
@@ -65,7 +65,7 @@ JNIEXPORT void JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_deleteP
 
 JNIEXPORT void JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_pushBack(JNIEnv* env, jobject jthis, jlong ptr, jlong x, jlong y, jlong z){
 	Path* p = (Path*)ptr;
-	p->push_back(Vector3D<int64_t>{x,y,z});
+	p->push_back(Vector3D<double>{static_cast<double>(x)/1000.0,static_cast<double>(y)/1000.0,static_cast<double>(z)/1000.0});
 }
 
 JNIEXPORT jlong JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_getPointPtr(JNIEnv* env, jobject jthis, jlong ptr, jint index){
@@ -74,15 +74,15 @@ JNIEXPORT jlong JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_getPoi
 }
 
 JNIEXPORT jlong JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_getPointX(JNIEnv* env, jobject jthis, jlong ptr){
-	return ((Vector3D<int64_t>*)ptr)->get(0);
+	return ((Vector3D<double>*)ptr)->get(0)*1000.0;
 }
 
 JNIEXPORT jlong JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_getPointY(JNIEnv* env, jobject jthis, jlong ptr){
-	return ((Vector3D<int64_t>*)ptr)->get(1);
+	return ((Vector3D<double>*)ptr)->get(1)*1000.0;
 }
 
 JNIEXPORT jlong JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_getPointZ(JNIEnv* env, jobject jthis, jlong ptr){
-	return ((Vector3D<int64_t>*)ptr)->get(2);
+	return ((Vector3D<double>*)ptr)->get(2)*1000.0;
 }
 
 JNIEXPORT jint JNICALL Java_de_vhf_pathtransform_PathTransform_00024Path_getPointCount(JNIEnv* env, jobject jthis, jlong ptr){
