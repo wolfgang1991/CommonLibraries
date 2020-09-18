@@ -220,8 +220,38 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 			//       So this returns the config which can do most, not the
 			//       config which is closest to the requested parameters.
 		//
+		
+		//changed:
+		
+		#define RESET_ANTIALIASING \
+			if(Params.AntiAlias){ \
+				Attribs[17] = 1; \
+				Attribs[19] = Params.AntiAlias; \
+				steps = 5; \
+			}
+			
+		#define RESET_ALPHACHANNEL \
+			if(Params.WithAlphaChannel){ \
+				Attribs[7] = 1; \
+				steps = 4; \
+			}
+			
+		#define RESET_STENCILBUFFER \
+			if(Params.Stencilbuffer){ \
+				Attribs[15] = 1; \
+				steps = 3; \
+			}
+			
+		#define RESET_ZBUFFER \
+			if(Params.ZBufferBits>8){ \
+				Attribs[13] = Params.ZBufferBits; \
+				steps = 2; \
+			}
+		
+		u32 count = 0;
 		while (!eglChooseConfig(EglDisplay, Attribs, &configResult, 1, &numConfigs) || !numConfigs)
 		{
+			count++;
 			switch (steps)
 			{
 			case 5: // samples
@@ -229,7 +259,7 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 					--Attribs[19];
 				else
 				{
-					Attribs[17] = 0;	// Params.Stencilbuffer
+					Attribs[17] = 0;	// Params.AntiAlias?1:0
 					Attribs[19] = 0;	// Params.AntiAlias
 					--steps;
 				}
@@ -239,12 +269,7 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 				{
 					Attribs[7] = 0;
 
-					if (Params.AntiAlias)
-					{
-						Attribs[17] = 1;
-						Attribs[19] = Params.AntiAlias;
-						steps = 5;
-					}
+					RESET_ANTIALIASING
 				}
 				else
 					--steps;
@@ -253,21 +278,21 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 				if (Attribs[15])	// Params.Stencilbuffer
 				{
 					Attribs[15] = 0;
-
-					if (Params.AntiAlias)
-					{
-						Attribs[17] = 1;
-						Attribs[19] = Params.AntiAlias;
-						steps = 5;
-					}
+					
+					RESET_ALPHACHANNEL
+					RESET_ANTIALIASING
 				}
 				else
 					--steps;
 				break;
 			case 2: // depth size
-				if (Attribs[13] > 16)	// Params.ZBufferBits
+				if (Attribs[13] > 8)	// Params.ZBufferBits
 				{
 					Attribs[13] -= 8;
+					
+					RESET_STENCILBUFFER
+					RESET_ALPHACHANNEL
+					RESET_ANTIALIASING
 				}
 				else
 					--steps;
@@ -276,6 +301,10 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 				if (Attribs[9] > 16)	// Params.Bits
 				{
 					Attribs[9] -= 8;
+					RESET_ZBUFFER
+					RESET_STENCILBUFFER
+					RESET_ALPHACHANNEL
+					RESET_ANTIALIASING
 				}
 				else
 					--steps;
@@ -284,9 +313,11 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 				return 0;
 			}
 		}
+		
+		os::Printer::log((core::stringc("#Steps used to find working EGLConfig: ")+core::stringc(count)).c_str());
 
-		if (Params.AntiAlias && !Attribs[17])
-			os::Printer::log("No multisampling.");
+		if (Params.AntiAlias > Attribs[19])
+			os::Printer::log((core::stringc("No full multisampling: ")+core::stringc(Attribs[19])).c_str());
 
 		if (Params.WithAlphaChannel && !Attribs[7])
 			os::Printer::log("No alpha.");
@@ -295,10 +326,12 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 			os::Printer::log("No stencil buffer.");
 
 		if (Params.ZBufferBits > Attribs[13])
-			os::Printer::log("No full depth buffer.");
+			os::Printer::log((core::stringc("No full depth buffer: ")+core::stringc(Attribs[13])).c_str());
 
 		if (Params.Bits > Attribs[9])
-			os::Printer::log("No full color buffer.");
+			os::Printer::log((core::stringc("No full color buffer: ")+core::stringc(Attribs[9])).c_str());
+			
+		//changed end
 	}
 	else if ( confStyle == ECS_IRR_CHOOSE )
 	{

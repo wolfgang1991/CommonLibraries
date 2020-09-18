@@ -3,6 +3,8 @@
 #include <IGUIStaticText.h>
 #include <IGUIButton.h>
 #include <IGUIEditBox.h>
+#include <IGUICheckBox.h>
+#include <IGUIComboBox.h>
 
 using namespace irr;
 using namespace gui;
@@ -33,6 +35,14 @@ AggregatableGUIElementAdapter* addAggregatableButton(IGUIEnvironment* env, const
 
 AggregatableGUIElementAdapter* addAggregatableEditBox(irr::gui::IGUIEnvironment* env, const wchar_t* text, irr::f32 weight, bool border, irr::s32 id){
 	return new AggregatableGUIElementAdapter(env, weight, 1.f, false, env->addEditBox(text, rect<s32>(0,0,0,0), border, NULL, id), false, 0);
+}
+
+AggregatableGUIElementAdapter* addAggregatableCheckBox(irr::gui::IGUIEnvironment* env, const wchar_t* text, bool checked, irr::f32 weight, irr::s32 id){
+	return new AggregatableGUIElementAdapter(env, weight, 1.f, false, env->addCheckBox(checked, rect<s32>(0,0,0,0), NULL, id, text), false, 0);
+}
+
+AggregatableGUIElementAdapter* addAggregatableComboBox(irr::gui::IGUIEnvironment* env, irr::f32 weight, irr::s32 id){
+	return new AggregatableGUIElementAdapter(env, weight, 1.f, false, env->addComboBox(rect<s32>(0,0,0,0), NULL, id), false, 0);
 }
 
 irr::gui::IGUIElement* getFirstGUIElementChild(irr::gui::IGUIElement* ele){

@@ -19,6 +19,10 @@ AggregatableGUIElementAdapter* addAggregatableButton(irr::gui::IGUIEnvironment* 
 
 AggregatableGUIElementAdapter* addAggregatableEditBox(irr::gui::IGUIEnvironment* env, const wchar_t* text, irr::f32 weight, bool border = true, irr::s32 id = -1);
 
+AggregatableGUIElementAdapter* addAggregatableCheckBox(irr::gui::IGUIEnvironment* env, const wchar_t* text, bool checked, irr::f32 weight, irr::s32 id = -1);
+
+AggregatableGUIElementAdapter* addAggregatableComboBox(irr::gui::IGUIEnvironment* env, irr::f32 weight, irr::s32 id = -1);
+
 //! useful in case an adapter is sometimes used to avoid unnecessary ifs
 irr::gui::IGUIElement* getFirstGUIElementChild(irr::gui::IGUIElement* ele);
 

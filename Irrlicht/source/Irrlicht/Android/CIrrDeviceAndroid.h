@@ -73,6 +73,14 @@ namespace irr
 		virtual bool isGyroscopeAvailable();
 
 	private:
+	
+		bool isInMultiWindowMode();//changed
+	
+		static void initSurface(android_app* app);//changed
+		
+		static void destroySurface(android_app* app);//changed
+		
+		void checkAndHandleScreenChange();//changed
 
 		static void handleAndroidCommand(android_app* app, int32_t cmd);
 
@@ -95,9 +103,11 @@ namespace irr
 		bool InitAborted;//true if init aborted before driver init (required to prevent splash screen hangs) //changed 
 		bool Paused;
 		bool Stopped;//changed
-		bool IsSplitScreen;
+		bool IsSplitScreen;//changed
+		bool IsWindowInitialized;
 
 		JNIEnv* JNIEnvAttachedToVM;
+		jmethodID isInMultiWindowModeID;//changed
 
 		video::SExposedVideoData ExposedVideoData;
 
@@ -132,6 +142,15 @@ namespace irr
 				sSize = ssize;
 				refrect = core::rect<s32>(0,0,sSize.Width,sSize.Height);
 				Device = device;
+			}
+			
+			void OnResize(const irr::core::dimension2d<u32>& size){
+				if(refrect.getWidth()==sSize.Width && refrect.getHeight()==sSize.Height){//unchanged by the user => use new screenrect
+					sSize = size;
+					setReferenceRect();
+				}else{
+					sSize = size;
+				}
 			}
 
 			virtual void setVisible(bool visible){}//TODO: external mouse cursor visibility

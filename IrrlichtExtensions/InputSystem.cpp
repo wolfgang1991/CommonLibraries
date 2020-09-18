@@ -114,6 +114,7 @@ void InputSystem::setColor(irr::video::SColor Color){
 }
 
 InputSystem::~InputSystem(){
+	if(inputVisible){input[activeInput]->OnDeSelect();}
 	c->getEventReceiver()->removeSubEventReceiver(this);
 	delete button;
 	for(uint32_t i=0; i<input.size(); i++){

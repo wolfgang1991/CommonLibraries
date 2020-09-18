@@ -39,7 +39,7 @@ namespace irr
 {
 
 CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
-	: CIrrDeviceStub(param), Accelerometer(0), Gyroscope(0), Focused(false), Initialized(false), InitAborted(false), Paused(true), Stopped(false), IsSplitScreen(false), JNIEnvAttachedToVM(0)//changed
+	: CIrrDeviceStub(param), Accelerometer(0), Gyroscope(0), Focused(false), Initialized(false), InitAborted(false), Paused(true), Stopped(false), IsSplitScreen(false), IsWindowInitialized(false), JNIEnvAttachedToVM(0), isInMultiWindowModeID(0)//changed
 {
 	//changed
 	// see below for init (NULL here to indicate "not init" and to avoid problems with events)
@@ -98,11 +98,11 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 				if(!Activity){
 					os::Printer::log("android/app/Activity not found", ELL_ERROR);
 				}else{
-					jmethodID isInMultiWindowMode = JNIEnvAttachedToVM->GetMethodID(Activity, "isInMultiWindowMode", "()Z");
-					if(!isInMultiWindowMode){
+					isInMultiWindowModeID = JNIEnvAttachedToVM->GetMethodID(Activity, "isInMultiWindowMode", "()Z");
+					if(!isInMultiWindowModeID){
 						os::Printer::log("isInMultiWindowMode method not found", ELL_ERROR);
 					}else{
-						IsSplitScreen = JNIEnvAttachedToVM->CallBooleanMethod(Android->activity->clazz, isInMultiWindowMode);
+						IsSplitScreen = isInMultiWindowMode();
 						core::stringc msg("IsSplitScreen: ");
 						msg += (int)IsSplitScreen;
 						os::Printer::log(msg.c_str(), ELL_ERROR);
@@ -130,7 +130,7 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 	// Create EGL manager.
 	ContextManager = new video::CEGLManager();
 
-	os::Printer::log("Waiting for Android activity window to be created.", ELL_DEBUG);
+	__android_log_print(ANDROID_LOG_ERROR, "Irrlicht", "Waiting for Android activity window to be created.");//changed
 
 	do
 	{
@@ -144,6 +144,8 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 		}
 	}
 	while(!Initialized && !InitAborted);
+	
+	__android_log_print(ANDROID_LOG_ERROR, "Irrlicht", "Activity window created");//changed
 
 	//changed:
 	ButtonStates=0;
@@ -153,6 +155,21 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 	//changed end
 
 }
+
+//changed:
+bool CIrrDeviceAndroid::isInMultiWindowMode(){
+		JavaVMAttachArgs attachArgs;
+		attachArgs.version = JNI_VERSION_1_6;
+		attachArgs.name = 0;
+		attachArgs.group = NULL;
+		// Not a big problem calling it each time - it's a no-op when the thread already is attached.
+		jint result = Android->activity->vm->AttachCurrentThread(&JNIEnvAttachedToVM, &attachArgs);
+		if(result!=JNI_ERR && isInMultiWindowModeID!=0){
+			return JNIEnvAttachedToVM->CallBooleanMethod(Android->activity->clazz, isInMultiWindowModeID);
+		}
+		return false;
+}
+//changed end
 
 
 CIrrDeviceAndroid::~CIrrDeviceAndroid()
@@ -228,9 +245,27 @@ bool CIrrDeviceAndroid::run()
 		if(!Initialized)
 			break;
 	}
+	
+	checkAndHandleScreenChange();//changed
 
 	return Initialized;
 }
+
+//changed:
+void CIrrDeviceAndroid::checkAndHandleScreenChange(){
+	if(IsWindowInitialized && Android->window!=NULL){
+		core::dimension2d<u32> ss = VideoDriver->getScreenSize();
+		int32_t w = ANativeWindow_getWidth(Android->window);
+		int32_t h = ANativeWindow_getHeight(Android->window);
+		if(w!=ss.Width || h!=ss.Height){
+			__android_log_print(ANDROID_LOG_ERROR, "checkAndHandleScreenChange", "old size: %i %i, new size: %i %i", (int)ss.Width, (int)ss.Height, w, h);
+			destroySurface(Android);
+			initSurface(Android);
+			IsSplitScreen = isInMultiWindowMode();
+		}
+	}
+}
+//changed end
 
 void CIrrDeviceAndroid::yield()
 {
@@ -310,6 +345,49 @@ E_DEVICE_TYPE CIrrDeviceAndroid::getType() const
 	return EIDT_ANDROID;
 }
 
+//changed:
+//in case of future merge: some portions have previously been in handleAndroidCommand
+void CIrrDeviceAndroid::initSurface(android_app* app){
+	CIrrDeviceAndroid* device = (CIrrDeviceAndroid*)app->userData;
+	device->getExposedVideoData().OGLESAndroid.Window = app->window;
+	if(device->CreationParams.WindowSize.Width == 0 || device->CreationParams.WindowSize.Height == 0){
+		device->CreationParams.WindowSize.Width = ANativeWindow_getWidth(app->window);
+		device->CreationParams.WindowSize.Height = ANativeWindow_getHeight(app->window);
+	}
+	device->getContextManager()->initialize(device->CreationParams, device->ExposedVideoData);
+	device->getContextManager()->generateSurface();
+	device->getContextManager()->generateContext();
+	device->getContextManager()->activateContext(device->getContextManager()->getContext());
+	if(!device->Initialized){
+		io::CAndroidAssetFileArchive* assets = new io::CAndroidAssetFileArchive( device->Android->activity->assetManager, false, false);
+		assets->addDirectoryToFileList("");
+		device->FileSystem->addFileArchive(assets);
+		assets->drop();
+		device->createDriver();
+		if(device->VideoDriver){device->createGUIAndScene();}
+	}else{
+		//core::dimension2d<u32> ss = device->VideoDriver->getScreenSize();
+		int32_t w = ANativeWindow_getWidth(app->window);
+		int32_t h = ANativeWindow_getHeight(app->window);
+		//if(w!=ss.Width || h!=ss.Height){
+		//__android_log_print(ANDROID_LOG_ERROR, "initSurface screen size changed", "old size: %i %i, new size: %i %i", (int)ss.Width, (int)ss.Height, w, h);
+		device->VideoDriver->OnResize(core::dimension2d<u32>(w, h));
+		if(device->CursorControl){((CCursorControl*)device->CursorControl)->OnResize(core::dimension2d<u32>(w, h));}
+		//}
+	
+	}
+	device->Initialized = true;
+	device->IsWindowInitialized = true;
+}
+
+void CIrrDeviceAndroid::destroySurface(android_app* app){
+	CIrrDeviceAndroid* device = (CIrrDeviceAndroid*)app->userData;
+	device->getContextManager()->destroySurface();
+	device->IsWindowInitialized = false;
+}
+
+//changed end
+
 void CIrrDeviceAndroid::handleAndroidCommand(android_app* app, int32_t cmd)
 {
 	CIrrDeviceAndroid* device = (CIrrDeviceAndroid*)app->userData;
@@ -339,7 +417,10 @@ void CIrrDeviceAndroid::handleAndroidCommand(android_app* app, int32_t cmd)
 			os::Printer::log("Android command APP_CMD_CONTENT_RECT_CHANGED", ELL_DEBUG);
 		break;
 		case APP_CMD_CONFIG_CHANGED:
+		if(device->IsWindowInitialized){//changed:
 			os::Printer::log("Android command APP_CMD_CONFIG_CHANGED", ELL_DEBUG);
+			device->checkAndHandleScreenChange();//changed
+		}//changed end
 		break;
 		case APP_CMD_LOW_MEMORY:
 			os::Printer::log("Android command APP_CMD_LOW_MEMORY", ELL_DEBUG);
@@ -350,36 +431,12 @@ void CIrrDeviceAndroid::handleAndroidCommand(android_app* app, int32_t cmd)
 		break;
 		case APP_CMD_INIT_WINDOW:
 			os::Printer::log("Android command APP_CMD_INIT_WINDOW", ELL_DEBUG);
-			device->getExposedVideoData().OGLESAndroid.Window = app->window;
-
-			if (device->CreationParams.WindowSize.Width == 0 || device->CreationParams.WindowSize.Height == 0)
-			{
-				device->CreationParams.WindowSize.Width = ANativeWindow_getWidth(app->window);
-				device->CreationParams.WindowSize.Height = ANativeWindow_getHeight(app->window);
-			}
-
-			device->getContextManager()->initialize(device->CreationParams, device->ExposedVideoData);
-			device->getContextManager()->generateSurface();
-			device->getContextManager()->generateContext();
-			device->getContextManager()->activateContext(device->getContextManager()->getContext());
-
-			if (!device->Initialized)
-			{
-				io::CAndroidAssetFileArchive* assets = new io::CAndroidAssetFileArchive( device->Android->activity->assetManager, false, false);
-				assets->addDirectoryToFileList("");
-				device->FileSystem->addFileArchive(assets);
-				assets->drop();
-
-				device->createDriver();
-
-				if (device->VideoDriver)
-					device->createGUIAndScene();
-			}
-			device->Initialized = true;
+			initSurface(app);//changed
+			device->IsSplitScreen = device->isInMultiWindowMode();//changed
 		break;
 		case APP_CMD_TERM_WINDOW:
 			os::Printer::log("Android command APP_CMD_TERM_WINDOW", ELL_DEBUG);
-			device->getContextManager()->destroySurface();
+			destroySurface(app);//changed
 		break;
 		case APP_CMD_GAINED_FOCUS:
 			os::Printer::log("Android command APP_CMD_GAINED_FOCUS", ELL_DEBUG);
@@ -396,7 +453,6 @@ void CIrrDeviceAndroid::handleAndroidCommand(android_app* app, int32_t cmd)
 				device->JNIEnvAttachedToVM  = 0;
 				device->Android->activity->vm->DetachCurrentThread();
 			}
-			__android_log_print(ANDROID_LOG_ERROR, "Irrlicht:", "InitAborted: %i", (int)device->InitAborted);
 			device->InitAborted = !device->Initialized;//changed
 			device->Initialized = false;
 			break;

@@ -1,7 +1,6 @@
 #include <JSONParser.h>
 #include <StringHelpers.h>
 #include <utf8.h>
-//#include <timing.h>
 
 #include <cstring>
 #include <sstream>

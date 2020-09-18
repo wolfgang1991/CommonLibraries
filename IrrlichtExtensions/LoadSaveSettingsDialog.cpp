@@ -263,7 +263,7 @@ LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, i
 LoadSaveSettingsDialog::~LoadSaveSettingsDialog(){
 	delete gui;
 	delete nameCbk;
-	//gets automatically removed since win is a child of this: win->remove();
+	//children get automatically removed
 }
 
 void LoadSaveSettingsDialog::setLanguage(const ILanguagePhrases* phrases){
@@ -404,6 +404,7 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 				return true;
 			}else if(g.Caller==ebcreatefolder){
 				bNewDir = new EditBoxDialog(nameCbk, device, phrases->getPhrase(L"LoadSaveSettingsDialog::NEW_DIRECTORY", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::OK", &defaultPhrases).c_str(),  phrases->getPhrase(L"LoadSaveSettingsDialog::CANCEL", &defaultPhrases).c_str(), L"", true);
+				addChild(bNewDir);
 				return true;
 			}else{
 				for(u32 i=0; i<settingsList->getSubElementCount(); i++){
@@ -412,6 +413,7 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 					IGUIElement* bdelete = getFirstGUIElementChild(row->getSubElement(5));
 					if(g.Caller==bmove){
 						bRename = new EditBoxDialog(nameCbk, device, phrases->getPhrase(L"LoadSaveSettingsDialog::RENAME", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::OK", &defaultPhrases).c_str(),  phrases->getPhrase(L"LoadSaveSettingsDialog::CANCEL", &defaultPhrases).c_str(), convertStringToWString(entries[i].path).c_str(), true);
+						addChild(bRename);
 						renameIndex = i;
 						return true;
 					}else if(g.Caller==bdelete){
