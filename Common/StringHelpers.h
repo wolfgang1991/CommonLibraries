@@ -8,6 +8,12 @@
 //! returns filename from a path
 std::string stripDir(const std::string& str);
 
+//! returns (path and) filename without extension
+std::string stripExt(const std::string& str);
+
+//! returns the file extension from a path/filename without dot (empty string if no extension)
+std::string getExt(const std::string& str);
+
 //! returns the path without filename but with trailing slash
 std::string stripFile(const std::string& path);
 

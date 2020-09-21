@@ -21,21 +21,23 @@ public class PathTransform {
 
 		private long ptr = 0;
 
-		private native long createPath(int reservedSpace);
+		private static native long createPath(int reservedSpace);
 
-		private native void deletePath(long pathPtr);
+		private static native void deletePath(long pathPtr);
 
-		private native void pushBack(long pathPtr, long x, long y, long z);
+		private static native void pushBack(long pathPtr, long x, long y, long z);
 
-		private native long getPointPtr(long pathPtr, int index);
+		private static native long getPointPtr(long pathPtr, int index);
 
-		private native long getPointX(long pointPtr);
+		private static native long getPointX(long pointPtr);
 
-		private native long getPointY(long pointPtr);
+		private static native long getPointY(long pointPtr);
 
-		private native long getPointZ(long pointPtr);
+		private static native long getPointZ(long pointPtr);
+		
+		private static native void deletePoint(long pointPtr);
 
-		private native int getPointCount(long pathPtr);
+		private static native int getPointCount(long pathPtr);
 
 		public Path(int reservedSpace) {
 			ptr = createPath(reservedSpace);
@@ -57,10 +59,8 @@ public class PathTransform {
 		}
 
 		public Point getPoint(int index) {
-			long pptr;
-
 			checkPointer(ptr);
-			pptr = getPointPtr(ptr, index);
+			long pptr = getPointPtr(ptr, index);
 			return new Point(getPointX(pptr), getPointY(pptr), getPointZ(pptr));
 		}
 
@@ -76,19 +76,22 @@ public class PathTransform {
 				System.out.println("x: " + p.x + " y: " + p.y + " z: " + p.z);
 			}
 		}
+		
 	}
 
 	private long ptr = 0;
 
-	private native long createPathTransform(String representation);
+	private static native long createPathTransform(String representation);
 
-	private native void printPathTransform(long ptr);
+	private static native void printPathTransform(long ptr);
 
-	private native void deletePathTransform(long ptr);
+	private static native void deletePathTransform(long ptr);
 
-	private native void transformInPlace(long ptr, long pathPtr);
+	private static native void transformInPlace(long ptr, long pathPtr);
 
-	private native long transform(long ptr, long pathPtr);
+	private static native long transform(long ptr, long pathPtr);
+	
+	private static native long transformSingle(long ptr, long x, long y, long z);
 
 	private static void checkPointer(long p) {
 		if (p == 0) {
@@ -112,6 +115,14 @@ public class PathTransform {
 		checkPointer(ptr);
 		deletePathTransform(ptr);
 		ptr = 0;
+	}
+	
+	public Path.Point transformSingle(Path.Point p){
+		checkPointer(ptr);
+		long pointPtr = transformSingle(ptr, p.x, p.y, p.z);
+		Path.Point result = new Path.Point(Path.getPointX(pointPtr), Path.getPointY(pointPtr), Path.getPointZ(pointPtr));
+		Path.deletePoint(pointPtr);
+		return result;
 	}
 
 	/** transforms a path without subdivisions by modifying its coordinates directly */

@@ -17,6 +17,9 @@ public class Test{
 		PathTransform.Path path3 = pt.transform(path2);
 		System.out.println("path3:");
 		path3.print();
+		PathTransform.Path.Point testPoint = new PathTransform.Path.Point(1,1,0);
+		PathTransform.Path.Point result = pt.transformSingle(testPoint);
+		System.out.println("result: x: "+result.x+" y: "+result.y+" z: "+result.z);
 		path.dispose();
 		path2.dispose();
 		path3.dispose();

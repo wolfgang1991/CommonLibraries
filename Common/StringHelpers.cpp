@@ -115,6 +115,28 @@ std::string stripFile(const std::string& path){
 	}
 }
 
+//! -1 if not available
+static int findDotPos(const std::string& str){
+	int dotPos = -1;
+	for(int i = (int)str.size()-1; i>=0; i--){
+		if(str[i]=='.'){
+			dotPos = i;
+			break;
+		}
+	}
+	return dotPos;
+}
+
+std::string stripExt(const std::string& str){
+	int dotPos = findDotPos(str);
+	return dotPos>=0?str.substr(0,dotPos):str;
+}
+
+std::string getExt(const std::string& str){
+	int dotPos = findDotPos(str);
+	return dotPos>=0?str.substr(dotPos+1,str.size()):"";
+}
+
 std::string getHumanReadableTime(uint64_t time, bool showDays){
 	uint64_t secs = time%60;
 	uint64_t mins = (time%3600)/60;
