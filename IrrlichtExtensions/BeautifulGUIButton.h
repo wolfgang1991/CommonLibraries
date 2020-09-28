@@ -10,11 +10,13 @@ class BeautifulGUIButton : public AggregateGUIElement{
 	protected:
 	
 	bool pressed;
+	irr::core::rect<irr::s32> pressedStart;
 	
 	irr::SEvent buttonEvent;
 	
 	public:
 	
+	//! id is NOT used for fetching a ISkinExtension here (so arbitrary values are possible)
 	BeautifulGUIButton(irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, bool isHorizontal, bool isScrollable, const std::initializer_list<IAggregatableGUIElement*>& subElements, const std::initializer_list<IAggregatableGUIElement*>& activatedSubElements, irr::s32 id, void* data = NULL, irr::gui::IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0));
 	
 	void draw();

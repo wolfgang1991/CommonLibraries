@@ -48,6 +48,7 @@ void BeautifulGUIText::draw(){
 		guiFont->setDefaultScale(scale*cScale);
 		guiFont->drawFontMeshBuffer(mb, textSize, AbsoluteRect, hcenter, vcenter, &AbsoluteClippingRect);
 		guiFont->setDefaultScale(cScale);
+		IAggregatableGUIElement::draw();//draw children etc
 	}
 }
 

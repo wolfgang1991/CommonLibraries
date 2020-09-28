@@ -14,6 +14,7 @@ BeautifulGUIButton::BeautifulGUIButton(irr::gui::IGUIEnvironment* environment, i
 	buttonEvent.GUIEvent.Caller = this;
 	buttonEvent.GUIEvent.Element = NULL;
 	buttonEvent.GUIEvent.EventType = EGET_BUTTON_CLICKED;
+	pressedStart = rect<s32>(0,0,0,0);
 }
 	
 void BeautifulGUIButton::draw(){
@@ -36,16 +37,18 @@ bool BeautifulGUIButton::OnEvent(const irr::SEvent& event){
 		vector2d<s32> mPos(m.X,m.Y);
 		if(pressed && m.Event==EMIE_LMOUSE_LEFT_UP){
 			pressed = false;
-			if(AbsoluteRect.isPointInside(mPos)){
-				//if(!AggregateGUIElement::OnEvent(event)){//event must be finished before issuing the button event which may lead to the destruction of the BeautifulGUIButton
+			if(AbsoluteRect.isPointInside(mPos) && pressedStart.isPointInside(mPos)){
 				if(Parent && isTrulyVisible()){
+					AggregateGUIElement::OnEvent(event);//because parent may decide to delete itself or this element on button event
 					Parent->OnEvent(buttonEvent);
-					return true;//Parent may decide to delete itself or this element on button event, therefore the mouse event must not be processed further by a potential non exisitng parent
+					return true;
 				}
-				//}
 			}
+		}else if(pressed && m.Event==EMIE_MOUSE_MOVED){
+			pressed = AbsoluteRect.isPointInside(mPos) && pressedStart.isPointInside(mPos);
 		}else if(!pressed && m.Event==EMIE_LMOUSE_PRESSED_DOWN){
 			pressed = AbsoluteRect.isPointInside(mPos);
+			pressedStart = AbsoluteRect;
 		}
 	}
 	return AggregateGUIElement::OnEvent(event);

@@ -68,6 +68,7 @@ EditBoxDialog::EditBoxDialog(IEditBoxDialogCallback* cbk, irr::IrrlichtDevice* d
 	win->getCloseButton()->setVisible(false);
 	win->setDrawTitlebar(false);
 	win->setDraggable(false);
+	win->setNotClipped(true);
 	gui = new GUI(Environment, &guiIni, irr::core::rect<irr::s32>(0,0,win->getRelativePosition().getWidth(),win->getRelativePosition().getHeight()), win, true);
 	ettitle = (IGUIStaticText*)gui->getElement("ttitle");
 	ettitle->setText(title);

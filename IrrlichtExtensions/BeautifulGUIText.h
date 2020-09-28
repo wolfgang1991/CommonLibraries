@@ -39,20 +39,20 @@ class BeautifulGUIText : public IAggregatableGUIElement{
 	
 	~BeautifulGUIText();
 	
-	void draw();
+	virtual void draw();
 	
 	//! recalculates the meshbuffer using the current font
-	void recalculateMeshBuffer();
+	virtual void recalculateMeshBuffer();
 	
-	void setColor(irr::video::SColor color);
+	virtual void setColor(irr::video::SColor color);
 	
-	void setItalicGradient(irr::f32 italicGradient);
+	virtual void setItalicGradient(irr::f32 italicGradient);
 	
-	void setCenter(bool hcenter, bool vcenter);
+	virtual void setCenter(bool hcenter, bool vcenter);
 	
-	void setText(const wchar_t* text);
+	virtual void setText(const wchar_t* text);
 	
-	irr::scene::SMeshBuffer& getMeshBuffer();
+	virtual irr::scene::SMeshBuffer& getMeshBuffer();
 	
 };
 
