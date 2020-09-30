@@ -72,7 +72,27 @@ std::wstring convertStringToWString(const std::string& str);
 //! Convert WString to String
 std::string convertWStringToString(const std::wstring& str);
 
-std::list<std::string> parseSeparatedString(const std::string& s, char seperator);
+//! special case of parseSeparatedString function template
+std::list<std::string> parseSeparatedString(const std::string& s, char separator);
+
+//! parses a separated string e.g. csv and pushed back the token into out. TContainer should be a container where push_back is possible in O(1) (e.g. std::list or std::vector)
+template<typename TContainer>
+void parseSeparatedString(TContainer& out, const typename TContainer::value_type& s, typename TContainer::value_type::value_type separator){
+	typedef typename TContainer::value_type String;
+	typedef typename String::value_type Char;
+	std::basic_stringstream<Char> ss;
+	for(size_t i=0; i<s.size(); i++){
+		Char c = s[i];
+		if(c==separator){
+			out.push_back(ss.str());
+			ss.str(String());
+		}else{
+			ss << c;
+		}
+	}
+	String finalToken = ss.str();
+	if(!finalToken.empty()){out.push_back(finalToken);}
+}
 
 //! returns a string representation of val rounded to acc decimal places
 std::string round(double val, int acc);

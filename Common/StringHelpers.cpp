@@ -52,19 +52,9 @@ std::string convertWStringToString(const std::wstring& str){
 	return std::string(str.begin(), str.end());//does not recognize encoding correctly (for non ascii chars)
 }
 
-std::list<std::string> parseSeparatedString(const std::string& s, char seperator){
+std::list<std::string> parseSeparatedString(const std::string& s, char separator){
 	std::list<std::string> res;
-	std::stringstream ss;
-	for(unsigned int i=0; i<s.size(); i++){
-		char c = s[i];
-		if(c==seperator){
-			res.push_back(ss.str());
-			ss.str("");
-		}else{
-			ss << c;
-		}
-	}
-	if(ss.str().size()!=0){res.push_back(ss.str());}
+	parseSeparatedString(res, s, separator);
 	return res;
 }
 
