@@ -64,6 +64,11 @@ class Matrix{
 	//Init internal array directly
 	template <typename... T> 
 	Matrix(T... ts):data{static_cast<TScalar>(ts)...} {}
+	
+	template<typename TMatrix, typename std::enable_if<TMatrix::isMatrix, int>::type = 0>
+	Matrix(const TMatrix& other){
+		copyMatrix(other, *this);
+	}
    
 	template<typename TMatrix>
 	Matrix& operator=(const TMatrix& matrix){
@@ -96,6 +101,14 @@ class TransposeMatrix{
 	
 	Scalar& get(uint32_t row, uint32_t column = 0){
 		return parentMatrix.get(column, row);
+	}
+	
+	const Scalar& operator[](uint32_t row) const{
+		return get(row, 0);
+	}
+	
+	Scalar& operator[](uint32_t row){
+		return get(row, 0);
 	}
 	
 	void set(uint32_t row, uint32_t column, Scalar value){
@@ -136,6 +149,14 @@ class SubMatrix{
 	
 	Scalar& get(uint32_t row, uint32_t column = 0){
 		return parentMatrix.get(TRowIndex+row, TColumnIndex+column);
+	}
+	
+	const Scalar& operator[](uint32_t row) const{
+		return get(row, 0);
+	}
+	
+	Scalar& operator[](uint32_t row){
+		return get(row, 0);
 	}
 	
 	void set(uint32_t row, uint32_t column, Scalar value){
@@ -455,7 +476,7 @@ TFloat calcFrobeniusNorm(const TMatrix& m){
 
 //! Normalize the matrix using the frobenius norm
 template<typename TMatrix, typename TFloat = typename TMatrix::Scalar, typename std::enable_if<TMatrix::isMatrix, int>::type = 0>
-TMatrix& normalize(TMatrix& m){
+TMatrix normalize(const TMatrix& m){
 	TFloat factor = calcFrobeniusNorm<TMatrix,TFloat>(m);
 	factor = ((TFloat)1)/factor;
 	return factor * m;
@@ -467,6 +488,12 @@ typename ResultScalar<TVectorA,TVectorB>::type calcDotProduct(const TVectorA& a,
 	typename ResultScalar<TVectorA,TVectorB>::type res = 0;
 	for(uint32_t i=0; i<TVectorA::rowCount; i++){res += a.get(i)*b.get(i);}
 	return res;
+}
+
+//! Calculate cross product of two 3D vectors (axb)
+template<typename TVectorA, typename TVectorB, typename std::enable_if<TVectorA::isMatrix&&TVectorA::columnCount==1&&TVectorA::rowCount==3&&TVectorB::isMatrix&&TVectorB::columnCount==1&&TVectorB::rowCount==3, int>::type = 0>
+Vector3D<typename ResultScalar<TVectorA,TVectorB>::type> calcCrossProduct(const TVectorA& a, const TVectorB& b){
+	return Vector3D<typename ResultScalar<TVectorA,TVectorB>::type>{ a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0] };
 }
 
 //! Calculates a numerical jacobi matrix for a given function f (does only make sense with equal floating point scalars) using the provided parameters +/- delta
