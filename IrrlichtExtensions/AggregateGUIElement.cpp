@@ -207,22 +207,24 @@ bool AggregateGUIElement::OnEvent(const irr::SEvent& event){
 		if(g.EventType==EGET_COUNT){//Deactivate siblings of activated element
 			bool isActiveChild = false;
 			for(uint32_t i=0; i<subElements.size() && !isActiveChild; i++){
-				isActiveChild = isActiveChild || subElements[i]==g.Caller;
+				isActiveChild = subElements[i]==g.Caller && subElements[i]->isActive();
 			}
 			for(uint32_t i=0; i<activatedSubElements.size() && !isActiveChild; i++){
-				isActiveChild = isActiveChild || activatedSubElements[i]==g.Caller;
+				isActiveChild = activatedSubElements[i]==g.Caller && activatedSubElements[i]->isActive();
 			}
 			if(isActiveChild && !multiSelect){
 				for(uint32_t i=0; i<subElements.size(); i++){
-					if(subElements[i]!=g.Caller){subElements[i]->setActive(false);}
+					if(subElements[i]!=g.Caller){subElements[i]->setActive(false, false);}
 				}
 				for(uint32_t i=0; i<activatedSubElements.size(); i++){
-					if(activatedSubElements[i]!=g.Caller){activatedSubElements[i]->setActive(false);}
+					if(activatedSubElements[i]!=g.Caller){activatedSubElements[i]->setActive(false, false);}
 				}
-				return true;
-			}else if(multiSelect){
-				return true;
 			}
+			irr::SEvent event;
+			event.EventType = EET_GUI_EVENT;
+			event.GUIEvent = SEvent::SGUIEvent{this, g.Caller, EGET_LISTBOX_CHANGED};
+			Parent->OnEvent(event);
+			return true;
 		}
 	}
 	return IAggregatableGUIElement::OnEvent(event);

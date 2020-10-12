@@ -8,6 +8,7 @@
 #include "ForwardDeclarations.h"
 
 #include <string>
+#include <functional>
 
 class IniFile;
 class AggregateGUIElement;
@@ -49,6 +50,8 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 		OPEN_AND_SAVE,
 		CAPS_COUNT
 	};
+	
+	typedef std::function<std::wstring(const std::wstring&,IniFile*,const std::string&)> IndicationFunction;
 
 	private:
 	
@@ -100,7 +103,11 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 	
 	bool iniDirty;
 	
+	double lastSelectionChange;
+	
 	void openOrSave(bool open);
+	
+	IndicationFunction calculateIndication;
 	
 	public:
 
@@ -121,7 +128,7 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 	const ILanguagePhrases* phrases;
 	
 	//! the .*AggId parameters define the ids for the skin for the aggregation
-	LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, const char* exportPath = NULL, irr::video::ITexture* folderIcon = NULL, irr::video::ITexture* settingsIcon = NULL, bool isModal = true, irr::s32 deleteId = -1, irr::s32 renameId = -1, const wchar_t* defaultFileName = L"");
+	LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, const char* exportPath = NULL, irr::video::ITexture* folderIcon = NULL, irr::video::ITexture* settingsIcon = NULL, bool isModal = true, irr::s32 deleteId = -1, irr::s32 renameId = -1, const wchar_t* defaultFileName = L"", const IndicationFunction* calculateIndication = NULL);
 	
 	~LoadSaveSettingsDialog();
 	
@@ -130,6 +137,9 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 	void OnPostRender(irr::u32 timeMs);
 	
 	void setLanguage(const ILanguagePhrases* phrases);
+	
+	//! sets a callback function which is called to create the indicated label based on the default indication, ini representation and section. The section exists if a "file" has been selected.
+	void setIndicationOverideFunction(const IndicationFunction& calculateIndication);
 	
 };
 

@@ -37,6 +37,7 @@ IAggregatableGUIElement::IAggregatableGUIElement(irr::gui::IGUIEnvironment* envi
 	isActivateAble(isActivateAble),
 	active(false),
 	activationLock(false),
+	pressedInside(false),
 	data(data)
 {
 	setName("IAggregatableGUIElement");
@@ -95,8 +96,11 @@ void IAggregatableGUIElement::draw(){
 bool IAggregatableGUIElement::OnEvent(const irr::SEvent& event){
 	if(event.EventType==EET_MOUSE_INPUT_EVENT){
 		const SEvent::SMouseInput& m = event.MouseInput;
-		if(m.Event==EMIE_LMOUSE_LEFT_UP && isActivateAble && !activationLock){
+		if(m.Event==EMIE_LMOUSE_LEFT_UP && isActivateAble && !activationLock && pressedInside){
+			pressedInside = false;
 			setActive(!isActive());
+		}else if(m.Event==EMIE_LMOUSE_PRESSED_DOWN){
+			pressedInside = true;
 		}
 	}
 	return irr::gui::IGUIElement::OnEvent(event);
@@ -106,9 +110,10 @@ void IAggregatableGUIElement::setActivationLock(bool on){
 	activationLock = on;
 }
 
-void IAggregatableGUIElement::setActive(bool active){
+void IAggregatableGUIElement::setActive(bool active, bool emitEventOnChange){
+	bool prevActive = this->active;
 	this->active = active;
-	if(active && Parent!=NULL){
+	if(active!=prevActive && emitEventOnChange && Parent!=NULL){
 		irr::SEvent event;
 		event.EventType = EET_GUI_EVENT;
 		event.GUIEvent = SEvent::SGUIEvent{this, Parent, EGET_COUNT};

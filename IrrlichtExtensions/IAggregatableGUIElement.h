@@ -46,6 +46,7 @@ class IAggregatableGUIElement : public irr::gui::IGUIElement{
 	bool isActivateAble;
 	bool active;
 	bool activationLock;
+	bool pressedInside;
 	
 	void* data;
 	
@@ -87,7 +88,7 @@ class IAggregatableGUIElement : public irr::gui::IGUIElement{
 	//! lock activation possibility (useful if events shall be processed by a parent without selecting the children)
 	virtual void setActivationLock(bool on);
 	
-	virtual void setActive(bool active);
+	virtual void setActive(bool active, bool emitEventOnChange = true);
 	
 	virtual void* getData();
 	

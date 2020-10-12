@@ -8,6 +8,9 @@
 #include <CMBox.h>
 #include <EditBoxDialog.h>
 #include <ConstantLanguagePhrases.h>
+#include <timing.h>
+#include <BeautifulGUIText.h>
+#include <utf8.h>
 
 #include <IVideoDriver.h>
 #include <IGUIWindow.h>
@@ -25,6 +28,8 @@ using namespace irr;
 using namespace core;
 using namespace gui;
 using namespace video;
+
+#define DOUBLE_CLICK_TIME 0.5//s
 
 static const ConstantLanguagePhrases defaultPhrases({
 	{L"LoadSaveSettingsDialog::IMPORT",L"Importing from: %s\nImporting may overwrite existing data. Do you wish to continue?"},
@@ -94,7 +99,6 @@ class NameEditCallback : public IEditBoxDialogCallback{
 							lssDialog->ini->moveSection(*it, std::string(newName).append(it->substr(e.path.size())));
 						}
 					}else{
-						//std::cout << "renaming: " << e.path << " to " << newName << std::endl;
 						lssDialog->iniDirty = true;
 						lssDialog->ini->moveSection(e.path, newName);
 					}
@@ -210,7 +214,7 @@ static const char* guiCodeString =
 "VAlign = Center\n"
 "VisibilityDomain = 0\n";
 
-LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, const char* exportPath, irr::video::ITexture* folderIcon, irr::video::ITexture* settingsIcon, bool isModal, irr::s32 deleteId, irr::s32 renameId, const wchar_t* defaultFileName):
+LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, const char* exportPath, irr::video::ITexture* folderIcon, irr::video::ITexture* settingsIcon, bool isModal, irr::s32 deleteId, irr::s32 renameId, const wchar_t* defaultFileName, const IndicationFunction* calculateIndication):
 	IGUIElement(EGUIET_ELEMENT, device->getGUIEnvironment(), device->getGUIEnvironment()->getRootGUIElement(), -1, rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height)),
 	device(device),
 	ini(ini),
@@ -226,7 +230,8 @@ LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, i
 	deleteId(deleteId),
 	renameId(renameId),
 	caps(caps),
-	iniDirty(false){
+	iniDirty(false),
+	calculateIndication(calculateIndication?*calculateIndication:[](const std::wstring& indication, IniFile* ini ,const std::string& section){return indication;}){
 	IniFile guiIni;
 	guiIni.setFromString(guiCodeString);
 	irr::core::dimension2d<irr::u32> dim = Environment->getVideoDriver()->getScreenSize();
@@ -257,6 +262,7 @@ LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, i
 	setLanguage(&defaultPhrases);
 	nameCbk = new NameEditCallback(this);
 	bOverwrite = bDeleteOne = NULL;
+	lastSelectionChange = 0;
 	drop();//drop since the valid reference is hold by the parent (root element)
 }
 
@@ -265,6 +271,11 @@ LoadSaveSettingsDialog::~LoadSaveSettingsDialog(){
 	delete nameCbk;
 	//children get automatically removed
 }
+
+void LoadSaveSettingsDialog::setIndicationOverideFunction(const IndicationFunction& calculateIndication){
+	this->calculateIndication = calculateIndication;
+}
+
 
 void LoadSaveSettingsDialog::setLanguage(const ILanguagePhrases* phrases){
 	this->phrases = phrases;
@@ -289,7 +300,7 @@ void LoadSaveSettingsDialog::addRowToList(irr::video::ITexture* fittingIcon, con
 		:
 			(IAggregatableGUIElement*)new EmptyGUIElement(Environment, .2f, 1.f/1.f, false, false, defaultAggId),
 		new EmptyGUIElement(Environment, .025f, 1.f/1.f, false, false, defaultAggId),
-		addAggregatableStaticText(Environment, convertStringToWString(indication).c_str(), EGUIA_UPPERLEFT, EGUIA_CENTER, 1.3f),
+		new BeautifulGUIText(calculateIndication(convertUtf8ToWString(indication),ini,std::string(currentPrefix).append(indication[0]=='/'?"":"/").append(indication)).c_str(), Environment->getSkin()->getColor(EGDC_BUTTON_TEXT), 0.f, NULL, false, true, Environment, 1.3f),//addAggregatableStaticText(Environment, convertStringToWString(indication).c_str(), EGUIA_UPPERLEFT, EGUIA_CENTER, 1.3f),
 		createButtons?
 			(IAggregatableGUIElement*)new AggregatableGUIElementAdapter(Environment, .2f, 7.f/4.f, true, Environment->addButton(rect<s32>(0,0,0,0), NULL, renameId, renameId<0?L"Move":L""), false, defaultAggId)//Attention: indices in OnEvent must match the order, else => crash
 		:
@@ -479,6 +490,36 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_NO){
 			bDeleteOne = bOverwrite = bDeleteAll = bImport = bExport = NULL;
+		}else if(g.EventType==EGET_LISTBOX_CHANGED){
+			s32 nowSelected = -1;
+			for(u32 i=0; i<settingsList->getSubElementCount(); i++){
+				AggregateGUIElement* row = (AggregateGUIElement*)(settingsList->getSubElement(i));
+				if(row->isActive()){
+					nowSelected = i;
+					break;
+				}
+			}
+			if(nowSelected!=lastSelected){
+				if(nowSelected>=0){
+					ListEntry& e = entries[nowSelected];
+					if(e.isFolder){
+						currentPrefix = e.path;
+						fillList(L"");
+						lastSelected = nowSelected = -1;
+						return true;
+					}else{
+						int32_t lastSlash = findLastSlash(e.path);
+						eeName->setText(convertStringToWString(lastSlash>=0?e.path.substr(lastSlash+1,std::string::npos):e.path).c_str());
+					}
+				}
+				double t = getSecs();
+				if((nowSelected==-1 || lastSelected==-1) && t-lastSelectionChange<DOUBLE_CLICK_TIME){
+					openOrSave(true);
+				}
+				lastSelectionChange = t;
+			}
+			lastSelected = nowSelected;
+			return true;
 		}
 	}else if(event.EventType==EET_KEY_INPUT_EVENT){
 		const SEvent::SKeyInput& k = event.KeyInput;
@@ -495,23 +536,4 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 
 void LoadSaveSettingsDialog::OnPostRender(irr::u32 timeMs){
 	IGUIElement::OnPostRender(timeMs);
-	s32 nowSelected = -1;
-	for(u32 i=0; i<settingsList->getSubElementCount(); i++){
-		AggregateGUIElement* row = (AggregateGUIElement*)(settingsList->getSubElement(i));
-		if(row->isActive()){
-			nowSelected = i;
-			if((int32_t)i!=lastSelected){
-				ListEntry& e = entries[i];
-				if(e.isFolder){
-					currentPrefix = e.path;
-					fillList(L"");
-				}else{
-					int32_t lastSlash = findLastSlash(e.path);
-					eeName->setText(convertStringToWString(lastSlash>=0?e.path.substr(lastSlash+1,std::string::npos):e.path).c_str());
-				}
-			}
-			break;
-		}
-	}
-	lastSelected = nowSelected;
 }
