@@ -1,4 +1,5 @@
 #include <IExtendableSkin.h>
+#include <Drawer2D.h>
 
 #include <set>
 
@@ -8,8 +9,9 @@ bool isExtendableSkin(void* something){
 	return extendableSkins.find(something)!=extendableSkins.end();
 }
 
-IExtendableSkin::IExtendableSkin(irr::gui::IGUISkin* parent, irr::IrrlichtDevice* device):
-	device(device),
+IExtendableSkin::IExtendableSkin(irr::gui::IGUISkin* parent, Drawer2D* drawer):
+	drawer(drawer),
+	device(drawer->getDevice()),
 	parent(parent){
 	extendableSkins.insert(this);
 }
@@ -42,6 +44,10 @@ irr::gui::IGUISkin* IExtendableSkin::getParentSkin(){
 
 irr::IrrlichtDevice* IExtendableSkin::getDevice(){
 	return device;
+}
+
+Drawer2D* IExtendableSkin::getDrawer2D(){
+	return drawer;
 }
 
 irr::video::SColor IExtendableSkin::getColor(irr::gui::EGUI_DEFAULT_COLOR color) const{

@@ -22,15 +22,15 @@ bool RS232::open(int baudRate, std::string device, bool hwFlowControl, bool read
 	return res==0;
 }
 
-bool RS232::sendData(const char* buf, int len){
+bool RS232::send(const char* buf, uint32_t len){
 	if(port){
 		int res = sendWholeTermData(port, buf, len);
-		return res==len;
+		return res==(int)len;
 	}
 	return false;
 }
 
-int RS232::recvData(char* buf, int buflen){
+int32_t RS232::recv(char* buf, uint32_t buflen){
 	if(port){
 		return recvTermData(port, buf, buflen);
 	}

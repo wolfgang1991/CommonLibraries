@@ -9,6 +9,8 @@
 #include <map>
 #include <string>
 
+class Drawer2D;
+
 class ISkinExtension{
 
 	public:
@@ -25,6 +27,7 @@ class IExtendableSkin : public irr::gui::IGUISkin{
 
 	protected:
 	
+	Drawer2D* drawer;
 	irr::IrrlichtDevice* device;
 	irr::gui::IGUISkin* parent;
 	
@@ -32,7 +35,7 @@ class IExtendableSkin : public irr::gui::IGUISkin{
 	
 	public:
 	
-	IExtendableSkin(irr::gui::IGUISkin* parent, irr::IrrlichtDevice* device);
+	IExtendableSkin(irr::gui::IGUISkin* parent, Drawer2D* drawer);
 	
 	virtual ~IExtendableSkin();
 	
@@ -44,6 +47,8 @@ class IExtendableSkin : public irr::gui::IGUISkin{
 	virtual irr::gui::IGUISkin* getParentSkin();
 	
 	virtual irr::IrrlichtDevice* getDevice();
+	
+	virtual Drawer2D* getDrawer2D();
 	
 	virtual irr::video::SColor getColor(irr::gui::EGUI_DEFAULT_COLOR color) const;
 

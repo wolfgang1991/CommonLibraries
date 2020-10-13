@@ -108,4 +108,10 @@ TValue Angle0to360(TValue phi){
 	return phi<(TValue)0.0?(phi+(TValue)360.0):phi;
 }
 
+//! returns true if the intervals [a1,a2] and [b1,b2] overlap
+template <class T>
+inline bool NumbersOverlap(T a1, T a2, T b1, T b2){
+	return (b1<=a1 && b2>=a1) || (b1<=a2 && b2>=a2) || (b1>=a1 && b2<=a2);
+}
+
 #endif

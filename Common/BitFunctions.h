@@ -1,9 +1,13 @@
 #ifndef BITFUNCTIONS_H_INCLUDED
 #define BITFUNCTIONS_H_INCLUDED
 
+#include "platforms.h"
+
+#ifndef MICROCONTROLLER_PLATFORM
 #include <vector>
-#include <cstring>
-#include <cstdint>
+#endif
+#include <string.h>
+#include <stdint.h>
 
 template <typename T>
 bool getBit(const T value, const unsigned char index){
@@ -66,6 +70,7 @@ void readUnalignedObject(TObject& object, const char* buffer, uint32_t& offset){
 	object.read(buffer, offset);
 }
 
+#ifndef MICROCONTROLLER_PLATFORM
 //! Format: uint32_t #objects; objects
 //! changes offset by the amount of read bytes
 template<typename TObject>
@@ -76,11 +81,52 @@ void readUnalignedObjectVector(std::vector<TObject>& objects, const char* buffer
 		readUnalignedObject<TObject>(objects[i], buffer, offset);
 	}
 }
+#endif
 
 template<typename T>
 void writeUnaligned(char* buffer, uint32_t& offset, T value){
 	memcpy(&(buffer[offset]), &value, sizeof(T));
 	offset += sizeof(T);
+}
+
+template <typename T, typename TIndex = uint32_t>
+void writeLittleEndian(uint8_t* buffer, TIndex& offset, const T& value){
+	for(uint8_t i=0; i<sizeof(T); i++){
+		uint8_t shift = i << 3;//i*8
+		buffer[offset] = static_cast<uint8_t>((value >> shift) & 0xFF);//extract ith byte
+		offset++;
+	}
+}
+
+template <typename T, typename TIndex = uint32_t>
+T readLittleEndian(uint8_t* buffer, TIndex& offset){
+	T res = 0;
+	for(uint8_t i=0; i<sizeof(T); i++){
+		uint8_t shift = i << 3;//i*8
+		res = res | (static_cast<T>(buffer[offset]) << shift);
+		offset++;
+	}
+	return res;
+}
+
+template <typename T, typename TIndex = uint32_t>
+void writeBigEndian(uint8_t* buffer, TIndex& offset, const T& value){
+	for(uint8_t i=0; i<sizeof(T); i++){
+		uint8_t shift = (sizeof(T)-i-1) << 3;//*8
+		buffer[offset] = static_cast<uint8_t>((value >> shift) & 0xFF);//extract ith byte
+		offset++;
+	}
+}
+
+template <typename T, typename TIndex = uint32_t>
+T readBigEndian(uint8_t* buffer, TIndex& offset){
+	T res = 0;
+	for(uint8_t i=0; i<sizeof(T); i++){
+		uint8_t shift = (sizeof(T)-i-1) << 3;//*8
+		res = res | (static_cast<T>(buffer[offset]) << shift);
+		offset++;
+	}
+	return res;
 }
 
 #endif
