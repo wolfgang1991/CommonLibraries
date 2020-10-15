@@ -5,9 +5,16 @@
 #include <list>
 #include <cstdint>
 
+#define SIMPLESOCKETS_WIN (defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64))
+
+#if SIMPLESOCKETS_WIN
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#endif
 
 class IIPAddress{
 
@@ -100,6 +107,11 @@ class ISocket{
 	int32_t restoreReceiveSize;
 	
 	ISocket();
+	
+	#if SIMPLESOCKETS_WIN
+	int isBlocking;//! 0 false, 1 true, 2 undefined
+	void handleBlocking(bool shallBeBlocking);
+	#endif
 
 	public:
 	

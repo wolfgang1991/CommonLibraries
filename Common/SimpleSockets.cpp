@@ -3,13 +3,18 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
-#include <netinet/in.h>
+
+#if SIMPLESOCKETS_WIN
+//TODO
+#else
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netdb.h>
+#include <net/if.h>
+#endif
+
+#include <unistd.h>
+#include <sys/types.h>
 #include <fcntl.h>
 
 #if defined(__ANDROID__)// || defined(__linux__)
@@ -17,8 +22,7 @@
 #define USE_ANDROID_BRD_ADDR_WORKAROUND
 #endif
 
-#include <net/if.h>
-#ifndef USE_ANDROID_BRD_ADDR_WORKAROUND
+#if !defined(USE_ANDROID_BRD_ADDR_WORKAROUND) && !SIMPLESOCKETS_WIN
 #include <ifaddrs.h>
 #endif
 
@@ -65,10 +69,55 @@
 #define ONCLOSE ;
 #endif
 
+#if SIMPLESOCKETS_WIN
+static int inet_pton(int af, const char* src, void* dst){
+	sockaddr_storage addr;
+	char srcStr[INET6_ADDRSTRLEN];
+	memset(&addr, 0, sizeof(addr));
+	strncpy(srcStr, src, INET6_ADDRSTRLEN);
+	srcStr[INET6_ADDRSTRLEN] = 0;
+	int size = sizeof(addr);
+	if(WSAStringToAddress(srcStr, af, NULL, (sockaddr*)&addr, &size)==0){
+		if(af==AF_INET){
+			*(in_addr*)dst = ((sockaddr_in*)&addr)->sin_addr;
+			return 1;
+		}else if(af==AF_INET6){
+			*(in6_addr*)dst = ((sockaddr_in6*)&addr)->sin6_addr;
+			return 1;
+		}
+	}
+	return 0;
+}
 
+static const char* inet_ntop(int af, const void* src, char* dst, socklen_t size){
+	sockaddr_storage addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.ss_family = af;
+	if(af==AF_INET){
+		((sockaddr_in*)&addr)->sin_addr = *(in_addr*)src;
+	}else if(af==AF_INET6){
+		((sockaddr_in6*)&addr)->sin6_addr = *(in6_addr*)src;
+	}else{
+		return NULL;
+	}
+	unsigned long s = size;
+	return (WSAAddressToString((sockaddr*)&addr, sizeof(addr), NULL, dst, &s)==0)?dst:NULL;
+}
+#endif
 
 static void handleErrorMessage(const char* error = NULL){
+	#if SIMPLESOCKETS_WIN
+	const char* finalError = error;
+	if(error==NULL){
+		static char errorstr[512];
+		errorstr[0] = '\0';
+		int errorCode = WSAGetLastError();
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,NULL,errorCode, MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),errorstr,sizeof(errorstr),NULL);
+		finalError = errorstr;
+	}
+	#else
 	const char* finalError = error==NULL?strerror(errno):error;
+	#endif
 	std::cout << "socket error: " << finalError << std::endl;
 	#if defined(__ANDROID__)
 	__android_log_print(ANDROID_LOG_ERROR, "SimpleSockets", "socket error: %s\n", finalError);
@@ -84,7 +133,6 @@ IPv4Address::IPv4Address(const std::string& addressString, uint16_t port){
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	//addr.sin_addr.s_addr = inet_addr(addressString.c_str());
 	if(inet_pton(AF_INET, addressString.c_str(), &(addr.sin_addr))!=1){
 		handleErrorMessage("Invalid IP address");
 	}
@@ -202,7 +250,12 @@ void ISocket::setSocketHandle(int socketHandle){
 }
 
 bool ISocket::setReceiveBufferSize(uint32_t size){
+	#ifdef SIMPLESOCKETS_WIN
+	int s = size;
+	if(setsockopt(socketHandle, SOL_SOCKET, SO_RCVBUF, (const char*)&s, sizeof(size))!=-1){
+	#else
 	if(setsockopt(socketHandle, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size))!=-1){
+	#endif
 		restoreReceiveSize = size;
 		return true;
 	}
@@ -220,7 +273,22 @@ ISocket::ISocket(){
 	restoreReceiveSize = -1;
 	socketHandle = -1;
 	shallTryRestore = true;
+	#if SIMPLESOCKETS_WIN
+	isBlocking = 2;
+	#endif
 }
+
+#if SIMPLESOCKETS_WIN
+void ISocket::handleBlocking(bool shallBeBlocking){
+	if(socketHandle!=-1 && isBlocking!=(int)shallBeBlocking){
+		isBlocking = (int)shallBeBlocking;
+		unsigned long mode = shallBeBlocking?0:1;
+		if(ioctlsocket(socketHandle, FIONBIO, &mode)!=0){
+			handleErrorMessage();
+		}
+	}
+}
+#endif
 
 bool ISocket::tryRestoreOnce(){
 	if(shallTryRestore){
@@ -241,9 +309,15 @@ ISocket::~ISocket(){
 }
 
 uint32_t ISocket::getAvailableBytes() const{
+	#if SIMPLESOCKETS_WIN
+	u_long res = 0;
+	if(ioctlsocket(socketHandle, FIONREAD, &res)!=0){
+		handleErrorMessage();
+	#else
 	int res = 0;
 	if(ioctl(socketHandle, FIONREAD, &res)!=0){
 		handleErrorMessage();
+	#endif
 		return 0;
 	}
 	return (uint32_t)res;
@@ -251,6 +325,14 @@ uint32_t ISocket::getAvailableBytes() const{
 	
 uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	ONRECEIVE(readBlocking)
+	#if SIMPLESOCKETS_WIN
+	handleBlocking(readBlocking);
+	int read = ::recv(socketHandle, buf, bufSize, 0);
+	if(read<0){
+		handleErrorMessage();
+		return 0;
+	}
+	#else
 	ssize_t read = ::recv(socketHandle, buf, bufSize, readBlocking?0:MSG_DONTWAIT);
 	if(read<0){
 		if(errno!=EAGAIN && errno!=EWOULDBLOCK && errno!=ECONNRESET && errno!=EHOSTUNREACH){
@@ -271,11 +353,15 @@ uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 			return 0;
 		}
 	}
+	#endif
 	return read;
 }
 	
 bool ISocket::send(const char* buf, uint32_t bufSize){
 	ONSEND
+	#if SIMPLESOCKETS_WIN
+	return ::send(socketHandle, buf, bufSize, 0)!=SOCKET_ERROR;
+	#else
 	if(::send(socketHandle, buf, bufSize, MSG_NOSIGNAL)!=-1){
 		return true;
 	}else if(errno==ENOTCONN){
@@ -285,6 +371,7 @@ bool ISocket::send(const char* buf, uint32_t bufSize){
 		}
 	}
 	return false;
+	#endif
 }
 
 IPv4Socket::IPv4Socket(){restoreBind = -1; restoreReusePort = false;}
@@ -300,13 +387,17 @@ bool IPv4Socket::restore(){
 
 bool IPv4Socket::bind(int port, bool reusePort){
 	int enable = 1;
-	if(setsockopt(socketHandle, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable))==-1){//without this it is not possible to bind again shortly after the socket has been closed
+	if(setsockopt(socketHandle, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable))==-1){//without this it is not possible to bind again shortly after the socket has been closed
 		handleErrorMessage();
 	}
 	if(reusePort){
+		#if SIMPLESOCKETS_WIN
+		handleErrorMessage("SO_REUSEPORT not supported on windows.");
+		#else
 		if(setsockopt(socketHandle, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable))==-1){
 			handleErrorMessage();
 		}
+		#endif
 	}
 	restoreReusePort = reusePort;
 	sockaddr_in addr;
@@ -335,7 +426,7 @@ IPv4UDPSocket::IPv4UDPSocket():targetAddress("0.0.0.0",0),lastReceivedAddress("0
 void IPv4UDPSocket::init(){
 	socketHandle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	int on = 1;
-	if(setsockopt(socketHandle, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))==-1){//allow broadcast
+	if(setsockopt(socketHandle, SOL_SOCKET, SO_BROADCAST, (const char*)&on, sizeof(on))==-1){//allow broadcast
 		handleErrorMessage();
 	}
 	disableBlockingTimeout(socketHandle);
@@ -370,10 +461,22 @@ bool IPv4UDPSocket::send(const char* buf, uint32_t bufSize){
 
 uint32_t IPv4UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	sockaddr_in addr;
-	socklen_t len = sizeof(addr);
 	ONRECEIVE(readBlocking)
+	#if SIMPLESOCKETS_WIN
+	handleBlocking(readBlocking);
+	int len = sizeof(addr);
+	int received = ::recvfrom(socketHandle, buf, bufSize, 0, (sockaddr*)(&addr), &len);
+	if(received>=0){
+		lastReceivedAddress.setInternalRepresentation(addr);
+		return received;
+	}else{
+		handleErrorMessage();
+		return 0;
+	}
+	#else
+	socklen_t len = sizeof(addr);
 	ssize_t received = recvfrom(socketHandle, buf, bufSize, readBlocking?0:MSG_DONTWAIT, (sockaddr*)(&addr), &len);
-	if(received>0){
+	if(received>=0){
 		lastReceivedAddress.setInternalRepresentation(addr);
 		return received;
 	}else if(received<0 && errno!=EAGAIN && errno!=EWOULDBLOCK && errno!=EHOSTUNREACH){
@@ -391,6 +494,7 @@ uint32_t IPv4UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 		handleErrorMessage();
 		return 0;
 	}
+	#endif
 	return 0;
 }
 	
@@ -413,20 +517,24 @@ bool IPv6Socket::restore(){
 void IPv6Socket::setIPv4ReceptionEnabled(bool enabled){
 	restoreIPv4ReceptionEnabled = enabled;
 	int opt = (int)(!enabled);
-	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt))==-1){
+	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&opt, sizeof(opt))==-1){
 		handleErrorMessage();
 	}
 }
 
 bool IPv6Socket::bind(int port, bool reusePort){
 	int enable = 1;
-	if(setsockopt(socketHandle, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable))==-1){//without this it is not possible to bind again shortly after the socket has been closed
+	if(setsockopt(socketHandle, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable))==-1){//without this it is not possible to bind again shortly after the socket has been closed
 		handleErrorMessage();
 	}
 	if(reusePort){
-		if(setsockopt(socketHandle, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable))==-1){
+		#if SIMPLESOCKETS_WIN
+		handleErrorMessage("SO_REUSEPORT not supported on windows.");
+		#else
+		if(setsockopt(socketHandle, SOL_SOCKET, SO_REUSEPORT, (const char*)&enable, sizeof(enable))==-1){
 			handleErrorMessage();
 		}
+		#endif
 	}
 	restoreReusePort = reusePort;
 	sockaddr_in6 addr;
@@ -451,7 +559,7 @@ void IPv6UDPSocket::joinLinkLocalMulticastGroup(uint32_t multicastInterfaceIndex
 	memset(&mreq, 0, sizeof(mreq));
 	inet_pton(AF_INET6, "FF02::1", &(mreq.ipv6mr_multiaddr));
 	mreq.ipv6mr_interface = multicastInterfaceIndex;
-	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq))==-1){//allow broadcast == link local multicast
+	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char*)&mreq, sizeof(mreq))==-1){//allow broadcast == link local multicast
 		if(errno!=ENODEV){handleErrorMessage();}
 	}
 }
@@ -459,7 +567,7 @@ void IPv6UDPSocket::joinLinkLocalMulticastGroup(uint32_t multicastInterfaceIndex
 void IPv6UDPSocket::init(){
 	socketHandle = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	int ttl = 63;
-	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, &ttl, sizeof(ttl))==-1){//default ttl may be too low
+	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (const char*)&ttl, sizeof(ttl))==-1){//default ttl may be too low
 		handleErrorMessage();
 	}
 	disableBlockingTimeout(socketHandle);
@@ -494,8 +602,20 @@ bool IPv6UDPSocket::send(const char* buf, uint32_t bufSize){
 
 uint32_t IPv6UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	sockaddr_in6 addr;
-	socklen_t len = sizeof(sockaddr_in6);
 	ONRECEIVE(readBlocking)
+	#if SIMPLESOCKETS_WIN
+	handleBlocking(readBlocking);
+	int len = sizeof(addr);
+	int received = ::recvfrom(socketHandle, buf, bufSize, 0, (sockaddr*)(&addr), &len);
+	if(received>=0){
+		lastReceivedAddress.setInternalRepresentation(addr);
+		return received;
+	}else{
+		handleErrorMessage();
+		return 0;
+	}
+	#else
+	socklen_t len = sizeof(sockaddr_in6);
 	ssize_t received = recvfrom(socketHandle, buf, bufSize, readBlocking?0:MSG_DONTWAIT, (sockaddr*)(&addr), &len);
 	if(received>0){
 		lastReceivedAddress.setInternalRepresentation(addr);
@@ -515,6 +635,7 @@ uint32_t IPv6UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 		handleErrorMessage();
 		return 0;
 	}
+	#endif
 	return 0;
 }
 
@@ -566,17 +687,26 @@ IPv4TCPSocket* IPv4TCPSocket::accept(uint32_t timeout, IPv4Address* peerAddress)
 	return acceptWithTimeout<IPv4TCPSocket, IPv4Address>(this, timeout, peerAddress);
 }
 
+#if !SIMPLESOCKETS_WIN
 static int setBlockingFlag(int fd, bool blocking){
 	int flags = fcntl(fd, F_GETFL, 0);
 	if(flags<0){return -1;}
 	flags = blocking ? (flags&~O_NONBLOCK) : (flags|O_NONBLOCK);
 	return fcntl(fd, F_SETFL, flags);
 }
+#endif
 
 //! Helper function to do a connect with timeout
-static int connectWithTimeout(int socketHandle, uint32_t timeout, const sockaddr* addr, int addrLen){
+static int connectWithTimeout(int socketHandle, uint32_t timeout, const sockaddr* addr, int addrLen, bool restoreBlocking){
 	ONCONNECT
+	#if SIMPLESOCKETS_WIN
+	unsigned long mode = 1;
+	if(ioctlsocket(socketHandle, FIONBIO, &mode)!=0){
+		handleErrorMessage();
+	}
+	#else
 	if(setBlockingFlag(socketHandle, false)==-1){return -1;}
+	#endif
 	int res = ::connect(socketHandle, addr, addrLen);
 	if(res==-1 && errno!=EINPROGRESS){return -1;}
 	fd_set fdset;
@@ -588,14 +718,27 @@ static int connectWithTimeout(int socketHandle, uint32_t timeout, const sockaddr
 	int so_error = -1;
 	if(select(socketHandle+1, NULL, &fdset, NULL, &tv)>0){
 		socklen_t len = sizeof(so_error);
-		getsockopt(socketHandle, SOL_SOCKET, SO_ERROR, &so_error, &len);
+		getsockopt(socketHandle, SOL_SOCKET, SO_ERROR, (char*)&so_error, &len);
 	}
-	if(setBlockingFlag(socketHandle, true)==-1){return -1;}
+	if(restoreBlocking){
+		#if SIMPLESOCKETS_WIN
+		unsigned long mode = 0;
+		if(ioctlsocket(socketHandle, FIONBIO, &mode)!=0){
+			handleErrorMessage();
+		}
+		#else
+		if(setBlockingFlag(socketHandle, true)==-1){return -1;}
+		#endif
+	}
 	return so_error;
 }
 	
 bool IPv4TCPSocket::connect(const IPv4Address& address, uint32_t timeout){
-	if(connectWithTimeout(socketHandle, timeout, (const sockaddr*)(&(address.getInternalRepresentation())), sizeof(sockaddr_in))==0){
+	#if SIMPLESOCKETS_WIN
+	if(connectWithTimeout(socketHandle, timeout, (const sockaddr*)(&(address.getInternalRepresentation())), sizeof(sockaddr_in), isBlocking)==0){
+	#else
+	if(connectWithTimeout(socketHandle, timeout, (const sockaddr*)(&(address.getInternalRepresentation())), sizeof(sockaddr_in), true)==0){
+	#endif
 		restoreTimeout = timeout;
 		restoreAddress = address;
 		restoreListen = -1;
@@ -650,7 +793,11 @@ IPv6TCPSocket* IPv6TCPSocket::accept(uint32_t timeout, IPv6Address* peerAddress)
 }
 	
 bool IPv6TCPSocket::connect(const IPv6Address& address, uint32_t timeout){
-	if(connectWithTimeout(socketHandle, timeout, (const sockaddr*)(&(address.getInternalRepresentation())), sizeof(sockaddr_in6))==0){
+	#if SIMPLESOCKETS_WIN
+	if(connectWithTimeout(socketHandle, timeout, (const sockaddr*)(&(address.getInternalRepresentation())), sizeof(sockaddr_in6), isBlocking)==0){
+	#else
+	if(connectWithTimeout(socketHandle, timeout, (const sockaddr*)(&(address.getInternalRepresentation())), sizeof(sockaddr_in6), true)==0){
+	#endif
 		restoreTimeout = timeout;
 		restoreAddress = address;
 		restoreListen = -1;
@@ -708,7 +855,9 @@ std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_
 std::list<IPv4Address> queryIPv4BroadcastAdresses(uint16_t portToFill){
 	std::list<IPv4Address> l;
 	IPv4Address address("255.255.255.255", portToFill);
-	#ifdef USE_ANDROID_BRD_ADDR_WORKAROUND//works on Linux and Android
+	#if SIMPLESOCKETS_WIN
+	//TODO
+	#elif defined(USE_ANDROID_BRD_ADDR_WORKAROUND)//works on Linux and Android
 	static const size_t len = sizeof(ifreq);
 	char buf[16384];
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
