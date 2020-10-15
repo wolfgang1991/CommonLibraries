@@ -39,5 +39,7 @@ Compilation Hints:
 
 Each library can be compiled separately. In case of missing dependencies (e.g. OpenCV) you might want to compile only the libraries you need.
 If OpenCV usage is desired the corresponding path might need to be adapted. 
+Irrlicht needs to be compiled separately (please check the Makefile comments in Irrlicht/source/Irrlicht for more information).
+Irrlicht can be compiled with mingw32-make.exe CC=gcc staticlib_win32 -j8 on windows or simply make -j8 on Linux.
 The Makefiles can also be used on Windows with mingw (for example: CC=gcc mingw32-make.exe DEBUG=1 PLATFORM=win32 -j8 ).
 If PLATFORM=win32 the windows libraries are linked. If PLATFORM is undefined Linux or compatible is asserted.
