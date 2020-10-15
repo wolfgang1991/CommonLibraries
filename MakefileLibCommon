@@ -1,19 +1,12 @@
-ifeq ($(PLATFORM),)
 FINALSTATICLIB = $(STATIC_LIB)
-else
-FINALSTATICLIB = $(patsubst %.a,%_$(PLATFORM).a,$(STATIC_LIB))
-endif
 
-ifeq ($(PLATFORM),win32)
-FINALOBJDIR = $(OBJDIR)/win32
-CXX = x86_64-w64-mingw32-g++-posix
-CC = x86_64-w64-mingw32-gcc
-else
-FINALOBJDIR = $(OBJDIR)
-endif
+#ifeq ($(PLATFORM),win32)
+#CXX = x86_64-w64-mingw32-g++-posix
+#CC = x86_64-w64-mingw32-gcc
+#endif
 
-LINKOBJ = $(patsubst %,$(FINALOBJDIR)/%,$(_LINKOBJ))
-C_LINKOBJ = $(patsubst %,$(FINALOBJDIR)/%,$(_C_LINKOBJ))
+LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
+C_LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_C_LINKOBJ))
 
 ifeq ($(DEBUG),1)
 OPTIM = $(USEROPTIM) -g -DDEBUG=1
@@ -32,20 +25,21 @@ $(FINALSTATICLIB): $(LINKOBJ) $(C_LINKOBJ)
 	$(AR) rs $@ $^
 	
 # Create dependency files for automatic recompilation
-$(FINALOBJDIR)/%.d:$(SRCDIR)/%.cpp
+$(OBJDIR)/%.d:$(SRCDIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -MM -MF $@ $<
-	sed -i -e "1s;.*;$(FINALOBJDIR)/\0;" $@
+	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
 	echo "	$(CXX) $(CPPFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 	
-$(FINALOBJDIR)/%.d:$(SRCDIR)/%.c
+$(OBJDIR)/%.d:$(SRCDIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MM -MF $@ $<
-	sed -i -e "1s;.*;$(FINALOBJDIR)/\0;" $@
+	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
 	echo "	$(CC) $(CFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(LINKOBJ:.o=.d)
+-include $(C_LINKOBJ:.o=.d)
 endif
 
 clean: clean_deps

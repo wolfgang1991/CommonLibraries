@@ -16,7 +16,7 @@ all: all_linux
 include $(COMMONLIBPATH)/MakefileConsoleCommon
 
 build_deps:
-	cd $(COMMONLIBPATH)/Common && $(MAKE) DEBUG=$(DEBUG)
+	cd $(COMMONLIBPATH)/Common && "$(MAKE)" DEBUG=$(DEBUG)
 	
 clean_deps:
 	#cd $(COMMONLIBPATH)/Common && $(MAKE) clean

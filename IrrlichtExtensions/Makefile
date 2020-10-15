@@ -14,7 +14,7 @@ all: all_lib
 include ../MakefileLibCommon
 
 build_deps:
-	cd ../Common && $(MAKE) DEBUG=$(DEBUG)
+	cd ../Common && "$(MAKE)" DEBUG=$(DEBUG)
 
 clean_deps:
-	cd ../Common && $(MAKE) clean
+	cd ../Common && "$(MAKE)" clean

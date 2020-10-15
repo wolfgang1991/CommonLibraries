@@ -8,8 +8,9 @@
 #define SIMPLESOCKETS_WIN (defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64))
 
 #if SIMPLESOCKETS_WIN
-#include <winsock2.h>
 #include <ws2tcpip.h>
+#undef ERROR
+#undef small
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>

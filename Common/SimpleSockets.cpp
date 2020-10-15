@@ -1,5 +1,6 @@
 #include <SimpleSockets.h>
 
+#include <cassert>
 #include <cstring>
 #include <iostream>
 #include <sstream>
@@ -29,6 +30,11 @@
 #if defined(__APPLE__) || defined(MACOSX)
 #define MSG_NOSIGNAL SO_NOSIGPIPE
 #define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP // future use
+#endif
+
+#if SIMPLESOCKETS_WIN
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #endif
 
 //Exceptions and signals are dangerous because depending on the OS dependent implementation of the POSIX sockets there can be undocumented errors.
@@ -68,6 +74,21 @@
 #define ONRECEIVE(BLOCKING) ;
 #define ONCLOSE ;
 #endif
+
+static volatile bool initialized = false;
+#if SIMPLESOCKETS_WIN
+static WSADATA wsa;
+#endif
+
+static void checkAndInitGlobally(){
+	if(!initialized){
+		initialized = true;
+		#if SIMPLESOCKETS_WIN
+		int res = WSAStartup(MAKEWORD(2,0),&wsa);
+		assert(res==0);
+		#endif
+	}
+}
 
 #if SIMPLESOCKETS_WIN
 static int inet_pton(int af, const char* src, void* dst){
@@ -114,9 +135,11 @@ static void handleErrorMessage(const char* error = NULL){
 		int errorCode = WSAGetLastError();
 		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,NULL,errorCode, MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),errorstr,sizeof(errorstr),NULL);
 		finalError = errorstr;
+		std::cout << "WSAGetLastError: " << errorCode << std::endl;
 	}
 	#else
 	const char* finalError = error==NULL?strerror(errno):error;
+	std::cout << "errno: " << errno << std::endl;
 	#endif
 	std::cout << "socket error: " << finalError << std::endl;
 	#if defined(__ANDROID__)
@@ -130,6 +153,7 @@ static void handleErrorMessage(const char* error = NULL){
 }
 
 IPv4Address::IPv4Address(const std::string& addressString, uint16_t port){
+	checkAndInitGlobally();
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
@@ -183,6 +207,7 @@ void IPv4Address::setInternalRepresentation(const sockaddr_in& r){
 }
 
 IPv6Address::IPv6Address(const std::string& addressString, uint16_t port){
+	checkAndInitGlobally();
 	memset(&addr, 0, sizeof(addr));
 	addr.sin6_family = AF_INET6;
 	addr.sin6_port = htons(port);
@@ -270,6 +295,7 @@ bool ISocket::restore(){
 }
 
 ISocket::ISocket(){
+	checkAndInitGlobally();
 	restoreReceiveSize = -1;
 	socketHandle = -1;
 	shallTryRestore = true;
@@ -301,10 +327,17 @@ bool ISocket::tryRestoreOnce(){
 ISocket::~ISocket(){
 	if(socketHandle!=-1){
 		ONCLOSE
+		#if SIMPLESOCKETS_WIN
+		int res = closesocket(socketHandle);
+		if(res<0){
+			handleErrorMessage();
+		}
+		#else
 		int res = ::close(socketHandle);
 		if(res<0 && errno!=EIO && errno!=EINTR){
-			std::cerr << "Error while closing a socket: " << strerror(errno) << std::endl;
+			handleErrorMessage();
 		}
+		#endif
 	}
 }
 
@@ -329,7 +362,10 @@ uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	handleBlocking(readBlocking);
 	int read = ::recv(socketHandle, buf, bufSize, 0);
 	if(read<0){
-		handleErrorMessage();
+		int errCode = WSAGetLastError();
+		if(errCode!=WSAEWOULDBLOCK && errCode!=WSAEINPROGRESS && errCode!=WSAEALREADY && errCode!=WSAECONNRESET && errCode!=WSAEHOSTUNREACH){
+			handleErrorMessage();
+		}
 		return 0;
 	}
 	#else
@@ -466,11 +502,14 @@ uint32_t IPv4UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	handleBlocking(readBlocking);
 	int len = sizeof(addr);
 	int received = ::recvfrom(socketHandle, buf, bufSize, 0, (sockaddr*)(&addr), &len);
-	if(received>=0){
+	if(received>0){
 		lastReceivedAddress.setInternalRepresentation(addr);
 		return received;
-	}else{
-		handleErrorMessage();
+	}else if(received<0){
+		int errCode = WSAGetLastError();
+		if(errCode!=WSAEWOULDBLOCK && errCode!=WSAEINPROGRESS && errCode!=WSAEALREADY && errCode!=WSAECONNRESET && errCode!=WSAEHOSTUNREACH){
+			handleErrorMessage();
+		}
 		return 0;
 	}
 	#else
@@ -607,11 +646,14 @@ uint32_t IPv6UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	handleBlocking(readBlocking);
 	int len = sizeof(addr);
 	int received = ::recvfrom(socketHandle, buf, bufSize, 0, (sockaddr*)(&addr), &len);
-	if(received>=0){
+	if(received>0){
 		lastReceivedAddress.setInternalRepresentation(addr);
 		return received;
-	}else{
-		handleErrorMessage();
+	}else if(received<0){
+		int errCode = WSAGetLastError();
+		if(errCode!=WSAEWOULDBLOCK && errCode!=WSAEINPROGRESS && errCode!=WSAEALREADY && errCode!=WSAECONNRESET && errCode!=WSAEHOSTUNREACH){
+			handleErrorMessage();
+		}
 		return 0;
 	}
 	#else
@@ -700,7 +742,7 @@ static int setBlockingFlag(int fd, bool blocking){
 static int connectWithTimeout(int socketHandle, uint32_t timeout, const sockaddr* addr, int addrLen, bool restoreBlocking){
 	ONCONNECT
 	#if SIMPLESOCKETS_WIN
-	unsigned long mode = 1;
+	unsigned long mode = 1;//0;//TODO 1;
 	if(ioctlsocket(socketHandle, FIONBIO, &mode)!=0){
 		handleErrorMessage();
 	}
@@ -708,7 +750,13 @@ static int connectWithTimeout(int socketHandle, uint32_t timeout, const sockaddr
 	if(setBlockingFlag(socketHandle, false)==-1){return -1;}
 	#endif
 	int res = ::connect(socketHandle, addr, addrLen);
+	#if SIMPLESOCKETS_WIN
+	if(res==-1){
+		if(WSAGetLastError()!=WSAEWOULDBLOCK){return -1;}
+	}
+	#else
 	if(res==-1 && errno!=EINPROGRESS){return -1;}
+	#endif
 	fd_set fdset;
 	FD_ZERO(&fdset);
 	FD_SET(socketHandle, &fdset);
@@ -830,6 +878,7 @@ static inline void* get_in_addr(struct sockaddr *sa) {
 }
 
 std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_t portToFill){
+	checkAndInitGlobally();
 	std::list<IIPAddress*> l;
 	addrinfo* result;
 	addrinfo* res;
@@ -853,6 +902,7 @@ std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_
 }
 
 std::list<IPv4Address> queryIPv4BroadcastAdresses(uint16_t portToFill){
+	checkAndInitGlobally();
 	std::list<IPv4Address> l;
 	IPv4Address address("255.255.255.255", portToFill);
 	#if SIMPLESOCKETS_WIN
