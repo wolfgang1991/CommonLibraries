@@ -96,7 +96,7 @@ static int inet_pton(int af, const char* src, void* dst){
 	char srcStr[INET6_ADDRSTRLEN];
 	memset(&addr, 0, sizeof(addr));
 	strncpy(srcStr, src, INET6_ADDRSTRLEN);
-	srcStr[INET6_ADDRSTRLEN] = 0;
+	srcStr[INET6_ADDRSTRLEN-1] = 0;
 	int size = sizeof(addr);
 	if(WSAStringToAddress(srcStr, af, NULL, (sockaddr*)&addr, &size)==0){
 		if(af==AF_INET){

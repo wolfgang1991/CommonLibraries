@@ -1,9 +1,10 @@
 FINALSTATICLIB = $(STATIC_LIB)
 
-#ifeq ($(PLATFORM),win32)
+ifeq ($(PLATFORM),win32)
+CPPFLAGS += -D_IRR_STATIC_LIB_ -DCURL_STATICLIB
 #CXX = x86_64-w64-mingw32-g++-posix
 #CC = x86_64-w64-mingw32-gcc
-#endif
+endif
 
 LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
 C_LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_C_LINKOBJ))

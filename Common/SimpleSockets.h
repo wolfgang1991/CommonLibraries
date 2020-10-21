@@ -11,6 +11,8 @@
 #include <ws2tcpip.h>
 #undef ERROR
 #undef small
+#undef ABSOLUTE
+#undef TRANSPARENT
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
