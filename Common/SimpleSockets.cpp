@@ -35,6 +35,7 @@
 #if SIMPLESOCKETS_WIN
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <iphlpapi.h>
 #endif
 
 //Exceptions and signals are dangerous because depending on the OS dependent implementation of the POSIX sockets there can be undocumented errors.
@@ -906,7 +907,34 @@ std::list<IPv4Address> queryIPv4BroadcastAdresses(uint16_t portToFill){
 	std::list<IPv4Address> l;
 	IPv4Address address("255.255.255.255", portToFill);
 	#if SIMPLESOCKETS_WIN
-	//TODO
+	PMIB_IPADDRTABLE ipAddrTable = (MIB_IPADDRTABLE*)malloc(sizeof(MIB_IPADDRTABLE));
+	if(ipAddrTable!=NULL){
+		DWORD size = 0;
+		if(GetIpAddrTable(ipAddrTable, &size, 0)==ERROR_INSUFFICIENT_BUFFER){//first call: get the required size
+			free(ipAddrTable);
+			ipAddrTable = (MIB_IPADDRTABLE*)malloc(size);
+		}
+		if(ipAddrTable!=NULL){
+			DWORD retVal;
+			if((retVal = GetIpAddrTable(ipAddrTable, &size, 0))!=NO_ERROR){
+				std::cerr << "GetIpAddrTable failed with error: " << retVal << std::endl;
+				LPVOID msgBuf;
+				if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, retVal, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) & msgBuf, 0, NULL)){
+					std::cerr << msgBuf << std::endl;
+					LocalFree(msgBuf);
+				}
+			}else{
+				for(int i=0; i<(int)ipAddrTable->dwNumEntries; i++){
+					sockaddr_in addr;
+					addr.sin_addr.S_un.S_addr = ((uint32_t)ipAddrTable->table[i].dwAddr) | ((~(uint32_t)ipAddrTable->table[i].dwMask) & (~(uint32_t)0)); //calculate real broadcast address from subnet mask and ip address (the one returned by windows is wrong)
+					addr.sin_port = htons(portToFill);
+					address.setInternalRepresentation(addr);
+					l.push_back(address);
+				}
+			}
+		}
+	}
+	free(ipAddrTable);
 	#elif defined(USE_ANDROID_BRD_ADDR_WORKAROUND)//works on Linux and Android
 	static const size_t len = sizeof(ifreq);
 	char buf[16384];
