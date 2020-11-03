@@ -1,6 +1,8 @@
 #ifndef SIMPLESOCKETS_H_INCLUDED
 #define SIMPLESOCKETS_H_INCLUDED
 
+#include <ICommunicationEndpoint.h>
+
 #include <string>
 #include <list>
 #include <cstdint>
@@ -89,7 +91,7 @@ class IPv6Address : public IIPAddress{
 
 };
 
-class ISocket{
+class ISocket : public ICommunicationEndpoint{
 
 	protected:
 	
@@ -106,7 +108,11 @@ class ISocket{
 	//! returns the amount of readable bytes
 	virtual uint32_t getAvailableBytes() const;
 	
-	virtual uint32_t recv(char* buf, uint32_t bufSize, bool readBlocking = false);
+	virtual uint32_t recv(char* buf, uint32_t bufSize, bool readBlocking);
+	
+	int32_t recv(char* buf, uint32_t bufSize){
+		return recv(buf, bufSize, false);
+	}
 	
 	//! true if buf has been sent (does not gurantee reception on other side)
 	virtual bool send(const char* buf, uint32_t bufSize);
