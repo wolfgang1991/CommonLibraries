@@ -4,6 +4,7 @@
 #include <timing.h>
 #include <Threading.h>
 #include <mathUtils.h>
+#include <Matrix.h>
 
 #include <opencv2/features2d.hpp>
 
@@ -22,6 +23,7 @@ class ConcurrentBlobDetectionPrivate{
 		irr::video::IImage* img;
 		cv::SimpleBlobDetector::Params params;
 		bool whiteOnBlack;//if false black on white
+		Matrix<2,3,double> homogenousCamTransform;
 	};
 	
 	ThreadPool pool;
@@ -34,13 +36,14 @@ class ConcurrentBlobDetectionPrivate{
 	
 	cv::SimpleBlobDetector::Params paramsToCopy;
 	bool whiteOnBlackToCopy;
+	double camRotationDegrees;
 	irr::f32 minArea, maxArea;
 	
 	std::vector<ConcurrentBlobDetection::Blob>* currentBlobs;
 	
 	static void* detectBlobs(void* params);
 	
-	ConcurrentBlobDetectionPrivate():pool(1),isNew(false),intermediateBlobs(new std::vector<ConcurrentBlobDetection::Blob>()),params(NULL),paramsToCopy(),whiteOnBlackToCopy(false),minArea(3.17891e-05),maxArea(0.0625),currentBlobs(new std::vector<ConcurrentBlobDetection::Blob>()){}
+	ConcurrentBlobDetectionPrivate():pool(1),isNew(false),intermediateBlobs(new std::vector<ConcurrentBlobDetection::Blob>()),params(NULL),paramsToCopy(),whiteOnBlackToCopy(false),camRotationDegrees(0.0),minArea(3.17891e-05),maxArea(0.0625),currentBlobs(new std::vector<ConcurrentBlobDetection::Blob>()){}
 	
 	~ConcurrentBlobDetectionPrivate(){
 		while(pool.hasRunningThreads()){//wait until all is done
@@ -85,7 +88,23 @@ void ConcurrentBlobDetection::requestBlobDetection(irr::video::IImage* img){
 	u32 totalArea = img->getDimension().getArea();
 	prv->paramsToCopy.minArea = prv->minArea*totalArea;
 	prv->paramsToCopy.maxArea = prv->maxArea*totalArea;
-	prv->params = new ConcurrentBlobDetectionPrivate::BlobDetectionParameters{this, img, prv->paramsToCopy, prv->whiteOnBlackToCopy};
+	double cosPhi = cos(-prv->camRotationDegrees/DEG_RAD);
+	double sinPhi = sin(-prv->camRotationDegrees/DEG_RAD);
+	double t_x = -((double)img->getDimension().Width/2.0);
+	double t_y = -((double)img->getDimension().Height/2.0);
+	Matrix<2,3,double> homoTransform = {//(1) translation center->origin, (2) rotation, (3) translation origin->center
+		cosPhi, -sinPhi,  -sinPhi*t_y+cosPhi*t_x-t_x,
+		sinPhi,	cosPhi,	cosPhi*t_y-t_y+sinPhi*t_x,
+	};
+	prv->params = new ConcurrentBlobDetectionPrivate::BlobDetectionParameters{this, img, prv->paramsToCopy, prv->whiteOnBlackToCopy, homoTransform};
+}
+
+void ConcurrentBlobDetection::setCameraRotationDegrees(double degrees){
+	prv->camRotationDegrees = degrees;
+}
+
+double ConcurrentBlobDetection::getCameraRotationDegrees() const{
+	return prv->camRotationDegrees;
 }
 
 irr::f32 ConcurrentBlobDetection::getMinAreaProportion() const{
@@ -120,9 +139,10 @@ void* ConcurrentBlobDetectionPrivate::detectBlobs(void* params){
 	blobs.reserve(keypoints.size());
 	//std::cout << "found blobs: " << keypoints.size() << std::endl;
 	for(uint32_t i=0; i<keypoints.size(); i++){
-		KeyPoint& p = keypoints[i];
-		blobs.push_back(ConcurrentBlobDetection::Blob{vector2d<f32>(p.pt.x, p.pt.y), p.size});
-		//std::cout << "blob " << i << ": " << p.pt.x << ", " << p.pt.y << " angle: " << p.angle << " response: " << p.response << " size: " << p.size << std::endl;
+		KeyPoint& kp = keypoints[i];
+		Vector2D<double> transformedBlob = p->homogenousCamTransform * Vector3D<double>(kp.pt.x, kp.pt.y, 1.0);
+		blobs.push_back(ConcurrentBlobDetection::Blob{vector2d<f32>(transformedBlob[0], transformedBlob[1]), kp.size});
+		//std::cout << "blob " << i << ": " << kp.pt.x << ", " << kp.pt.y << " angle: " << p.angle << " response: " << p.response << " size: " << p.size << std::endl;
 	}
 	p->detection->prv->isNew = true;
 	p->img->drop();
