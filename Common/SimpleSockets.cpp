@@ -156,11 +156,11 @@ static void handleErrorMessage(const char* error = NULL){
 IPv4Address::IPv4Address(const std::string& addressString, uint16_t port){
 	checkAndInitGlobally();
 	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
 	if(inet_pton(AF_INET, addressString.c_str(), &(addr.sin_addr))!=1){
 		handleErrorMessage("Invalid IP address");
 	}
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
 }
 
 bool IPv4Address::operator<(const IPv4Address& other) const{
@@ -210,11 +210,11 @@ void IPv4Address::setInternalRepresentation(const sockaddr_in& r){
 IPv6Address::IPv6Address(const std::string& addressString, uint16_t port){
 	checkAndInitGlobally();
 	memset(&addr, 0, sizeof(addr));
-	addr.sin6_family = AF_INET6;
-	addr.sin6_port = htons(port);
 	if(inet_pton(AF_INET6, addressString.c_str(), &(addr.sin6_addr))!=1){
 		handleErrorMessage("Invalid IP address");
 	}
+	addr.sin6_family = AF_INET6;
+	addr.sin6_port = htons(port);
 }
 
 bool IPv6Address::operator<(const IPv6Address& other) const{
@@ -397,7 +397,11 @@ uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 bool ISocket::send(const char* buf, uint32_t bufSize){
 	ONSEND
 	#if SIMPLESOCKETS_WIN
-	return ::send(socketHandle, buf, bufSize, 0)!=SOCKET_ERROR;
+	bool success = ::send(socketHandle, buf, bufSize, 0)!=SOCKET_ERROR;
+	if(!success){
+		handleErrorMessage();
+	}
+	return success;
 	#else
 	if(::send(socketHandle, buf, bufSize, MSG_NOSIGNAL)!=-1){
 		return true;
@@ -406,6 +410,8 @@ bool ISocket::send(const char* buf, uint32_t bufSize){
 			ONSEND
 			return ::send(socketHandle, buf, bufSize, MSG_NOSIGNAL)!=-1;
 		}
+	}else{
+		handleErrorMessage();
 	}
 	return false;
 	#endif
@@ -456,7 +462,7 @@ static void disableBlockingTimeout(int sockHandle){
 	setsockopt(sockHandle, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 }
 
-IPv4UDPSocket::IPv4UDPSocket():targetAddress("0.0.0.0",0),lastReceivedAddress("0.0.0.0",0){
+IPv4UDPSocket::IPv4UDPSocket():boundOrSent(false),targetAddress("0.0.0.0",0),lastReceivedAddress("0.0.0.0",0){
 	init();
 }
 
@@ -483,20 +489,28 @@ const IPv4Address& IPv4UDPSocket::getUDPTarget() const{
 	return targetAddress;
 }
 
+bool IPv4UDPSocket::bind(int port, bool reusePort){
+	boundOrSent = true;
+	return IPv4Socket::bind(port, reusePort);
+}
+
 bool IPv4UDPSocket::send(const char* buf, uint32_t bufSize){
+	boundOrSent = true;
 	ONSEND
-	if(sendto(socketHandle, buf, bufSize, 0, (const sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in)) != -1){
+	if( sendto(socketHandle, buf, bufSize, 0, (const sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in)) != -1){
 		return true;
 	}else if(errno==ENOTCONN){//reset by iOS
 		if(tryRestoreOnce()){
 			ONSEND
 			return sendto(socketHandle, buf, bufSize, 0, (const sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in)) != -1;
 		}
-	}
+	}else{
+		handleErrorMessage();	}
 	return false;
 }
 
 uint32_t IPv4UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
+	if(!boundOrSent){return 0;}
 	sockaddr_in addr;
 	ONRECEIVE(readBlocking)
 	#if SIMPLESOCKETS_WIN
@@ -589,9 +603,14 @@ bool IPv6Socket::bind(int port, bool reusePort){
 	return false;
 }
 
-IPv6UDPSocket::IPv6UDPSocket():targetAddress("::",0),lastReceivedAddress("::",0){
+IPv6UDPSocket::IPv6UDPSocket():boundOrSent(false),targetAddress("::",0),lastReceivedAddress("::",0){
 	init();
 	setIPv4ReceptionEnabled(true);
+}
+
+bool IPv6UDPSocket::bind(int port, bool reusePort){
+	boundOrSent = true;
+	return IPv6Socket::bind(port, reusePort);
 }
 
 void IPv6UDPSocket::joinLinkLocalMulticastGroup(uint32_t multicastInterfaceIndex){
@@ -628,6 +647,7 @@ const IPv6Address& IPv6UDPSocket::getUDPTarget() const{
 }
 
 bool IPv6UDPSocket::send(const char* buf, uint32_t bufSize){
+	boundOrSent = true;
 	ONSEND
 	if(sendto(socketHandle, buf, bufSize, 0, (sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in6)) != -1){
 		return true;
@@ -636,11 +656,14 @@ bool IPv6UDPSocket::send(const char* buf, uint32_t bufSize){
 			ONSEND
 			return sendto(socketHandle, buf, bufSize, 0, (sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in6)) != -1;
 		}
+	}else{
+		handleErrorMessage();
 	}
 	return false;
 }
 
 uint32_t IPv6UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
+	if(!boundOrSent){return 0;}
 	sockaddr_in6 addr;
 	ONRECEIVE(readBlocking)
 	#if SIMPLESOCKETS_WIN
@@ -928,6 +951,7 @@ std::list<IPv4Address> queryIPv4BroadcastAdresses(uint16_t portToFill){
 					sockaddr_in addr;
 					addr.sin_addr.S_un.S_addr = ((uint32_t)ipAddrTable->table[i].dwAddr) | ((~(uint32_t)ipAddrTable->table[i].dwMask) & (~(uint32_t)0)); //calculate real broadcast address from subnet mask and ip address (the one returned by windows is wrong)
 					addr.sin_port = htons(portToFill);
+					addr.sin_family = AF_INET;
 					address.setInternalRepresentation(addr);
 					l.push_back(address);
 				}

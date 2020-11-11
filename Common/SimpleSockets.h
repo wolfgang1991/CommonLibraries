@@ -191,6 +191,8 @@ class IPv4UDPSocket : public IPv4Socket{
 
 	private:
 	
+	bool boundOrSent;
+	
 	void init();
 	
 	IPv4Address targetAddress;
@@ -199,6 +201,8 @@ class IPv4UDPSocket : public IPv4Socket{
 	public:
 	
 	IPv4UDPSocket();
+	
+	bool bind(int port, bool reusePort = false);
 	
 	bool restore();
 	
@@ -219,6 +223,8 @@ class IPv6UDPSocket : public IPv6Socket{
 
 	private:
 	
+	bool boundOrSent;
+	
 	void init();
 	
 	IPv6Address targetAddress;
@@ -227,6 +233,8 @@ class IPv6UDPSocket : public IPv6Socket{
 	public:
 	
 	IPv6UDPSocket();
+	
+	bool bind(int port, bool reusePort = false);
 	
 	//! joins the "ff02::1" link local multicast group at the selected interface
 	//! WARNING1: May hang on different plattforms (like iOS) if interface is down
