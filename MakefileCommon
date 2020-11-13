@@ -2,7 +2,7 @@ ifeq ($(PLATFORM),win32)
 #CXX = x86_64-w64-mingw32-g++-posix
 #CC = x86_64-w64-mingw32-gcc
 FINALEXECFILE = $(EXECFILE).exe
-PLATFORMLIBFLAGS = $(WIN32_LIBFLAGS) -static-libstdc++ -static-libgcc -L$(COMMONLIBPATH)/Irrlicht/lib/Win32-gcc -lIrrlicht -lgdi32 -lwinspool -lcomdlg32 -lole32 -loleaut32 -luuid -lodbc32 -lodbccp32 -lopengl32
+PLATFORMLIBFLAGS = $(WIN32_LIBFLAGS) -static-libstdc++ -static-libgcc -L$(COMMONLIBPATH)/Irrlicht/lib/Win32-gcc -lIrrlicht -lgdi32 -lwinspool -lcomdlg32 -lole32 -loleaut32 -luuid -lodbc32 -lodbccp32 -lopengl32 -lwinmm -lws2_32 -lIphlpapi -static -pthread -lz -lschannel -lcrypt32
 CPPFLAGS += -D_IRR_STATIC_LIB_ -DCURL_STATICLIB
 else
 FINALEXECFILE = $(EXECFILE)
