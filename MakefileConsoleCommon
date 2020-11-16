@@ -5,7 +5,7 @@ FINALEXECFILE = $(EXECFILE).exe
 PLATFORMLIBFLAGS = $(WIN32_LIBFLAGS) -static-libstdc++ -static-libgcc -lwinmm -lws2_32 -lIphlpapi -static -pthread -lz -lschannel -lcrypt32
 else
 FINALEXECFILE = $(EXECFILE)
-PLATFORMLIBFLAGS = $(LINUX_LIBFLAGS)
+PLATFORMLIBFLAGS = $(LINUX_LIBFLAGS) -lpthread -lz
 endif
 
 FINALLIBFLAGS = $(COMMONLIBFLAGS) $(PLATFORMLIBFLAGS)
