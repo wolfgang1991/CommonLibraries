@@ -69,6 +69,9 @@ class Drawer2D{
 	void drawLine(irr::video::ITexture* tex, irr::core::position2d<int> start, irr::core::position2d<int> end, int height = 5, float verticalOffset = 0.5);
 
 	void setTextureCoordinates(irr::core::vector2d<irr::f32>* coords);
+	
+	//! set defaults
+	void setTextureCoordinates();
 
 	void draw(irr::video::ITexture* tex, irr::core::position2d<int> pos, irr::core::dimension2d<int> size = irr::core::dimension2d<int>(0, 0), float rotation = 0.0f, irr::core::vector2d<irr::f32> origin = irr::core::vector2d<irr::f32>(0, 0));
 	
@@ -93,8 +96,8 @@ class Drawer2D{
 
 	irr::video::E_MATERIAL_TYPE getMaterialType();
 
-	//! Mirror UV Coordinates for Images
-	void setMirroring(bool horizontal = false, bool vertical = false);
+	//! Mirror UV Coordinates for Images, call again with same parameters to undo/mirror twice
+	void setMirroring(bool horizontal, bool vertical);
 	
 	void drawRectWithCorner(const irr::core::rect<irr::f32>& rectangle, irr::f32 uvCornerSize, irr::f32 realCornerSize, irr::video::ITexture* tex, irr::video::SColor color = irr::video::SColor(255,255,255,255), const irr::core::rect<irr::s32>* clip = NULL);
 	
@@ -115,7 +118,7 @@ class Drawer2D{
 	//! Parameters see drawPolygon, aaFactor: 0: no AA, 0.5: full AA with center no alpha, >0.5 extreme values (do not really make sense)
 	void fillPolygonMeshBuffer(irr::scene::SMeshBuffer* mb, irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::f32 lineThickness = 3, float texPerLinePixel = 0.01f, irr::video::ITexture* tex = NULL, bool closed = true, float lineHandle = 0.f, bool weldedVertices = true, irr::f32 aaFactor = 0.25f);
 	
-	void setDefaultPolygonAAValue(irr::f32 aaValue);
+	void setDefaultPolygonAAValue(irr::f32 aaValue = 0.f);
 	
 	irr::f32 getDefaultPolygonAAValue() const;
 	
@@ -135,7 +138,7 @@ class Drawer2D{
 	void reset2DTransforms();
 	
 	//! set to true if transformations of active camera shall be restored automatically after drawing
-	void setAutoResetTransformEnabled(bool enabled);
+	void setAutoResetTransformEnabled(bool enabled = true);
 
 	//! MUST be called (on Android and on any OS which do not reinit (global) static variables on restart) before using a Drawer2D for the first time after app start
 	static void initStaticVars();

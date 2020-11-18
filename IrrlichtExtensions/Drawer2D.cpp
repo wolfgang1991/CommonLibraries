@@ -209,7 +209,7 @@ Drawer2D::Drawer2D(irr::IrrlichtDevice* device):cCalc(16.f/9.f){
 	imgMb.Indices.reallocate(6);
 	imgMb.Indices.setAllocStrategy(ALLOC_STRATEGY_DOUBLE);
 	stdColor[0] = stdColor[1] = stdColor[2] = stdColor[3] = SColor(255,255,255,255);
-	tcoords[0] = vector2d<f32>(0.f,0.f); tcoords[1] = vector2d<f32>(1.f,0.f); tcoords[2] = vector2d<f32>(0.f,1.f); tcoords[3] = vector2d<f32>(1.f,1.f);
+	setTextureCoordinates();
 	v[0] = vector2d<f32>(0.f,0.f); v[1] = vector2d<f32>(1.f,0.f); v[2] = vector2d<f32>(0.f,1.f); v[3] = vector2d<f32>(1.f,1.f);
 	setFiltering(true,true,16);
 	imgMb.Indices.push_back(0);//Indices for a rectangle consisting of two triangles (vertex coordinates in array v)
@@ -862,6 +862,13 @@ void Drawer2D::setTextureCoordinates(vector2d<f32>* coords){
 	for(int i=0; i<4; i++){
 		tcoords[i] = coords[i];
 	}
+}
+
+void Drawer2D::setTextureCoordinates(){
+	tcoords[0] = vector2d<f32>(0.f,0.f);
+	tcoords[1] = vector2d<f32>(1.f,0.f);
+	tcoords[2] = vector2d<f32>(0.f,1.f);
+	tcoords[3] = vector2d<f32>(1.f,1.f);
 }
 
 void Drawer2D::setMirroring(bool horizontal, bool vertical){

@@ -48,19 +48,25 @@
 #include <csignal>
 #endif
 
+#define HAS_EXECINFO defined(__linux__) && defined(__GNUC__) && !defined(__APPLE__) && !defined(__ANDROID__)
+
+#if HAS_EXECINFO
+#include <execinfo.h>
+#endif
+
 //To simulate a bad connections a delay can be introduced for each connect, send, receive and close
 //#define SIMULARE_BAD_CONNECTION
 #ifndef CONNECT_DELAY
 #define CONNECT_DELAY 500
 #endif
 #ifndef SEND_DELAY
-#define SEND_DELAY 50000
+#define SEND_DELAY 10//max rate for tcp is BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND*1000/SEND_DELAY
 #endif 
 #ifndef RECV_DELAY
-#define RECV_DELAY 5000
+#define RECV_DELAY 10//max rate for tcp is BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER*1000/RECV_DELAY
 #endif
 #ifndef CLOSE_DELAY
-#define CLOSE_DELAY 1000
+#define CLOSE_DELAY 500
 #endif
 //Macros for delays
 #ifdef SIMULARE_BAD_CONNECTION
@@ -69,6 +75,8 @@
 #define ONSEND delay(SEND_DELAY);
 #define ONRECEIVE(BLOCKING) if(BLOCKING){delay(RECV_DELAY);}
 #define ONCLOSE delay(CLOSE_DELAY);
+#define BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER 5 // useful to simulate "fragmentation" and slow receiving (used in ISocket::recv)
+#define BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND 5 // useful to simulate "fragmentation" and slow sending (used in ISocket::send)
 #else
 #define ONCONNECT ;
 #define ONSEND ;
@@ -143,6 +151,12 @@ static void handleErrorMessage(const char* error = NULL){
 	std::cout << "errno: " << errno << std::endl;
 	#endif
 	std::cout << "socket error: " << finalError << std::endl;
+	#if HAS_EXECINFO
+	size_t size = 100;
+	void* array[100];
+	size = backtrace(array, size);
+	backtrace_symbols_fd(array, size, STDOUT_FILENO);
+	#endif
 	#if defined(__ANDROID__)
 	__android_log_print(ANDROID_LOG_ERROR, "SimpleSockets", "socket error: %s\n", finalError);
 	#endif
@@ -359,6 +373,9 @@ uint32_t ISocket::getAvailableBytes() const{
 	
 uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	ONRECEIVE(readBlocking)
+	#ifdef BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER
+	bufSize = bufSize>BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER?BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER:bufSize;
+	#endif
 	#if SIMPLESOCKETS_WIN
 	handleBlocking(readBlocking);
 	int read = ::recv(socketHandle, buf, bufSize, 0);
@@ -393,27 +410,43 @@ uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	#endif
 	return read;
 }
-	
-bool ISocket::send(const char* buf, uint32_t bufSize){
+
+static inline bool hlp_send(ISocket* socket, const char* buf, uint32_t bufSize){
 	ONSEND
 	#if SIMPLESOCKETS_WIN
-	bool success = ::send(socketHandle, buf, bufSize, 0)!=SOCKET_ERROR;
+	bool success = ::send(socket->getSocketHandle(), buf, bufSize, 0)!=SOCKET_ERROR;
 	if(!success){
 		handleErrorMessage();
 	}
 	return success;
 	#else
-	if(::send(socketHandle, buf, bufSize, MSG_NOSIGNAL)!=-1){
+	if(::send(socket->getSocketHandle(), buf, bufSize, MSG_NOSIGNAL)!=-1){
 		return true;
 	}else if(errno==ENOTCONN){
-		if(tryRestoreOnce()){
+		if(socket->tryRestoreOnce()){
 			ONSEND
-			return ::send(socketHandle, buf, bufSize, MSG_NOSIGNAL)!=-1;
+			return ::send(socket->getSocketHandle(), buf, bufSize, MSG_NOSIGNAL)!=-1;
 		}
 	}else{
 		handleErrorMessage();
 	}
 	return false;
+	#endif
+}
+	
+bool ISocket::send(const char* buf, uint32_t bufSize){
+	#ifdef BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND
+		bool success = true;
+		while(success && bufSize>0){
+			uint32_t toSend = bufSize>BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND?BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND:bufSize;
+			//std::cout << "toSend: " << toSend << std::endl;
+			success = hlp_send(this, buf, toSend);
+			bufSize -= toSend;
+			buf = &buf[toSend];
+		}
+		return success;
+	#else
+	return hlp_send(this, buf, bufSize);
 	#endif
 }
 
@@ -497,7 +530,7 @@ bool IPv4UDPSocket::bind(int port, bool reusePort){
 bool IPv4UDPSocket::send(const char* buf, uint32_t bufSize){
 	boundOrSent = true;
 	ONSEND
-	if( sendto(socketHandle, buf, bufSize, 0, (const sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in)) != -1){
+	if(sendto(socketHandle, buf, bufSize, 0, (const sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in)) != -1){
 		return true;
 	}else if(errno==ENOTCONN){//reset by iOS
 		if(tryRestoreOnce()){

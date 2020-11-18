@@ -14,10 +14,10 @@ all: all_linux
 include $(COMMONLIBPATH)/MakefileCommon
 
 build_deps:
-	cd $(COMMONLIBPATH)/Common && $(MAKE) DEBUG=$(DEBUG)
-	cd $(COMMONLIBPATH)/IrrlichtExtensions && $(MAKE) DEBUG=$(DEBUG)
+	cd $(COMMONLIBPATH)/Common && "$(MAKE)" DEBUG=$(DEBUG)
+	cd $(COMMONLIBPATH)/IrrlichtExtensions && "$(MAKE)" DEBUG=$(DEBUG)
 	
 clean_deps:
-	cd $(COMMONLIBPATH)/Common && $(MAKE) clean
-	cd $(COMMONLIBPATH)/IrrlichtExtensions && $(MAKE) clean
+	cd $(COMMONLIBPATH)/Common && "$(MAKE)" clean
+	cd $(COMMONLIBPATH)/IrrlichtExtensions && "$(MAKE)" clean
 

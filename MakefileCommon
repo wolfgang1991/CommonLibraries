@@ -12,6 +12,7 @@ endif
 FINALLIBFLAGS = $(COMMONLIBFLAGS) $(PLATFORMLIBFLAGS)
 
 LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
+C_LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_C_LINKOBJ))
 
 ifeq ($(DEBUG),1)
 OPTIM = $(USEROPTIM) -g -DDEBUG=1
@@ -35,6 +36,12 @@ $(OBJDIR)/%.d:$(SRCDIR)/%.cpp
 	$(CXX) $(CPPFLAGS) -MM -MF $@ $<
 	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
 	echo "	$(CXX) $(CPPFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
+
+$(OBJDIR)/%.d:$(SRCDIR)/%.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MM -MF $@ $<
+	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
+	echo "	$(CC) $(CFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(LINKOBJ:.o=.d)
