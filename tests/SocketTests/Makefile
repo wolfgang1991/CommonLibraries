@@ -6,8 +6,6 @@ SRCDIR = .
 OBJDIR = $(SRCDIR)/obj
 CPPFLAGS = -D_DEBUG=$(DEBUG) -Wall -I. -I$(COMMONLIBPATH)/Common
 COMMONLIBFLAGS = -L$(COMMONLIBPATH)/Common -lCommon
-LINUX_LIBFLAGS = -pthread
-WIN32_LIBFLAGS = 
 EXECFILE = ./SocketTests
 USEROPTIM = 
 
@@ -19,5 +17,5 @@ build_deps:
 	cd $(COMMONLIBPATH)/Common && "$(MAKE)" DEBUG=$(DEBUG)
 	
 clean_deps:
-	#cd $(COMMONLIBPATH)/Common && $(MAKE) clean
+	cd $(COMMONLIBPATH)/Common && "$(MAKE)" clean
 

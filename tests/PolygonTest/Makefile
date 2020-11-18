@@ -5,7 +5,7 @@ COMMONLIBPATH = ../..
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj
 CPPFLAGS = -D_DEBUG=$(DEBUG) -Wall -I$(COMMONLIBPATH)/Irrlicht/include -I/usr/X11R6/include -I. -I$(COMMONLIBPATH)/Common -I$(COMMONLIBPATH)/IrrlichtExtensions
-LIBFLAGS = -L$(COMMONLIBPATH)/IrrlichtExtensions -lIrrlichtExtensions -L$(COMMONLIBPATH)/Common -lCommon
+COMMONLIBFLAGS = -L$(COMMONLIBPATH)/IrrlichtExtensions -lIrrlichtExtensions -L$(COMMONLIBPATH)/Common -lCommon
 EXECFILE = ./PolyTests
 USEROPTIM = 
 

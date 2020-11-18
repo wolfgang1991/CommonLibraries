@@ -415,7 +415,8 @@ static inline bool hlp_send(ISocket* socket, const char* buf, uint32_t bufSize){
 	ONSEND
 	#if SIMPLESOCKETS_WIN
 	bool success = ::send(socket->getSocketHandle(), buf, bufSize, 0)!=SOCKET_ERROR;
-	if(!success){
+	int errCode = WSAGetLastError();
+	if(!success && errCode!=WSAECONNRESET && errCode!=WSAENOTCONN){
 		handleErrorMessage();
 	}
 	return success;
@@ -538,7 +539,8 @@ bool IPv4UDPSocket::send(const char* buf, uint32_t bufSize){
 			return sendto(socketHandle, buf, bufSize, 0, (const sockaddr*)(&(targetAddress.getInternalRepresentation())), sizeof(sockaddr_in)) != -1;
 		}
 	}else{
-		handleErrorMessage();	}
+		handleErrorMessage();
+	}
 	return false;
 }
 
