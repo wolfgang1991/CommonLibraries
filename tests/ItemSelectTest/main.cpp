@@ -38,7 +38,7 @@ class AppSkin : public IExtendableSkin {
 		registerExtension(new AggregateSkinExtension(this, true, true), REGULAR_AGGREGATION);
 		registerExtension(new AggregateSkinExtension(this, false, true), NO_HIGHLIGHT_AGGREGATION);
 		registerExtension(new AggregateSkinExtension(this, false, false), INVISIBLE_AGGREGATION);
-		registerExtension(new AggregateSkinExtension(this, true, false), LIST_ELE_AGGREGATION);
+		registerExtension(new AggregateSkinExtension(this, true, false, NULL, true), LIST_ELE_AGGREGATION);
 		registerExtension(new DefaultAggregatableSkin(this, true), DEFAULT_AGGREGATABLE);
 	}
 		
@@ -90,6 +90,16 @@ class IconSource : public IItemSelectIconSource{
 	
 };
 
+class TestItemSelectCallack : public IItemSelectCallback{
+	
+	public:
+	
+	void OnItemSelect(Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer){
+		std::cout << "OnItemSelect: action=" << action << " item=" << (item?item->relativePath:"NULL") << " absolutePath: " << absolutePath << std::endl;
+	}
+	
+};
+
 int main(int argc, char *argv[]){
 	IrrlichtDevice* nulldevice = createDevice(EDT_NULL);
 	core::dimension2d<u32> deskres = nulldevice->getVideoModeList()->getDesktopResolution();
@@ -128,7 +138,9 @@ int main(int argc, char *argv[]){
 	
 	IconSource is(driver);
 	
-	ItemSelectElement* savediag = new ItemSelectElement(device, drawer, L"test.save", fso, AppSkin::REGULAR_AGGREGATION, AppSkin::LIST_ELE_AGGREGATION, -1, true, &is);
+	TestItemSelectCallack isc;
+	
+	ItemSelectElement* savediag = new ItemSelectElement(device, drawer, L"test.save", fso, &isc, AppSkin::REGULAR_AGGREGATION, AppSkin::LIST_ELE_AGGREGATION, AppSkin::INVISIBLE_AGGREGATION, -1, false, &is);
 	
 	while(device->run()){
 		if(device->isWindowActive()){

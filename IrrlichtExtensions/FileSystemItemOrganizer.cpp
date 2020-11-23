@@ -55,6 +55,20 @@ FileSystemItemOrganizer::FileSystemItemOrganizer(irr::io::IFileSystem* fsys):fsy
 	updateContent();
 }
 
+bool FileSystemItemOrganizer::doesExist(const std::string& path) const{
+	return fsys->existFile(path.c_str());
+}
+
+std::string FileSystemItemOrganizer::getAbsolutePath(const std::string& relativePath) const{
+	std::stringstream ss;
+	#if _WIN32
+	ss << wd << "\\" << relativePath;
+	#else
+	ss << wd << "/" << relativePath; 
+	#endif
+	return ss.str();
+}
+
 void FileSystemItemOrganizer::updateContent(){
 	wd = fsys->getWorkingDirectory().c_str();
 	IFileList* l = fsys->createFileList();
@@ -129,21 +143,21 @@ const std::string& FileSystemItemOrganizer::pwd() const{
 	return wd;
 }
 
-std::vector<IItemOrganizer::Item*> FileSystemItemOrganizer::ls(uint32_t fieldIndexForSorting){
+std::vector<IItemOrganizer::Item*> FileSystemItemOrganizer::ls(uint32_t fieldIndexForSorting, bool sortAscending){
 	std::vector<IItemOrganizer::Item*> res;
 	res.reserve(content.size());
 	for(uint32_t i=0; i<content.size(); i++){res.push_back(&(content[i]));}
 	if(fieldIndexForSorting==1){//1==size
-		std::function<bool(IItemOrganizer::Item* f1, IItemOrganizer::Item* f2)> isNameLess = createFieldLessComparator(0);//0==name
-		std::sort(res.begin(), res.end(), [this,&isNameLess](IItemOrganizer::Item* f1, IItemOrganizer::Item* f2){
+		std::function<bool(IItemOrganizer::Item* f1, IItemOrganizer::Item* f2)> isNameLess = createFieldLessComparator(0, sortAscending);//0==name
+		std::sort(res.begin(), res.end(), [this,&isNameLess,sortAscending](IItemOrganizer::Item* f1, IItemOrganizer::Item* f2){
 			if(f1->isDirectory!=f2->isDirectory){return f1->isDirectory;}//directories first
 			if(fileSizes[f1->additionalID]==fileSizes[f2->additionalID]){//if same filesize (e.g. two directories) compare the name
-				return isNameLess(f1, f2);
+				return sortAscending?isNameLess(f1,f2):isNameLess(f2,f1);
 			}
-			return fileSizes[f1->additionalID] < fileSizes[f2->additionalID];
+			return sortAscending?(fileSizes[f1->additionalID]<fileSizes[f2->additionalID]):(fileSizes[f1->additionalID]>fileSizes[f2->additionalID]);
 		});
 	}else{//other fields
-		sortItemsByField(res, fieldIndexForSorting);
+		sortItemsByField(res, fieldIndexForSorting, sortAscending);
 	}
 	return res;
 }

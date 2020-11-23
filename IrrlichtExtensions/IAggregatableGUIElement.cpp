@@ -10,9 +10,10 @@ using namespace irr;
 using namespace gui;
 using namespace core;
 
-IAggregatableSkinExtension::IAggregatableSkinExtension(IExtendableSkin* skin, bool highlightIfActive){
+IAggregatableSkinExtension::IAggregatableSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool highlightIfPressed){
 	this->skin = skin;
 	this->highlightIfActive = highlightIfActive;
+	this->highlightIfPressed = highlightIfPressed;
 }
 
 const std::string aggregatableSkinExtensionName = "AggregatableSkin";
@@ -24,6 +25,12 @@ const std::string& IAggregatableSkinExtension::getName(){
 void IAggregatableSkinExtension::drawHighlight(irr::gui::IGUIElement* ele, const irr::core::rect<irr::s32>& highlightRect, const irr::core::rect<irr::s32>* clip){
 	if(highlightIfActive){
 		skin->draw2DRectangle(ele, skin->getColor(EGDC_HIGH_LIGHT), highlightRect, clip);
+	}
+}
+
+void IAggregatableSkinExtension::drawPressedHighlight(irr::gui::IGUIElement* ele, const irr::core::rect<irr::s32>& highlightRect, const irr::core::rect<irr::s32>* clip){
+	if(highlightIfPressed){
+		skin->draw2DRectangle(ele, skin->getColor(EGDC_ICON_HIGH_LIGHT), highlightRect, clip);
 	}
 }
 
@@ -86,8 +93,15 @@ bool IAggregatableGUIElement::isActive(){
 void IAggregatableGUIElement::draw(){
 	if(isVisible()){
 		IGUISkin* skin = Environment->getSkin();
-		if(active && isExtendableSkin(skin)){
-			((IAggregatableSkinExtension*)((IExtendableSkin*)skin)->getExtension(aggregatableSkinExtensionName, getID()))->drawHighlight(this, AbsoluteRect, &AbsoluteClippingRect);
+		if(isExtendableSkin(skin)){
+			IAggregatableSkinExtension* extension = (IAggregatableSkinExtension*)((IExtendableSkin*)skin)->getExtension(aggregatableSkinExtensionName, getID());
+			if(extension!=NULL){
+				if(active){
+					extension->drawHighlight(this, AbsoluteRect, &AbsoluteClippingRect);
+				}else if(pressedInside){
+					extension->drawPressedHighlight(this, AbsoluteRect, &AbsoluteClippingRect);
+				}
+			}
 		}
 		irr::gui::IGUIElement::draw();
 	}
@@ -96,10 +110,12 @@ void IAggregatableGUIElement::draw(){
 bool IAggregatableGUIElement::OnEvent(const irr::SEvent& event){
 	if(event.EventType==EET_MOUSE_INPUT_EVENT){
 		const SEvent::SMouseInput& m = event.MouseInput;
-		if(m.Event==EMIE_LMOUSE_LEFT_UP && isActivateAble && !activationLock && pressedInside){
+		if(m.Event==EMIE_LMOUSE_LEFT_UP && pressedInside){
 			pressedInside = false;
-			setActive(!isActive());
-		}else if(m.Event==EMIE_LMOUSE_PRESSED_DOWN){
+			if(isActivateAble && !activationLock){
+				setActive(!isActive());
+			}
+		}else if(m.Event==EMIE_LMOUSE_PRESSED_DOWN){// && getAbsolutePosition().isPointInside(vector2d<s32>(m.X,m.Y))){
 			pressedInside = true;
 		}
 	}

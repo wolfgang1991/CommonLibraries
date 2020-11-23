@@ -27,6 +27,10 @@ class FileSystemItemOrganizer : public IItemOrganizer{
 	
 	FileSystemItemOrganizer(irr::io::IFileSystem* fsys);
 	
+	virtual bool doesExist(const std::string& path) const;
+	
+	virtual std::string getAbsolutePath(const std::string& relativePath) const;
+	
 	virtual void setLanguage(const ILanguagePhrases* phrases);
 	
 	virtual const std::vector<std::wstring>& getItemFieldLabels() const;
@@ -37,7 +41,7 @@ class FileSystemItemOrganizer : public IItemOrganizer{
 	
 	virtual const std::string& pwd() const;
 	
-	virtual std::vector<IItemOrganizer::Item*> ls(uint32_t fieldIndexForSorting = 0);
+	virtual std::vector<IItemOrganizer::Item*> ls(uint32_t fieldIndexForSorting = 0, bool sortAscending = true);
 	
 	virtual const std::vector<Place>& getPlaces() const;
 	

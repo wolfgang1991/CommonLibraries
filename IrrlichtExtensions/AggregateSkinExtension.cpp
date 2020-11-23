@@ -6,8 +6,8 @@
 using namespace irr;
 using namespace gui;
 
-AggregateSkinExtension::AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::SColor* bgColor):
-	IAggregatableSkinExtension(skin, highlightIfActive){
+AggregateSkinExtension::AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::SColor* bgColor, bool highlightIfPressed):
+	IAggregatableSkinExtension(skin, highlightIfActive, highlightIfPressed){
 	this->shallDrawSunkenPane = shallDrawSunkenPane;
 	useBgColor = bgColor!=NULL;
 	if(useBgColor){

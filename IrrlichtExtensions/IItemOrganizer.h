@@ -30,6 +30,14 @@ class IItemOrganizer{
 	
 	virtual ~IItemOrganizer(){}
 	
+	virtual std::string getAbsolutePath(const std::string& relativePath) const = 0;
+	
+	virtual std::string getAbsolutePath(Item* item) const{
+		return getAbsolutePath(item->relativePath);
+	}
+	
+	virtual bool doesExist(const std::string& path) const = 0;
+	
 	//! returns a vector of usual places
 	virtual const std::vector<Place>& getPlaces() const = 0;
 	
@@ -51,23 +59,23 @@ class IItemOrganizer{
 	
 	//! returns the content (relative pathes) of the current working directory
 	//! items are deleted on cd
-	virtual std::vector<Item*> ls(uint32_t fieldIndexForSorting = 0) = 0;
+	virtual std::vector<Item*> ls(uint32_t fieldIndexForSorting = 0, bool sortAscending = true) = 0;
 	
 };
 
 //! creates a function which returns true if f1<f2 according to the field with index fieldIndex
-inline std::function<bool(IItemOrganizer::Item* f1, IItemOrganizer::Item* f2)> createFieldLessComparator(uint32_t fieldIndex){
-	return [fieldIndex](IItemOrganizer::Item* f1, IItemOrganizer::Item* f2){
+inline std::function<bool(IItemOrganizer::Item* f1, IItemOrganizer::Item* f2)> createFieldLessComparator(uint32_t fieldIndex, bool sortAscending){
+	return [fieldIndex,sortAscending](IItemOrganizer::Item* f1, IItemOrganizer::Item* f2){
 		if(f1->isDirectory!=f2->isDirectory){return f1->isDirectory;}//directories first
 		std::wstring& f1s = f1->fields[fieldIndex];
 		std::wstring& f2s = f2->fields[fieldIndex];
 		try{
-			return std::locale("").operator()(f1s, f2s);
+			return sortAscending?(std::locale("").operator()(f1s,f2s)):(std::locale("").operator()(f2s,f1s));
 		}catch (const std::runtime_error& e){// empty locale seems not to exist on windows although the standard defines this as the "user preferred locale" which must exist
 			try{
-				return std::locale("en_US.UTF-8").operator()(f1s, f2s);
+				return sortAscending?(std::locale("en_US.UTF-8").operator()(f1s,f2s)):(std::locale("en_US.UTF-8").operator()(f2s,f1s));
 			}catch (const std::runtime_error& e){
-				return f1s<f2s;
+				return sortAscending?(f1s<f2s):(f2s<f1s);
 			}
 		}
 	};
@@ -75,8 +83,8 @@ inline std::function<bool(IItemOrganizer::Item* f1, IItemOrganizer::Item* f2)> c
 
 //! TContainer is a container of IItemOrganizer::Item*
 template<typename TContainer>
-void sortItemsByField(TContainer& ctr, uint32_t fieldIndex){
-	std::sort(ctr.begin(), ctr.end(), createFieldLessComparator(fieldIndex));
+void sortItemsByField(TContainer& ctr, uint32_t fieldIndex, bool sortAscending){
+	std::sort(ctr.begin(), ctr.end(), createFieldLessComparator(fieldIndex, sortAscending));
 }
 
 #endif
