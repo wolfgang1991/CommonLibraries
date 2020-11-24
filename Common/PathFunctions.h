@@ -1,7 +1,6 @@
 #ifndef PATH_FUNCTIONS_H_INCLUDED
 #define PATH_FUNCTIONS_H_INCLUDED
 
-#include <SafetyChecks.h>
 #include <StringHelpers.h>
 
 #include <cstdint>
@@ -59,29 +58,6 @@ bool isAbsolutePath(const std::basic_string<T>& filePath){
 		return filePath[0] == (T)'/';
 	}
 	#endif
-}
-
-inline std::string getAppHomePathFromArgV0(const char* argv0){
-	std::string apphome("./");
-	std::string p(argv0);
-	int lastSlash = -1;
-	for(int i=p.size()-1; i>=0; i--){
-		char c = p[i];
-		if(c=='/' || c=='\\'){
-			lastSlash = i;
-			break;
-		}
-	}
-	if(lastSlash>=0){
-		if(isAbsolutePath(p)){
-			apphome = safeSubstr(p, 0,lastSlash+1);
-		}else if(isPrefixEqual(p, "./") || isPrefixEqual(p, ".\\")){
-			apphome.append(safeSubstr(p,2,lastSlash+1-2));
-		}else{
-			apphome.append(safeSubstr(p,0,lastSlash+1));
-		}
-	}
-	return apphome;
 }
 
 #endif
