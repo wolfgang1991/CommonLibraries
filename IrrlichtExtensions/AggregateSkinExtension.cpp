@@ -11,8 +11,8 @@ using namespace gui;
 using namespace core;
 using namespace video;
 
-AggregateSkinExtension::AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::ITexture* sunkenPaneBgAlpha, irr::video::SColor* bgColor):
-	IAggregatableSkinExtension(skin, highlightIfActive){
+AggregateSkinExtension::AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::ITexture* sunkenPaneBgAlpha, irr::video::SColor* bgColor, bool highlightIfPressed):
+	IAggregatableSkinExtension(skin, highlightIfActive, highlightIfPressed){
 	this->shallDrawSunkenPane = shallDrawSunkenPane;
 	dimension2d<u32> dim = skin->getDevice()->getVideoDriver()->getScreenSize();
 	realCornerSize = 0.01*sqrt(dim.Width*dim.Height);

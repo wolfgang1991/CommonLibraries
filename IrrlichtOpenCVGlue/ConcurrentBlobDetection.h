@@ -97,6 +97,11 @@ class ConcurrentBlobDetection{
 	
 	bool isWhiteOnBlack() const;
 	
+	//! all blobs are rotated by -degrees after detection around the center of the image
+	void setCameraRotationDegrees(double degrees);
+	
+	double getCameraRotationDegrees() const;
+	
 };
 
 #endif

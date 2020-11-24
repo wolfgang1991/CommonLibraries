@@ -57,6 +57,7 @@ class AMLGUIElement : public AggregateGUIElement{
 	IAggregatableGUIElement* content;
 	irr::s32 invisibleAggregationId;
 	irr::s32 scrollbarId;
+	irr::s32 buttonId;
 	
 	irr::s32 contentIndex;
 	
@@ -109,7 +110,7 @@ class AMLGUIElement : public AggregateGUIElement{
 	//! creates an empty AMLGUIElement
 	//! Navigation Buttons wont't be created if NULL
 	//! language: only parts which match the defined language or match "" are visible
-	AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language = "", const NavButtons* navButtons = &defaultNavButtons, irr::gui::IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0));
+	AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language = "", const NavButtons* navButtons = &defaultNavButtons, irr::gui::IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0), irr::s32 buttonId = -1);
 	
 	~AMLGUIElement();
 	

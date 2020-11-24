@@ -6,10 +6,21 @@
 #include <rect.h>
 #include <SColor.h>
 #include <vector2d.h>
+#include <vector3d.h>
 
 #include <string>
 
 #include "ForwardDeclarations.h"
+
+template <typename TScalar>
+std::ostream& operator<<(std::ostream &out, const irr::core::vector2d<TScalar>& v){
+	return out << v.X << ", " << v.Y;
+}
+
+template <typename TScalar>
+std::ostream& operator<<(std::ostream &out, const irr::core::vector3d<TScalar>& v){
+	return out << v.X << ", " << v.Y << ", " << v.Z;
+}
 
 class IniFile;
 

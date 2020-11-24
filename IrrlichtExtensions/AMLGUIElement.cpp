@@ -30,12 +30,13 @@ using namespace io;
 
 const AMLGUIElement::NavButtons AMLGUIElement::defaultNavButtons{L"<", -1, L">", -1, L"1", -1, L"-", -1, L"+", -1, 0.05f, -1};
 
-AMLGUIElement::AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language, const NavButtons* navButtons, IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle):
+AMLGUIElement::AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language, const NavButtons* navButtons, IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle, irr::s32 buttonId):
 	AggregateGUIElement(context->getIrrlichtDevice()->getGUIEnvironment(), recommendedSpace, aspectRatio, recommendedSpace, aspectRatio, maintainAspectRatio, false, false, {}, {}, false, id, NULL, parent, rectangle),
 	language(language),
 	searchPath(appendMissingPathDelimeter(searchPath)),
 	c(context),
 	drawer(context->getDrawer()){
+	this->buttonId = buttonId;
 	back = fwd = reset = zoomOut = zoomIn = NULL;
 	printParsingErrors = true;
 	utf8Code = "<empty />";
@@ -284,7 +285,7 @@ class AMLParseCallback : public IParsingCallback{
 				}else{
 					AggregateGUIElement* agg;
 					if(isLink){
-						BeautifulGUIButton* butt = new BeautifulGUIButton(ele->Environment, fSpace, getF32Value(aspectRatio, 1.f), maintainAspectRatio, isHorizontal, isScrollable, {}, {}, -1);
+						BeautifulGUIButton* butt = new BeautifulGUIButton(ele->Environment, fSpace, getF32Value(aspectRatio, 1.f), maintainAspectRatio, isHorizontal, isScrollable, {}, {}, ele->buttonId);
 						ele->button2Params[butt] = AMLGUIElement::ButtonParams{t->attributes["href"], t->attributes["action"]};
 						agg = butt;
 					}else{

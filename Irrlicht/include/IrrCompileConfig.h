@@ -61,6 +61,12 @@
 #define _IRR_WINDOWS_
 #define _IRR_WINDOWS_API_
 #define _IRR_COMPILE_WITH_WINDOWS_DEVICE_
+//changed
+#define NO_IRR_COMPILE_WITH_OGLES1_
+#define NO_IRR_COMPILE_WITH_OGLES2_
+#define NO_IRR_COMPILE_WITH_WEBGL1_
+#define NO_IRR_COMPILE_WITH_JOYSTICK_EVENTS_
+//changed end
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER < 1500)

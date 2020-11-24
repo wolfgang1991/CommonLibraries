@@ -11,3 +11,4 @@ bin/
 octave-workspace
 xcuserdata/
 .reviewboardrc
+*.orig

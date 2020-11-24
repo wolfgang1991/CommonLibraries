@@ -1,4 +1,18 @@
+ifeq ($(PLATFORM),win32)
+#CXX = x86_64-w64-mingw32-g++-posix
+#CC = x86_64-w64-mingw32-gcc
+FINALEXECFILE = $(EXECFILE).exe
+PLATFORMLIBFLAGS = $(WIN32_LIBFLAGS) -static-libstdc++ -static-libgcc -L$(COMMONLIBPATH)/Irrlicht/lib/Win32-gcc -lIrrlicht -lgdi32 -lwinspool -lcomdlg32 -lole32 -loleaut32 -luuid -lodbc32 -lodbccp32 -lopengl32 -lwinmm -lws2_32 -lIphlpapi -static -pthread -lz -lschannel -lcrypt32
+CPPFLAGS += -D_IRR_STATIC_LIB_ -DCURL_STATICLIB
+else
+FINALEXECFILE = $(EXECFILE)
+PLATFORMLIBFLAGS = $(LINUX_LIBFLAGS) -L$(COMMONLIBPATH)/Irrlicht/lib/Linux -lIrrlicht -lGL -lXxf86vm -lX11 -lEGL -lGLESv2 -lpthread -lz
+endif
+
+FINALLIBFLAGS = $(COMMONLIBFLAGS) $(PLATFORMLIBFLAGS)
+
 LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
+C_LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_C_LINKOBJ))
 
 ifeq ($(DEBUG),1)
 OPTIM = $(USEROPTIM) -g -DDEBUG=1
@@ -11,16 +25,10 @@ endif
 CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall -std=c++11
 
 all_linux: CPPFLAGS += -I/usr/X11R6/include
-all_linux: LIBFLAGS += -L$(COMMONLIBPATH)/Irrlicht/lib/Linux -lIrrlicht -lGL -lXxf86vm -lX11 -lEGL -lGLESv2
+all_linux: FINALLIBFLAGS += 
 
 all_linux: build_deps $(LINKOBJ)
-	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) -o $(EXECFILE) $(LIBFLAGS)
-
-#TODO: win32 not tested!
-win32: LIBFLAGS += -L$(COMMONLIBPATH)/Irrlicht/lib/Win32-gcc -lIrrlicht -lgdi32 -lwinspool -lcomdlg32 -lole32 -loleaut32 -luuid -lodbc32 -lodbccp32 -lopengl32 -lwinmm -lm
-win32: EXECFILE += .exe
-win32: build_deps $(LINKOBJ)
-	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) -o $(EXECFILE) $(LIBFLAGS)
+	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) -o $(FINALEXECFILE) $(FINALLIBFLAGS)
 
 # Create dependency files for automatic recompilation
 $(OBJDIR)/%.d:$(SRCDIR)/%.cpp
@@ -28,6 +36,12 @@ $(OBJDIR)/%.d:$(SRCDIR)/%.cpp
 	$(CXX) $(CPPFLAGS) -MM -MF $@ $<
 	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
 	echo "	$(CXX) $(CPPFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
+
+$(OBJDIR)/%.d:$(SRCDIR)/%.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MM -MF $@ $<
+	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
+	echo "	$(CC) $(CFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(LINKOBJ:.o=.d)

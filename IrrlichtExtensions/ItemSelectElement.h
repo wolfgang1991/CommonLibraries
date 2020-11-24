@@ -1,0 +1,131 @@
+#ifndef ItemSelectElement_H_INCLUDED
+#define ItemSelectElement_H_INCLUDED
+
+#include "IItemOrganizer.h"
+#include "ForwardDeclarations.h"
+
+#include <IGUIElement.h>
+#include <IEventReceiver.h>
+
+#include <map>
+
+class AggregateGUIElement;
+class BeautifulGUIButton;
+class IAggregatableGUIElement;
+class ItemSelectEditBoxCallback;
+class Drawer2D;
+class ItemSelectElement;
+class CMBox;
+
+//! Interface for retrieving icons to depict the items
+class IItemSelectIconSource{
+	
+	public:
+	
+	virtual ~IItemSelectIconSource(){}
+	
+	virtual irr::video::ITexture* getAscendingIcon() = 0;
+	
+	virtual irr::video::ITexture* getDescendingIcon() = 0;
+	
+	virtual irr::video::ITexture* getMkdirIcon() = 0;
+	
+	virtual irr::video::ITexture* getFolderIcon() = 0;
+	
+	virtual irr::video::ITexture* getItemIcon(const IItemOrganizer::Item& item) = 0;
+	
+};
+
+//! Interface for a result receiving callback
+class IItemSelectCallback{
+	
+	public:
+	
+	enum Action{
+		SELECT,//! when an item has been selected without closing the dialog
+		DESELECT,//! when an item has been deselected without closing the dialog
+		SAVE,//! when save has been pressed
+		OPEN,//! when open has been pressed
+		CANCEL,//! when cancel has been pressed
+		ACTION_COUNT
+	};
+	
+	virtual ~IItemSelectCallback(){}
+	
+	//! item may be NULL in case of CANCEL or DESELECT or SAVE, absolutePath empty if not applicable
+	virtual void OnItemSelect(Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer) = 0;
+	
+};
+
+//! Dialog for selecting Items from an IItemOrganizer, asserts the IGUIFont can safely be casted to FlexibleFont
+class ItemSelectElement : public irr::gui::IGUIElement{
+	friend class ItemSelectEditBoxCallback;
+	
+	private:
+	
+	irr::IrrlichtDevice* device;
+	Drawer2D* drawer;
+	
+	IItemOrganizer* organizer;
+	IItemSelectCallback* itemcbk;
+	
+	IItemSelectIconSource* source;
+	
+	bool isSaveDialog;
+	
+	irr::gui::IGUIEnvironment* env;
+	irr::video::IVideoDriver* driver;
+	
+	const ILanguagePhrases* lang;
+	
+	irr::gui::IGUIEditBox* nameEdit;
+	
+	AggregateGUIElement* placesAgg;
+	
+	AggregateGUIElement* pathAgg;
+	std::map<irr::gui::IGUIElement*, std::string> button2path;
+	BeautifulGUIButton* mkdirBut;
+	
+	AggregateGUIElement* filesAndHeaderAgg;
+	AggregateGUIElement* filesAgg;
+	std::vector<BeautifulGUIButton*> fieldButtons;
+	uint32_t sortIndex;
+	bool sortAscending;
+	std::vector<IItemOrganizer::Item*> items;
+	int32_t selectedIndex;
+	
+	BeautifulGUIButton* positive;
+	BeautifulGUIButton* negative;
+	
+	irr::gui::IGUIElement* parent;//parent for children gui (either this or an intermediate window)
+	irr::core::rect<irr::s32> navBarRect;
+	irr::core::rect<irr::s32> fileListRect;
+	irr::s32 aggregationID, listElementAggregationID, invisibleAggregationID;
+	irr::s32 buttonHeight;
+	
+	ItemSelectEditBoxCallback* cbk;
+	
+	CMBox* overwritebox;
+	
+	void createPlacesGUI(const irr::core::rect<irr::s32>& r, irr::s32 padding, irr::gui::IGUIElement* parent, irr::s32 buttonHeight);
+	
+	void createNavigationBar(bool createMkdirButton = false, irr::s32 mkdirButtonID = -1);
+	
+	void createFileList();
+	
+	public:
+	
+	//! create a open or save dialog with window, subElement are inserted in the horizontal aggregation next to save/open and close buttons if empty an empy element is inserted
+	ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::wstring& defaultSaveFileName, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, IItemSelectIconSource* source, const std::initializer_list<IAggregatableGUIElement*>& subElements = {}, irr::f32 w = .75f, irr::f32 h = .75f, ILanguagePhrases* phrases = NULL, bool modal = true);
+	
+	virtual ~ItemSelectElement();
+	
+	virtual void OnPostRender(irr::u32 timeMs);
+	
+	virtual bool OnEvent(const irr::SEvent& event);
+	
+	virtual void cd(const std::string& path, bool resetPlacesSelection = true);
+	
+};
+
+#endif

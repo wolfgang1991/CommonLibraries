@@ -6,6 +6,7 @@
 #include <irrlicht.h>
 
 #include <list>
+#include <ctime>
 #include <iostream>
 
 using namespace irr;

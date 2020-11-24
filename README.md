@@ -4,6 +4,7 @@ CommonLibraries
 These libraries provide extensions that may especially be useful when developing cross-platform C++ applications with the Irrlicht 3D Engine.
 
 It has been tested with Android, iOS and Linux. Linux Makefiles are included. For Android and iOS please add the respective source files to your Android.mk or Xcode project.
+It has been tested on Windows with mingw64 (x86_64 with posix (threads) compatibility layer).
 
 It is split into the following domains:
 
@@ -33,3 +34,12 @@ PathTransform: Transformations of paths (containers of vectors) using transforma
 
 RPC: A JSON parser and a JSON-RPC implementation (client and server)
 
+
+Compilation Hints:
+
+Each library can be compiled separately. In case of missing dependencies (e.g. OpenCV) you might want to compile only the libraries you need.
+If OpenCV usage is desired the corresponding path might need to be adapted. 
+Irrlicht needs to be compiled separately (please check the Makefile comments in Irrlicht/source/Irrlicht for more information).
+Irrlicht can be compiled with mingw32-make.exe CC=gcc staticlib_win32 -j8 on windows or simply make -j8 on Linux.
+The Makefiles can also be used on Windows with mingw (for example: CC=gcc mingw32-make.exe DEBUG=1 PLATFORM=win32 -j8 ).
+If PLATFORM=win32 the windows libraries are linked. If PLATFORM is undefined Linux or compatible is asserted.

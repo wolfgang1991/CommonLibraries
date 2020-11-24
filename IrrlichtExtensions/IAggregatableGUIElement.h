@@ -16,16 +16,19 @@ class IAggregatableSkinExtension : public ISkinExtension{
 	
 	IExtendableSkin* skin;
 	bool highlightIfActive;
+	bool highlightIfPressed;
 	
 	public:
 	
-	IAggregatableSkinExtension(IExtendableSkin* skin, bool highlightIfActive);
+	IAggregatableSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool highlightIfPressed = false);
 	
 	virtual ~IAggregatableSkinExtension(){}
 	
 	const std::string& getName() final;
 	
 	virtual void drawHighlight(irr::gui::IGUIElement* ele, const irr::core::rect<irr::s32>& highlightRect, const irr::core::rect<irr::s32>* clip);
+	
+	virtual void drawPressedHighlight(irr::gui::IGUIElement* ele, const irr::core::rect<irr::s32>& highlightRect, const irr::core::rect<irr::s32>* clip);
 	
 };
 

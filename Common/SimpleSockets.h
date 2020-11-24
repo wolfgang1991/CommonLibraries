@@ -7,9 +7,19 @@
 #include <list>
 #include <cstdint>
 
+#define SIMPLESOCKETS_WIN (defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64))
+
+#if SIMPLESOCKETS_WIN
+#include <ws2tcpip.h>
+#undef ERROR
+#undef small
+#undef ABSOLUTE
+#undef TRANSPARENT
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#endif
 
 class IIPAddress{
 
@@ -102,6 +112,11 @@ class ISocket : public ICommunicationEndpoint{
 	int32_t restoreReceiveSize;
 	
 	ISocket();
+	
+	#if SIMPLESOCKETS_WIN
+	int isBlocking;//! 0 false, 1 true, 2 undefined
+	void handleBlocking(bool shallBeBlocking);
+	#endif
 
 	public:
 	
@@ -129,9 +144,6 @@ class ISocket : public ICommunicationEndpoint{
 	virtual int getSocketHandle() const;
 	
 	virtual bool setReceiveBufferSize(uint32_t size);
-	
-	//! it is usually a very bad idea to use this function TODO: if too much time refactor accept Code of tcp sockets to remove this method
-	virtual void setSocketHandle(int socketHandle);
 	
 	virtual ~ISocket();
 
@@ -182,14 +194,22 @@ class IPv4UDPSocket : public IPv4Socket{
 
 	private:
 	
-	void init();
+	bool boundOrSent;
+	
+	void init(int socketHandle);
 	
 	IPv4Address targetAddress;
 	IPv4Address lastReceivedAddress;
 
 	public:
 	
+	//! create new socket
 	IPv4UDPSocket();
+	
+	//! use existing "native" socket
+	IPv4UDPSocket(int socketHandle);
+	
+	bool bind(int port, bool reusePort = false);
 	
 	bool restore();
 	
@@ -210,14 +230,22 @@ class IPv6UDPSocket : public IPv6Socket{
 
 	private:
 	
-	void init();
+	bool boundOrSent;
+	
+	void init(int socketHandle);
 	
 	IPv6Address targetAddress;
 	IPv6Address lastReceivedAddress;
 
 	public:
 	
+	//! create new socket
 	IPv6UDPSocket();
+	
+	//! use existing "native" socket
+	IPv6UDPSocket(int socketHandle);
+	
+	bool bind(int port, bool reusePort = false);
 	
 	//! joins the "ff02::1" link local multicast group at the selected interface
 	//! WARNING1: May hang on different plattforms (like iOS) if interface is down
@@ -250,7 +278,11 @@ class IPv4TCPSocket : public IPv4Socket{
 
 	public:
 	
+	//! create new socket
 	IPv4TCPSocket();
+	
+	//! use existing "native" socket
+	IPv4TCPSocket(int socketHandle);
 	
 	bool restore();
 	
@@ -276,7 +308,11 @@ class IPv6TCPSocket : public IPv6Socket{
 	
 	public:
 	
+	//! create new socket
 	IPv6TCPSocket();
+	
+	//! use existing "native" socket
+	IPv6TCPSocket(int socketHandle);
 	
 	bool restore();
 	

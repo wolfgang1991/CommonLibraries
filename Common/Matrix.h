@@ -65,6 +65,10 @@ class Matrix{
 	template <typename... T> 
 	Matrix(T... ts):data{static_cast<TScalar>(ts)...} {}
 	
+	Matrix(TScalar singleScalar){
+		visitMatrix(*this, [singleScalar](uint32_t row, uint32_t column, TScalar& value){value = singleScalar;});
+	}
+	
 	template<typename TMatrix, typename std::enable_if<TMatrix::isMatrix, int>::type = 0>
 	Matrix(const TMatrix& other){
 		copyMatrix(other, *this);

@@ -1,3 +1,11 @@
+FINALSTATICLIB = $(STATIC_LIB)
+
+ifeq ($(PLATFORM),win32)
+CPPFLAGS += -D_IRR_STATIC_LIB_ -DCURL_STATICLIB
+#CXX = x86_64-w64-mingw32-g++-posix
+#CC = x86_64-w64-mingw32-gcc
+endif
+
 LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
 C_LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_C_LINKOBJ))
 
@@ -11,10 +19,10 @@ endif
 
 CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall -std=c++11
 
-all_lib: build_deps $(STATIC_LIB)
+all_lib: build_deps $(FINALSTATICLIB)
 
 # Builds as static lib
-$(STATIC_LIB): $(LINKOBJ) $(C_LINKOBJ)
+$(FINALSTATICLIB): $(LINKOBJ) $(C_LINKOBJ)
 	$(AR) rs $@ $^
 	
 # Create dependency files for automatic recompilation
@@ -32,10 +40,11 @@ $(OBJDIR)/%.d:$(SRCDIR)/%.c
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(LINKOBJ:.o=.d)
+-include $(C_LINKOBJ:.o=.d)
 endif
 
 clean: clean_deps
 	$(RM) $(LINKOBJ) $(LINKOBJ:.o=.d)
-	$(RM) $(STATIC_LIB)
+	$(RM) $(FINALSTATICLIB)
 
 .PHONY: all clean

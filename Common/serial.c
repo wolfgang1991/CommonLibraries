@@ -206,7 +206,7 @@ void closeTerm(struct SerialPort const *port) {
 #endif
 }
 
-static inline int min(int a, int b){return a<b?a:b;}
+static inline int serial_min(int a, int b){return a<b?a:b;}
 
 int recvTermData(struct SerialPort const *port, char* buf, int bufLen){
 	#ifdef _WIN32
@@ -223,7 +223,7 @@ int recvTermData(struct SerialPort const *port, char* buf, int bufLen){
 		return -1;
 	}
 	if(stat.cbInQue>0 || port->readBlocking){
-		if (!ReadFile(port->handle, buf, port->readBlocking?bufLen:min(stat.cbInQue,bufLen), &bytesRead, NULL)) {
+		if (!ReadFile(port->handle, buf, port->readBlocking?bufLen:serial_min(stat.cbInQue,bufLen), &bytesRead, NULL)) {
 			windows_perror("during ReadFile()");
 			fprintf(stderr, "Occurred on read access to %s\n", port->name);
 			return -1;
