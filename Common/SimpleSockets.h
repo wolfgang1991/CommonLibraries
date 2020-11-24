@@ -139,9 +139,6 @@ class ISocket{
 	
 	virtual bool setReceiveBufferSize(uint32_t size);
 	
-	//! it is usually a very bad idea to use this function TODO: if too much time refactor accept Code of tcp sockets to remove this method
-	virtual void setSocketHandle(int socketHandle);
-	
 	virtual ~ISocket();
 
 };
@@ -193,14 +190,18 @@ class IPv4UDPSocket : public IPv4Socket{
 	
 	bool boundOrSent;
 	
-	void init();
+	void init(int socketHandle);
 	
 	IPv4Address targetAddress;
 	IPv4Address lastReceivedAddress;
 
 	public:
 	
+	//! create new socket
 	IPv4UDPSocket();
+	
+	//! use existing "native" socket
+	IPv4UDPSocket(int socketHandle);
 	
 	bool bind(int port, bool reusePort = false);
 	
@@ -225,14 +226,18 @@ class IPv6UDPSocket : public IPv6Socket{
 	
 	bool boundOrSent;
 	
-	void init();
+	void init(int socketHandle);
 	
 	IPv6Address targetAddress;
 	IPv6Address lastReceivedAddress;
 
 	public:
 	
+	//! create new socket
 	IPv6UDPSocket();
+	
+	//! use existing "native" socket
+	IPv6UDPSocket(int socketHandle);
 	
 	bool bind(int port, bool reusePort = false);
 	
@@ -267,7 +272,11 @@ class IPv4TCPSocket : public IPv4Socket{
 
 	public:
 	
+	//! create new socket
 	IPv4TCPSocket();
+	
+	//! use existing "native" socket
+	IPv4TCPSocket(int socketHandle);
 	
 	bool restore();
 	
@@ -293,7 +302,11 @@ class IPv6TCPSocket : public IPv6Socket{
 	
 	public:
 	
+	//! create new socket
 	IPv6TCPSocket();
+	
+	//! use existing "native" socket
+	IPv6TCPSocket(int socketHandle);
 	
 	bool restore();
 	

@@ -285,10 +285,6 @@ int ISocket::getSocketHandle() const{
 	return socketHandle;
 }
 
-void ISocket::setSocketHandle(int socketHandle){
-	this->socketHandle = socketHandle;
-}
-
 bool ISocket::setReceiveBufferSize(uint32_t size){
 	#ifdef SIMPLESOCKETS_WIN
 	int s = size;
@@ -497,21 +493,29 @@ static void disableBlockingTimeout(int sockHandle){
 }
 
 IPv4UDPSocket::IPv4UDPSocket():boundOrSent(false),targetAddress("0.0.0.0",0),lastReceivedAddress("0.0.0.0",0){
-	init();
+	init(-1);
 }
 
-void IPv4UDPSocket::init(){
-	socketHandle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+IPv4UDPSocket::IPv4UDPSocket(int socketHandle):boundOrSent(false),targetAddress("0.0.0.0",0),lastReceivedAddress("0.0.0.0",0){
+	init(socketHandle);
+}
+
+void IPv4UDPSocket::init(int socketHandle){
+	if(socketHandle==-1){
+		this->socketHandle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	}else{
+		this->socketHandle = socketHandle;
+	}
 	int on = 1;
-	if(setsockopt(socketHandle, SOL_SOCKET, SO_BROADCAST, (const char*)&on, sizeof(on))==-1){//allow broadcast
+	if(setsockopt(this->socketHandle, SOL_SOCKET, SO_BROADCAST, (const char*)&on, sizeof(on))==-1){//allow broadcast
 		handleErrorMessage();
 	}
-	disableBlockingTimeout(socketHandle);
+	disableBlockingTimeout(this->socketHandle);
 }
 
 bool IPv4UDPSocket::restore(){
 	::close(socketHandle);
-	init();
+	init(-1);
 	return IPv4Socket::restore();
 }
 
@@ -639,7 +643,12 @@ bool IPv6Socket::bind(int port, bool reusePort){
 }
 
 IPv6UDPSocket::IPv6UDPSocket():boundOrSent(false),targetAddress("::",0),lastReceivedAddress("::",0){
-	init();
+	init(-1);
+	setIPv4ReceptionEnabled(true);
+}
+
+IPv6UDPSocket::IPv6UDPSocket(int socketHandle):boundOrSent(false),targetAddress("::",0),lastReceivedAddress("::",0){
+	init(socketHandle);
 	setIPv4ReceptionEnabled(true);
 }
 
@@ -658,18 +667,22 @@ void IPv6UDPSocket::joinLinkLocalMulticastGroup(uint32_t multicastInterfaceIndex
 	}
 }
 
-void IPv6UDPSocket::init(){
-	socketHandle = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+void IPv6UDPSocket::init(int socketHandle){
+	if(socketHandle==-1){
+		this->socketHandle = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	}else{
+		this->socketHandle = socketHandle;
+	}
 	int ttl = 63;
-	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (const char*)&ttl, sizeof(ttl))==-1){//default ttl may be too low
+	if(setsockopt(this->socketHandle, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (const char*)&ttl, sizeof(ttl))==-1){//default ttl may be too low
 		handleErrorMessage();
 	}
-	disableBlockingTimeout(socketHandle);
+	disableBlockingTimeout(this->socketHandle);
 }
 
 bool IPv6UDPSocket::restore(){
 	::close(socketHandle);
-	init();
+	init(-1);
 	return IPv6Socket::restore();
 }
 	
@@ -747,6 +760,10 @@ const IPv6Address& IPv6UDPSocket::getLastDatagramAddress() const{
 IPv4TCPSocket::IPv4TCPSocket():restoreTimeout(-1),restoreAddress("0.0.0.0",0),restoreListen(-1){
 	socketHandle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
+
+IPv4TCPSocket::IPv4TCPSocket(int socketHandle):restoreTimeout(-1),restoreAddress("0.0.0.0",0),restoreListen(-1){
+	this->socketHandle = socketHandle;
+}
 	
 bool IPv4TCPSocket::listen(int maxPendingConnections){
 	if(::listen(socketHandle, maxPendingConnections)!=-1){
@@ -777,9 +794,7 @@ static inline TSocket* acceptWithTimeout(TSocket* socket, uint32_t timeout, TIPA
 	socklen_t internalLen = sizeof(peerAddress->getInternalRepresentation());
 	int newHandle = acceptWithTimeout(socket->getSocketHandle(), timeout, (sockaddr*)(peerAddress?&(peerAddress->getInternalRepresentation()):NULL), peerAddress?&internalLen:NULL);
 	if(newHandle>=0){
-		TSocket* sock = new TSocket();
-		sock->setSocketHandle(newHandle);
-		return sock;
+		return new TSocket(newHandle);
 	}
 	return NULL;
 }
@@ -870,6 +885,11 @@ bool IPv4TCPSocket::restore(){
 
 IPv6TCPSocket::IPv6TCPSocket():restoreTimeout(-1),restoreAddress("::",0),restoreListen(-1){
 	socketHandle = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+	setIPv4ReceptionEnabled(true);
+}
+
+IPv6TCPSocket::IPv6TCPSocket(int socketHandle):restoreTimeout(-1),restoreAddress("::",0),restoreListen(-1){
+	this->socketHandle = socketHandle;
 	setIPv4ReceptionEnabled(true);
 }
 
