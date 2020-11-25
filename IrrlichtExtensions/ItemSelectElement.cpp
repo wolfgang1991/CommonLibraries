@@ -28,14 +28,16 @@ using namespace core;
 using namespace gui;
 using namespace video;
 
-static void printItemVector(const std::vector<IItemOrganizer::Item*>& v){
-	for(uint32_t i=0; i<v.size(); i++){
-		IItemOrganizer::Item* item = v[i];
-		for(uint32_t j=0; j<item->fields.size(); j++){
-			std::cout << "field[" << j << "] = \"" << convertWStringToUtf8String(item->fields[j]) << "\"" << std::endl;
-		}
-	}
-}
+#define BUTTON_WIDHT_PART (0.0625*0.79057)
+
+//static void printItemVector(const std::vector<IItemOrganizer::Item*>& v){
+//	for(uint32_t i=0; i<v.size(); i++){
+//		IItemOrganizer::Item* item = v[i];
+//		for(uint32_t j=0; j<item->fields.size(); j++){
+//			std::cout << "field[" << j << "] = \"" << convertWStringToUtf8String(item->fields[j]) << "\"" << std::endl;
+//		}
+//	}
+//}
 
 static const ConstantLanguagePhrases defaultPhrases({
 	{L"ItemSelectElement::NAME",L"Name:"},
@@ -76,7 +78,7 @@ class ItemSelectEditBoxCallback : public IEditBoxDialogCallback{
 
 };
 
-ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::wstring& defaultSaveFileName, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, IItemSelectIconSource* source, const std::initializer_list<IAggregatableGUIElement*>& subElements, irr::f32 w, irr::f32 h, ILanguagePhrases* phrases, bool modal):
+ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::wstring& defaultSaveFileName, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, IItemSelectIconSource* source, const std::initializer_list<IAggregatableGUIElement*>& subElements, irr::f32 w, irr::f32 h, const ILanguagePhrases* phrases, bool modal):
 	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)){
 	this->device = device;
 	this->organizer = organizer;
@@ -96,7 +98,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	u32 pw = w*ww;
 	u32 ph = h*wh;
 	double sqrtArea = sqrt(ww*wh);
-	buttonHeight = (s32)(0.0625*0.79057*sqrtArea);
+	buttonHeight = (s32)(BUTTON_WIDHT_PART*sqrtArea);
 	cbk = new ItemSelectEditBoxCallback(this);
 	IGUIWindow* win = env->addWindow(rect<s32>(ww/2-pw/2, wh/2-ph/2, ww/2+pw/2, wh/2+ph/2), modal, L"", this, -1);
 	win->getCloseButton()->setVisible(false); win->setDrawTitlebar(false); win->setNotClipped(true);
@@ -150,8 +152,44 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 			new BeautifulGUIText(isSaveDialog?(lang->getPhrase(L"ItemSelectElement::SAVE", &defaultPhrases).c_str()):(lang->getPhrase(L"ItemSelectElement::OPEN", &defaultPhrases).c_str()), textColor, 0.f, NULL, true, true, env, 1.f)
 		}, {}, -1)
 	}, {}, false, invisibleAggregationID, NULL, win, rect<s32>(padding, ph-padding-buttonHeight, pw-padding, ph-padding));
-	printItemVector(organizer->ls(1));
-	
+	//printItemVector(organizer->ls(1));
+}
+
+ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, IItemSelectIconSource* source, const irr::core::rect<irr::s32>& rectangle, irr::f32 placesPart, irr::f32 pathPart, const ILanguagePhrases* phrases, irr::gui::IGUIElement* parent):
+	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, rectangle){
+	this->device = device;
+	this->organizer = organizer;
+	this->itemcbk = itemcbk;
+	this->isSaveDialog = false;
+	this->aggregationID = aggregationID;
+	this->source = source;
+	this->listElementAggregationID = listElementAggregationID;
+	this->invisibleAggregationID = invisibleAggregationID;
+	this->drawer = drawer;
+	env = device->getGUIEnvironment();
+	if(parent==NULL){parent = env->getRootGUIElement();}
+	parent->addChild(this);
+	this->parent = this;
+	driver = device->getVideoDriver();
+	lang = phrases==NULL?&defaultPhrases:phrases;
+	u32 ww = driver->getScreenSize().Width;
+	u32 wh = driver->getScreenSize().Height;
+	double sqrtArea = sqrt(ww*wh);
+	buttonHeight = (s32)(BUTTON_WIDHT_PART*sqrtArea);
+	s32 padding = 0.015*sqrtArea;
+	nameEdit = NULL;
+	pathAgg = placesAgg = filesAgg = filesAndHeaderAgg = NULL;
+	negative = positive = NULL;
+	overwritebox = NULL;
+	selectedIndex = -1;
+	s32 placesLowerY = placesPart*rectangle.getHeight();
+	s32 navBarLowerY = placesLowerY+pathPart*rectangle.getHeight();
+	createPlacesGUI(rect<s32>(0, 0, rectangle.getWidth(), placesLowerY), padding/2, this, buttonHeight);
+	navBarRect = rect<s32>(0, placesLowerY, rectangle.getWidth(), navBarLowerY);
+	createNavigationBar(false, -1);
+	sortIndex = 0; sortAscending = true;
+	fileListRect = rect<s32>(0, navBarLowerY, rectangle.getWidth(), rectangle.getHeight());
+	createFileList();
 }
 
 ItemSelectElement::~ItemSelectElement(){
@@ -395,8 +433,8 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 					IItemOrganizer::Item* item = items[selected];
 					if(item->isDirectory){
 						cd(std::string(item->relativePath.c_str()));//create string copy since item pointer will become invalid during cd
-					}else if(nameEdit!=NULL){
-						nameEdit->setText(convertUtf8ToWString(item->relativePath).c_str());
+					}else{
+						if(nameEdit!=NULL){nameEdit->setText(convertUtf8ToWString(item->relativePath).c_str());}
 						itemcbk->OnItemSelect(IItemSelectCallback::SELECT, item, organizer->getAbsolutePath(item), this, organizer);
 					}
 				}else{
@@ -424,8 +462,11 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 	return IGUIElement::OnEvent(event);
 }
 
-void ItemSelectElement::OnPostRender(irr::u32 timeMs){
-	IGUIElement::OnPostRender(timeMs);
-	//std::cout << "pos: " << pathAgg->getScrollPosition() << std::endl;
+void ItemSelectElement::clearSelection(){
+	int32_t selected = filesAgg->getSingleSelected();
+	if(selected>=0){
+		filesAgg->getSubElement(selected)->setActive(false);
+		itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
+	}
 }
 

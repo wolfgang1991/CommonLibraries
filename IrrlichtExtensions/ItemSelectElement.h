@@ -116,15 +116,18 @@ class ItemSelectElement : public irr::gui::IGUIElement{
 	public:
 	
 	//! create a open or save dialog with window, subElement are inserted in the horizontal aggregation next to save/open and close buttons if empty an empy element is inserted
-	ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::wstring& defaultSaveFileName, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, IItemSelectIconSource* source, const std::initializer_list<IAggregatableGUIElement*>& subElements = {}, irr::f32 w = .75f, irr::f32 h = .75f, ILanguagePhrases* phrases = NULL, bool modal = true);
+	ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::wstring& defaultSaveFileName, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, IItemSelectIconSource* source, const std::initializer_list<IAggregatableGUIElement*>& subElements = {}, irr::f32 w = .75f, irr::f32 h = .75f, const ILanguagePhrases* phrases = NULL, bool modal = true);
+	
+	//! create an open dialog inside a rectangle, placesPart and pathPart define the part of the height of the rectange where the places and the path gui will be created
+	ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, IItemSelectIconSource* source, const irr::core::rect<irr::s32>& rectangle, irr::f32 placesPart=.3f, irr::f32 pathPart=.1f, const ILanguagePhrases* phrases = NULL, irr::gui::IGUIElement* parent = NULL);
 	
 	virtual ~ItemSelectElement();
-	
-	virtual void OnPostRender(irr::u32 timeMs);
 	
 	virtual bool OnEvent(const irr::SEvent& event);
 	
 	virtual void cd(const std::string& path, bool resetPlacesSelection = true);
+	
+	virtual void clearSelection();
 	
 };
 

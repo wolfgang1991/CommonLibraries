@@ -19,7 +19,7 @@ class IItemOrganizer{
 		bool isDirectory;
 		std::string relativePath;//! relative to current directory for which this item was created
 		std::vector<std::wstring> fields;
-		void* additionalData;//! implementation specific
+		const void* additionalData;//! implementation specific
 		uint32_t additionalID;//! implementation specific
 	};
 	

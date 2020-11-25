@@ -21,6 +21,8 @@ class FileSystemItemOrganizer : public IItemOrganizer{
 	std::vector<std::wstring> placeLangKeys;
 	std::vector<IItemOrganizer::Place> places;
 	
+	const ILanguagePhrases* lang;
+	
 	void updateContent();
 	
 	public:
