@@ -13,11 +13,13 @@
 #include <ctime>
 #include <iostream>
 
+#include <sys/stat.h>
+
 #ifdef _WIN32
 #include <fileapi.h>
+#include <shlobj.h>
 #else
 #include <errno.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
@@ -54,8 +56,15 @@ static const ConstantLanguagePhrases defaultPhrases({
 
 FileSystemItemOrganizer::FileSystemItemOrganizer(irr::IrrlichtDevice* device):fsys(device->getFileSystem()),fieldLangKeys{L"File::NAME", L"File::SIZE", L"File::MODIFICATION"}{
 	#ifdef _WIN32
+	//Home
+	WCHAR path[MAX_PATH];
+	if(SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, path))) {
+		placeLangKeys.push_back(L"Place::HOME");
+		places.push_back(IItemOrganizer::Place{L"", convertWStringToUtf8String(path)});
+	}
+	//Drives
 	DWORD driveMask = GetLogicalDrives();
-	std::string drivePath = "C:\\";
+	std::string drivePath = "C:";
 	uint32_t bitCount = sizeof(driveMask)*CHAR_BIT;
 	for(uint32_t i=0; i<bitCount; i++){
 		bool hasDrive = getBit(driveMask, i);
@@ -181,17 +190,17 @@ void FileSystemItemOrganizer::updateContent(){
 			if(cleanFileName!=".." && cleanFileName!="."){//don't include parent and this directory
 				uint64_t fileSize = 0;
 				time_t modificationTime = 0;
-				#ifdef _WIN32
-				//#error TODO Implement
-				#else
 				struct stat64 s;
 				if(stat64(filename.c_str(), &s)==0){
+					#ifdef _WIN32
+					modificationTime = s.st_mtime;
+					#else
 					modificationTime = s.st_mtim.tv_sec;
+					#endif
 					fileSize = s.st_size;
 				}else{
 					std::cerr << "stat64 error (" << errno << "): " << strerror(errno) << std::endl;
 				}
-				#endif
 				struct tm* timeinfo = localtime(&modificationTime);
 				std::wstringstream ss; ss << (1900+timeinfo->tm_year) << L"-" << std::setfill(L'0') << std::setw(2) << (1+timeinfo->tm_mon) << L"-" << std::setfill(L'0') << std::setw(2) << timeinfo->tm_mday << " " << std::setfill(L'0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill(L'0') << std::setw(2) << timeinfo->tm_min; 
 				content.push_back(IItemOrganizer::Item{l->isDirectory(i), cleanFileName.c_str(), {convertUtf8ToWString(cleanFileName.c_str()), l->isDirectory(i)?L"":convertUtf8ToWString(getHumanReadableSpace(fileSize)), ss.str()}, NULL, (uint32_t)content.size()});
@@ -223,20 +232,24 @@ const std::vector<std::wstring>& FileSystemItemOrganizer::getItemFieldLabels() c
 }
 
 bool FileSystemItemOrganizer::cd(const std::string& path){
-	std::cout << "cd to: " << path << std::endl;
 	#if _WIN32
-	bool succ = fsys->changeWorkingDirectoryTo(path.size()<=2?(path+"\\").c_str():path.c_str());
+	bool succ = false;//fsys->changeWorkingDirectoryTo(path.size()<=2(path+"\\").c_str():path.c_str());
+	if(path.size()==2){
+		if(path[1]==':'){
+			succ = fsys->changeWorkingDirectoryTo((path+"\\").c_str());
+		}
+	}
+	if(!succ){succ = fsys->changeWorkingDirectoryTo(path.c_str());}
 	#else
 	bool succ = fsys->changeWorkingDirectoryTo(path.c_str());
 	#endif
-	std::cout << "succ: " << (int)succ << std::endl;
 	if(succ){updateContent();}
 	return succ;
 }
 
 bool FileSystemItemOrganizer::mkdir(const std::string& path){
 	#ifdef _WIN32
-	return false;//#error TODO Implement
+	return _wmkdir(convertUtf8ToWString(path).c_str())==0;
 	#else
 	return ::mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP)==0;
 	#endif

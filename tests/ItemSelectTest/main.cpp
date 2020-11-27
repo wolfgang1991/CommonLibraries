@@ -98,7 +98,7 @@ int main(int argc, char *argv[]){
 	
 	TestItemSelectCallack isc;
 	
-	ItemSelectElement* savediag = new ItemSelectElement(device, drawer, "test.save", fso, &isc, AppSkin::REGULAR_AGGREGATION, AppSkin::LIST_ELE_AGGREGATION, AppSkin::INVISIBLE_AGGREGATION, -1, false, &is, {}, .75f, .75f, NULL, true);//, std::regex(".*(svg|png)"));
+	ItemSelectElement* savediag = new ItemSelectElement(device, drawer, "test.save", fso, &isc, AppSkin::REGULAR_AGGREGATION, AppSkin::LIST_ELE_AGGREGATION, AppSkin::INVISIBLE_AGGREGATION, -1, true, &is, {}, .75f, .75f, NULL, true);//, std::regex(".*(svg|png)"));
 	
 	while(device->run()){
 		if(device->isWindowActive()){

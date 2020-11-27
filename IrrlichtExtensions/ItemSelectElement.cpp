@@ -54,7 +54,8 @@ static const ConstantLanguagePhrases defaultPhrases({
 	{L"ItemSelectElement::ASK_OVERWRITE",L"Do you want to overwrite the existing file?"},
 	{L"ItemSelectElement::YES",L"Yes"},
 	{L"ItemSelectElement::NO",L"No"},
-	{L"ItemSelectElement::NO_SELECTION",L"Error: No file selected."}
+	{L"ItemSelectElement::NO_SELECTION",L"Error: No file selected."},
+	{L"ItemSelectElement::UNSUCCESSFUL_CD",L"Error: Unable to change directory.\nPlease check your permissions."}
 });
 
 class ItemSelectEditBoxCallback : public IEditBoxDialogCallback{
@@ -359,6 +360,8 @@ void ItemSelectElement::createFileList(){
 }
 
 void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
+	itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
+	selectedIndex = -1;
 	if(organizer->cd(path)){
 		itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
 		selectedIndex = -1;
@@ -382,6 +385,12 @@ void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
 				placesAgg->getSubElement(selected)->setActive(false);
 			}
 		}
+	}else{
+		int32_t selected = filesAgg->getSingleSelected();
+		if(selected>=0){
+			filesAgg->getSubElement(selected)->setActive(false);
+		}
+		new CMBox(device, lang->getPhrase(L"ItemSelectElement::UNSUCCESSFUL_CD", &defaultPhrases).c_str());
 	}
 }
 
