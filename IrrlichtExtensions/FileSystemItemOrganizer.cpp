@@ -3,6 +3,7 @@
 
 #include <utf8.h>
 #include <StringHelpers.h>
+#include <BitFunctions.h>
 
 #include <IFileSystem.h>
 #include <IrrlichtDevice.h>
@@ -13,7 +14,7 @@
 #include <iostream>
 
 #ifdef _WIN32
-//TODO
+#include <fileapi.h>
 #else
 #include <errno.h>
 #include <sys/stat.h>
@@ -53,7 +54,19 @@ static const ConstantLanguagePhrases defaultPhrases({
 
 FileSystemItemOrganizer::FileSystemItemOrganizer(irr::IrrlichtDevice* device):fsys(device->getFileSystem()),fieldLangKeys{L"File::NAME", L"File::SIZE", L"File::MODIFICATION"}{
 	#ifdef _WIN32
-	//TODO add places: drives, home dir, documents dir
+	DWORD driveMask = GetLogicalDrives();
+	std::string drivePath = "C:\\";
+	uint32_t bitCount = sizeof(driveMask)*CHAR_BIT;
+	for(uint32_t i=0; i<bitCount; i++){
+		bool hasDrive = getBit(driveMask, i);
+		if(hasDrive){
+			char driveLetter = 'A'+(char)i;
+			drivePath[0] = driveLetter;
+			std::wstring wDrivePath = convertUtf8ToWString(drivePath);
+			placeLangKeys.push_back(wDrivePath);
+			places.push_back(IItemOrganizer::Place{wDrivePath, drivePath});
+		}
+	}
 	#elif defined(__ANDROID__)
 //	placeLangKeys.push_back(L"Place::ROOT");
 //	places.push_back(IItemOrganizer::Place{L"", "/"});
@@ -169,7 +182,7 @@ void FileSystemItemOrganizer::updateContent(){
 				uint64_t fileSize = 0;
 				time_t modificationTime = 0;
 				#ifdef _WIN32
-				#error TODO Implement
+				//#error TODO Implement
 				#else
 				struct stat64 s;
 				if(stat64(filename.c_str(), &s)==0){
@@ -210,14 +223,20 @@ const std::vector<std::wstring>& FileSystemItemOrganizer::getItemFieldLabels() c
 }
 
 bool FileSystemItemOrganizer::cd(const std::string& path){
+	std::cout << "cd to: " << path << std::endl;
+	#if _WIN32
+	bool succ = fsys->changeWorkingDirectoryTo(path.size()<=2?(path+"\\").c_str():path.c_str());
+	#else
 	bool succ = fsys->changeWorkingDirectoryTo(path.c_str());
+	#endif
+	std::cout << "succ: " << (int)succ << std::endl;
 	if(succ){updateContent();}
 	return succ;
 }
 
 bool FileSystemItemOrganizer::mkdir(const std::string& path){
 	#ifdef _WIN32
-	#error TODO Implement
+	return false;//#error TODO Implement
 	#else
 	return ::mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP)==0;
 	#endif

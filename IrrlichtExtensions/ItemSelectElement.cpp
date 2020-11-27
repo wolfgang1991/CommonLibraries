@@ -362,14 +362,14 @@ void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
 	if(organizer->cd(path)){
 		itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
 		selectedIndex = -1;
-		filesAndHeaderAgg->remove();
+		filesAndHeaderAgg->remove();//setVisible(false);//
 		bool createMkdirButton = mkdirBut!=NULL;
 		s32 mkdirButtonID = -1;
 		if(createMkdirButton){
 			mkdirButtonID = mkdirBut->getID();
 			mkdirBut->remove();
 		}
-		pathAgg->remove();
+		pathAgg->remove();//setVisible(false);//
 		button2path.clear();
 		createNavigationBar(createMkdirButton, mkdirButtonID);
 		createFileList();
@@ -379,6 +379,7 @@ void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
 				placesAgg->getSubElement(selected)->setActive(false);
 			}
 		}
+		//env->setFocus(NULL);
 	}
 }
 
@@ -389,13 +390,16 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 			auto it = button2path.find(g.Caller);
 			if(it!=button2path.end()){
 				cd(it->second);
+				return true;
 			}else if(g.Caller==mkdirBut){
 				new EditBoxDialog(cbk, device, lang->getPhrase(L"ItemSelectElement::MKDIR_DESC", &defaultPhrases).c_str(), lang->getPhrase(L"ItemSelectElement::OK", &defaultPhrases).c_str(), lang->getPhrase(L"ItemSelectElement::CANCEL", &defaultPhrases).c_str());
+				return true;
 			}else if(g.Caller==negative){
 				organizer->cd(originalPath);//restore working directory to avoid side effects
 				itemcbk->OnItemSelect(IItemSelectCallback::CANCEL, NULL, "", this, organizer);
 				remove();
 				drop();
+				return true;
 			}else if(g.Caller==positive){
 				if(isSaveDialog){//Save
 					std::string filename = convertWStringToUtf8String(nameEdit->getText());
@@ -410,6 +414,7 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 						itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, absPath, this, organizer);
 						remove();
 						drop();
+						return true;
 					}
 				}else if(selectedIndex>=0){//Open
 					std::string absPath = organizer->getAbsolutePath(items[selectedIndex]->relativePath);
@@ -417,9 +422,11 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 					itemcbk->OnItemSelect(IItemSelectCallback::OPEN, items[selectedIndex], absPath, this, organizer);
 					remove();
 					drop();
+					return true;
 				}else{
 					new CMBox(device, lang->getPhrase(L"ItemSelectElement::NO_SELECTION", &defaultPhrases).c_str());
 				}
+				return true;
 			}else{
 				for(uint32_t i=0; i<fieldButtons.size(); i++){
 					if(g.Caller==fieldButtons[i]){
@@ -431,7 +438,7 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 						}
 						filesAndHeaderAgg->remove();
 						createFileList();
-						break;
+						return true;
 					}
 				}
 			}
@@ -442,6 +449,7 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 					const std::vector<IItemOrganizer::Place>& p = organizer->getPlaces();
 					cd(p[selected].path, false);
 				}
+				return true;
 			}else if(g.Caller==filesAgg){
 				int32_t selected = filesAgg->getSingleSelected();
 				if(selected>=0){
@@ -458,6 +466,8 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 					selectedIndex = -1;
 					itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
 				}
+				std::cout << "return true" << std::endl;
+				return true;
 			}
 		}else if(g.EventType==EGET_EDITBOX_CHANGED){
 			if(g.Caller==nameEdit){
@@ -465,6 +475,7 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 				if(selected>=0){
 					filesAgg->getSubElement(selected)->setActive(false);
 				}
+				return true;
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_YES){
 			if(g.Caller==overwritebox){
@@ -474,9 +485,13 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 				itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, absPath, this, organizer);
 				remove();
 				drop();
+				return true;
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_NO){
-			if(g.Caller==overwritebox){overwritebox = NULL;}
+			if(g.Caller==overwritebox){
+				overwritebox = NULL;
+				return true;
+			}
 		}
 	}
 	return IGUIElement::OnEvent(event);
