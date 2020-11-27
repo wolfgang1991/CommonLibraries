@@ -11,6 +11,7 @@
 #include <timing.h>
 #include <BeautifulGUIText.h>
 #include <utf8.h>
+#include <ItemSelectElement.h>
 
 #include <IVideoDriver.h>
 #include <IGUIWindow.h>
@@ -214,24 +215,27 @@ static const char* guiCodeString =
 "VAlign = Center\n"
 "VisibilityDomain = 0\n";
 
-LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, const char* exportPath, irr::video::ITexture* folderIcon, irr::video::ITexture* settingsIcon, bool isModal, irr::s32 deleteId, irr::s32 renameId, const wchar_t* defaultFileName, const IndicationFunction* calculateIndication):
+static const IItemOrganizer::Item dummyItem{false, "settings.ini", {}, NULL, 0};
+
+LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, IItemSelectIconSource* iconsource, const char* exportPath, bool isModal, irr::s32 deleteId, irr::s32 renameId, const wchar_t* defaultFileName, const IndicationFunction* calculateIndication):
 	IGUIElement(EGUIET_ELEMENT, device->getGUIEnvironment(), device->getGUIEnvironment()->getRootGUIElement(), -1, rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height)),
 	device(device),
 	ini(ini),
 	cbk(cbk),
-	exportPath(exportPath!=NULL?exportPath:""),
+	exportPath(exportPath!=NULL?(isSuffixEqual(exportPath,".ini")?exportPath:(std::string(exportPath).append(".ini"))):"data.ini"),
 	defaultAggId(defaultAggId),
 	invisibleAggId(invisibleAggId),
 	regularAggId(regularAggId),
 	noBorderAggId(noBorderAggId),
-	folderIcon(folderIcon),
-	settingsIcon(settingsIcon),
+	folderIcon(iconsource->getFolderIcon()),
+	settingsIcon(iconsource->getItemIcon(dummyItem)),
 	drawer(drawer),
 	deleteId(deleteId),
 	renameId(renameId),
 	caps(caps),
 	iniDirty(false),
-	calculateIndication(calculateIndication?*calculateIndication:[](const std::wstring& indication, IniFile* ini ,const std::string& section){return indication;}){
+	calculateIndication(calculateIndication?*calculateIndication:[](const std::wstring& indication, IniFile* ini ,const std::string& section){return indication;}),
+	iconsource(iconsource){
 	IniFile guiIni;
 	guiIni.setFromString(guiCodeString);
 	irr::core::dimension2d<irr::u32> dim = Environment->getVideoDriver()->getScreenSize();
@@ -257,7 +261,7 @@ LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, i
 	settingsList = NULL;
 	currentPrefix = "";
 	fillList(defaultFileName);
-	bDeleteOne = bOverwrite = bDeleteAll = bImport = bExport = NULL;
+	bDeleteOne = bOverwrite = bDeleteAll = NULL;
 	bNewDir = bRename = NULL;
 	setLanguage(&defaultPhrases);
 	nameCbk = new NameEditCallback(this);
@@ -402,12 +406,31 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 				openOrSave(true);
 				return true;
 			}else if(g.Caller==ebimport){
-				bImport = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::IMPORT", {convertStringToWString(exportPath)}, &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
-				addChild(bImport);
+				//bImport = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::IMPORT", {convertStringToWString(exportPath)}, &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
+				//addChild(bImport);
+				createItemSelectElement(device, drawer, exportPath, regularAggId, noBorderAggId, invisibleAggId, -1, false, [this](IItemSelectCallback::Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer){
+					if(action==IItemSelectCallback::OPEN){
+						IniFile importedIni(absolutePath);
+						IniIterator* it = importedIni.createNewIterator();
+						while(it->isSectionAvail()){//merge imported ini and overwrite without asking
+							while(it->isValueAvail()){
+								iniDirty = true;
+								ini->set(it->getCurrentSection(), it->getCurrentKey(), it->getCurrentValue());
+								it->gotoNextValue();
+							}
+							it->gotoNextSection();
+						}
+						delete it;
+						fillList();
+					}
+				}, iconsource, .75f, .75f, phrases, true, std::regex(".*.ini"));//TODO richtige icons
 				return true;
 			}else if(g.Caller==ebexport){
-				bExport = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::EXPORT", {convertStringToWString(exportPath)}, &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
-				addChild(bExport);
+				createItemSelectElement(device, drawer, exportPath, regularAggId, noBorderAggId, invisibleAggId, -1, true, [this](IItemSelectCallback::Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer){
+					if(action==IItemSelectCallback::SAVE){
+						ini->save(absolutePath);
+					}
+				}, iconsource, .75f, .75f, phrases, true, std::regex(".*.ini"));
 				return true;
 			}else if(g.Caller==ebdeleteall){
 				bDeleteAll = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::DELETE_ALL", &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
@@ -436,26 +459,7 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 				}
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_YES){
-			if(g.Caller==(IGUIElement*)bImport){
-				IniFile importedIni(exportPath);
-				IniIterator* it = importedIni.createNewIterator();
-				while(it->isSectionAvail()){//merge imported ini and overwrite without asking
-					while(it->isValueAvail()){
-						iniDirty = true;
-						ini->set(it->getCurrentSection(), it->getCurrentKey(), it->getCurrentValue());
-						it->gotoNextValue();
-					}
-					it->gotoNextSection();
-				}
-				delete it;
-				fillList();
-				bImport = NULL;
-				return true;
-			}else if(g.Caller==(IGUIElement*)bExport){
-				ini->save(exportPath);
-				bExport = NULL;
-				return true;
-			}else if(g.Caller==(IGUIElement*)bDeleteAll){
+			if(g.Caller==(IGUIElement*)bDeleteAll){
 				iniDirty = true;
 				ini->data.clear();
 				fillList();
@@ -489,7 +493,7 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 				return true;
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_NO){
-			bDeleteOne = bOverwrite = bDeleteAll = bImport = bExport = NULL;
+			bDeleteOne = bOverwrite = bDeleteAll = NULL;
 		}else if(g.EventType==EGET_LISTBOX_CHANGED){
 			s32 nowSelected = -1;
 			for(u32 i=0; i<settingsList->getSubElementCount(); i++){
