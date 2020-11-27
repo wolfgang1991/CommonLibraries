@@ -5,6 +5,7 @@
 #include <StringHelpers.h>
 
 #include <IFileSystem.h>
+#include <IrrlichtDevice.h>
 
 #include <iomanip>
 #include <sstream>
@@ -21,25 +22,109 @@
 #include <pwd.h>
 #endif
 
+#ifdef __ANDROID__
+#include <android_native_app_glue.h>
+#include <android/log.h>
+
+static std::wstring Java_To_WStr(JNIEnv *env, jstring string){
+    std::wstring value;
+    const jchar *raw = env->GetStringChars(string, 0);
+    jsize len = env->GetStringLength(string);
+    value.assign(raw, raw + len);
+    env->ReleaseStringChars(string, raw);
+    return value;
+}
+#endif
+
 using namespace irr;
 using namespace core;
 using namespace io;
+
 
 static const ConstantLanguagePhrases defaultPhrases({
 	{L"File::NAME",L"Name"},
 	{L"File::SIZE",L"Size"},
 	{L"File::MODIFICATION",L"Modified"},
 	{L"Place::HOME",L"Home"},
-	{L"Place::ROOT",L"/"}
+	{L"Place::ROOT",L"/"},
+	{L"Place::DOCUMENTS",L"Documents"},
+	{L"Place::DOWNLOADS",L"Downloads"}
 });
 
-FileSystemItemOrganizer::FileSystemItemOrganizer(irr::io::IFileSystem* fsys):fsys(fsys),fieldLangKeys{L"File::NAME", L"File::SIZE", L"File::MODIFICATION"}{
+FileSystemItemOrganizer::FileSystemItemOrganizer(irr::IrrlichtDevice* device):fsys(device->getFileSystem()),fieldLangKeys{L"File::NAME", L"File::SIZE", L"File::MODIFICATION"}{
 	#ifdef _WIN32
 	//TODO add places: drives, home dir, documents dir
 	#elif defined(__ANDROID__)
-	//TODO add places: internal/external flash, documents dir
+//	placeLangKeys.push_back(L"Place::ROOT");
+//	places.push_back(IItemOrganizer::Place{L"", "/"});
+	{
+		JNIEnv* JNIEnvAttachedToVM;
+		JavaVMAttachArgs attachArgs;
+		attachArgs.version = JNI_VERSION_1_6;
+		attachArgs.name = 0;
+		attachArgs.group = NULL;
+		// Get the interface to the native Android activity.
+		android_app* app = (android_app*)(device->getCreationParams().PrivateData);
+		// Not a big problem calling it each time - it's a no-op when the thread already is attached.
+		jint result = app->activity->vm->AttachCurrentThread(&JNIEnvAttachedToVM, &attachArgs);
+		if(result == JNI_ERR){
+			 __android_log_print(ANDROID_LOG_ERROR, "native", "AttachCurrentThread for the JNI environment failed.");
+			JNIEnvAttachedToVM = 0;
+		}else{
+			jclass fileClass = JNIEnvAttachedToVM->FindClass("java/io/File");
+			if(fileClass==NULL){
+				__android_log_print(ANDROID_LOG_ERROR, "native", "java/io/File not found");
+			}else{
+				jmethodID getAbsolutePath = JNIEnvAttachedToVM->GetMethodID(fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+				if(getAbsolutePath==NULL){
+					__android_log_print(ANDROID_LOG_ERROR, "native", "getAbsolutePath not found");
+				}else{
+					jclass environmentClass = JNIEnvAttachedToVM->FindClass("android/os/Environment");
+					if(environmentClass==NULL){
+						 __android_log_print(ANDROID_LOG_ERROR, "native", "android/os/Environment not found");
+					}else{
+						jmethodID getExternalStoragePublicDirectory = JNIEnvAttachedToVM->GetStaticMethodID(environmentClass, "getExternalStoragePublicDirectory", "(Ljava/lang/String;)Ljava/io/File;");
+						if(getExternalStoragePublicDirectory==NULL){
+							 __android_log_print(ANDROID_LOG_ERROR, "native", "getExternalStoragePublicDirectory method not found");
+						}else{
+							jfieldID DIRECTORY_DOCUMENTS = JNIEnvAttachedToVM->GetStaticFieldID(environmentClass, "DIRECTORY_DOCUMENTS", "Ljava/lang/String;");
+							if(DIRECTORY_DOCUMENTS==NULL){
+								__android_log_print(ANDROID_LOG_ERROR, "native", "DIRECTORY_DOCUMENTS static field not found");
+							}else{
+								jobject DIRECTORY_DOCUMENTS_STRING = JNIEnvAttachedToVM->GetStaticObjectField(environmentClass, DIRECTORY_DOCUMENTS);
+								if(DIRECTORY_DOCUMENTS_STRING==NULL){
+									__android_log_print(ANDROID_LOG_ERROR, "native", "Retrieving DIRECTORY_DOCUMENTS failed");
+								}else{
+									jfieldID DIRECTORY_DOWNLOADS = JNIEnvAttachedToVM->GetStaticFieldID(environmentClass, "DIRECTORY_DOWNLOADS", "Ljava/lang/String;");
+									if(DIRECTORY_DOWNLOADS==NULL){
+										__android_log_print(ANDROID_LOG_ERROR, "native", "DIRECTORY_DOWNLOADS static field not found");
+									}else{
+										jobject DIRECTORY_DOWNLOADS_STRING = JNIEnvAttachedToVM->GetStaticObjectField(environmentClass, DIRECTORY_DOWNLOADS);
+										if(DIRECTORY_DOWNLOADS_STRING==NULL){
+											__android_log_print(ANDROID_LOG_ERROR, "native", "Retrieving DIRECTORY_DOWNLOADS failed");
+										}else{
+											jobject dir = JNIEnvAttachedToVM->CallStaticObjectMethod(environmentClass, getExternalStoragePublicDirectory, DIRECTORY_DOCUMENTS_STRING);
+											jstring absPath = (jstring)(JNIEnvAttachedToVM->CallObjectMethod(dir, getAbsolutePath));
+											std::wstring absPathW = Java_To_WStr(JNIEnvAttachedToVM, absPath);
+											placeLangKeys.push_back(L"Place::DOCUMENTS");
+											places.push_back(IItemOrganizer::Place{L"", convertWStringToUtf8String(absPathW)});
+											dir = JNIEnvAttachedToVM->CallStaticObjectMethod(environmentClass, getExternalStoragePublicDirectory, DIRECTORY_DOWNLOADS_STRING);
+											absPath = (jstring)(JNIEnvAttachedToVM->CallObjectMethod(dir, getAbsolutePath));
+											absPathW = Java_To_WStr(JNIEnvAttachedToVM, absPath);
+											placeLangKeys.push_back(L"Place::DOWNLOADS");
+											places.push_back(IItemOrganizer::Place{L"", convertWStringToUtf8String(absPathW)});
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	#elif defined(__APPLE__)
-	//TODO add places: app home dir, documents dir
+	#error add places FileSystemItemOrganizer: app home dir, documents dir
 	#else//linux or compatible
 		placeLangKeys.push_back(L"Place::HOME");
 		const char* homedir;
@@ -94,7 +179,6 @@ void FileSystemItemOrganizer::updateContent(){
 					std::cerr << "stat64 error (" << errno << "): " << strerror(errno) << std::endl;
 				}
 				#endif
-				std::cout << "path: " << convertWStringToUtf8String(convertUtf8ToWString(cleanFileName.c_str())) << std::endl;
 				struct tm* timeinfo = localtime(&modificationTime);
 				std::wstringstream ss; ss << (1900+timeinfo->tm_year) << L"-" << std::setfill(L'0') << std::setw(2) << (1+timeinfo->tm_mon) << L"-" << std::setfill(L'0') << std::setw(2) << timeinfo->tm_mday << " " << std::setfill(L'0') << std::setw(2) << timeinfo->tm_hour << ":" << std::setfill(L'0') << std::setw(2) << timeinfo->tm_min; 
 				content.push_back(IItemOrganizer::Item{l->isDirectory(i), cleanFileName.c_str(), {convertUtf8ToWString(cleanFileName.c_str()), l->isDirectory(i)?L"":convertUtf8ToWString(getHumanReadableSpace(fileSize)), ss.str()}, NULL, (uint32_t)content.size()});

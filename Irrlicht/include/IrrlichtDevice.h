@@ -15,6 +15,7 @@
 #include "IVideoModeList.h"
 #include "ITimer.h"
 #include "IOSOperator.h"
+#include "SIrrCreationParameters.h"
 
 namespace irr
 {
@@ -332,6 +333,11 @@ namespace irr
 		/** This allows the user to check which windowing system is currently being
 		used. */
 		virtual E_DEVICE_TYPE getType() const = 0;
+		
+		//changed:
+		//! Gets the creation params used to create the device
+		virtual const irr::SIrrlichtCreationParameters& getCreationParams() const = 0;
+		//changed end
 
 		//! Check if a driver type is supported by the engine.
 		/** Even if true is returned the driver may not be available

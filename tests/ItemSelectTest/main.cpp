@@ -92,7 +92,7 @@ int main(int argc, char *argv[]){
 	ff->setDefaultMaterialType(fmgr->getSDFFMaterialType());
 	skin->setFont(ff);
 	
-	IItemOrganizer* fso = new FileSystemItemOrganizer(device->getFileSystem());
+	IItemOrganizer* fso = new FileSystemItemOrganizer(device);
 	
 	IItemSelectIconSource is(driver->getTexture("ascending.png"), driver->getTexture("descending.png"), driver->getTexture("mkdir.png"), driver->getTexture("file.png"), driver->getTexture("folder.png"));
 	

@@ -21,13 +21,11 @@ class FileSystemItemOrganizer : public IItemOrganizer{
 	std::vector<std::wstring> placeLangKeys;
 	std::vector<IItemOrganizer::Place> places;
 	
-	const ILanguagePhrases* lang;
-	
 	void updateContent();
 	
 	public:
 	
-	FileSystemItemOrganizer(irr::io::IFileSystem* fsys);
+	FileSystemItemOrganizer(irr::IrrlichtDevice* device);
 	
 	virtual bool doesExist(const std::string& path) const;
 	
