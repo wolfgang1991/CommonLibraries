@@ -362,14 +362,17 @@ void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
 	if(organizer->cd(path)){
 		itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
 		selectedIndex = -1;
-		filesAndHeaderAgg->remove();//setVisible(false);//
+		filesAndHeaderAgg->setVisible(false);//remove();//
+		toRemove.push_back(filesAndHeaderAgg);
 		bool createMkdirButton = mkdirBut!=NULL;
 		s32 mkdirButtonID = -1;
 		if(createMkdirButton){
 			mkdirButtonID = mkdirBut->getID();
-			mkdirBut->remove();
+			mkdirBut->setVisible(false);//remove();//
+			toRemove.push_back(mkdirBut);
 		}
-		pathAgg->remove();//setVisible(false);//
+		pathAgg->setVisible(false);//remove();//
+		toRemove.push_back(pathAgg);
 		button2path.clear();
 		createNavigationBar(createMkdirButton, mkdirButtonID);
 		createFileList();
@@ -379,7 +382,6 @@ void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
 				placesAgg->getSubElement(selected)->setActive(false);
 			}
 		}
-		//env->setFocus(NULL);
 	}
 }
 
@@ -436,7 +438,8 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 							sortIndex = i;
 							sortAscending = true;
 						}
-						filesAndHeaderAgg->remove();
+						filesAndHeaderAgg->setVisible(false);//remove();
+						toRemove.push_back(filesAndHeaderAgg);
 						createFileList();
 						return true;
 					}
@@ -503,6 +506,14 @@ void ItemSelectElement::clearSelection(){
 		filesAgg->getSubElement(selected)->setActive(false);
 		itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
 	}
+}
+
+void ItemSelectElement::OnPostRender(irr::u32 timeMs){
+	for(IGUIElement* ele : toRemove){
+		ele->remove();
+	}
+	toRemove.clear();
+	IGUIElement::OnPostRender(timeMs);
 }
 
 IItemSelectIconSource::IItemSelectIconSource(irr::video::ITexture* ascending, irr::video::ITexture* descending, irr::video::ITexture* mkdir, irr::video::ITexture* file, irr::video::ITexture* folder):

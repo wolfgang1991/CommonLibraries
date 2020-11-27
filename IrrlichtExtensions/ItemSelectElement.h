@@ -8,6 +8,7 @@
 #include <IEventReceiver.h>
 
 #include <map>
+#include <list>
 #include <regex>
 #include <functional>
 
@@ -124,6 +125,8 @@ class ItemSelectElement : public irr::gui::IGUIElement{
 	
 	std::regex regex;
 	
+	std::list<irr::gui::IGUIElement*> toRemove;//workaround for problem with remove during event processing
+	
 	void createPlacesGUI(const irr::core::rect<irr::s32>& r, irr::s32 padding, irr::gui::IGUIElement* parent, irr::s32 buttonHeight);
 	
 	void createNavigationBar(bool createMkdirButton = false, irr::s32 mkdirButtonID = -1);
@@ -148,6 +151,8 @@ class ItemSelectElement : public irr::gui::IGUIElement{
 	virtual void cd(const std::string& path, bool resetPlacesSelection = true);
 	
 	virtual void clearSelection();
+	
+	virtual void OnPostRender(irr::u32 timeMs);
 	
 };
 
