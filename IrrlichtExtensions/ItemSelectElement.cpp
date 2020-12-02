@@ -357,6 +357,7 @@ void ItemSelectElement::createFileList(){
 			lineIndex2ItemIndex.push_back(i);
 		}
 	}
+	Environment->setFocus(filesAgg);
 }
 
 void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
@@ -523,6 +524,10 @@ void ItemSelectElement::OnPostRender(irr::u32 timeMs){
 	}
 	toRemove.clear();
 	IGUIElement::OnPostRender(timeMs);
+}
+
+AggregateGUIElement* ItemSelectElement::getFilesAggregation() const{
+	return filesAgg;
 }
 
 IItemSelectIconSource::IItemSelectIconSource(irr::video::ITexture* ascending, irr::video::ITexture* descending, irr::video::ITexture* mkdir, irr::video::ITexture* file, irr::video::ITexture* folder):

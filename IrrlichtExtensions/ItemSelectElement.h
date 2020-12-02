@@ -154,6 +154,8 @@ class ItemSelectElement : public irr::gui::IGUIElement{
 	
 	virtual void OnPostRender(irr::u32 timeMs);
 	
+	virtual AggregateGUIElement* getFilesAggregation() const;
+	
 };
 
 typedef std::function<void(IItemSelectCallback::Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer)> ItemSelectCallbackFunction;
