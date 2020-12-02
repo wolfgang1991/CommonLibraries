@@ -277,3 +277,13 @@ std::vector<IItemOrganizer::Item*> FileSystemItemOrganizer::ls(uint32_t fieldInd
 	}
 	return res;
 }
+
+#if _WIN32
+static const std::vector<char> delimeter{'\\', '/'};
+#else
+static const std::vector<char> delimeter{'/'};
+#endif
+
+const std::vector<char>& FileSystemItemOrganizer::getPathDelimeter() const{
+	return delimeter;
+}

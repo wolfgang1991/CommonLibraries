@@ -259,14 +259,11 @@ void ItemSelectElement::createNavigationBar(bool createMkdirButton, irr::s32 mkd
 	IGUIFont* font = env->getSkin()->getFont();
 	f32 totalWidth = (f32)navBarRect.getWidth();
 	SColor textColor = env->getSkin()->getColor(EGDC_BUTTON_TEXT);
+	char delimeter = organizer->getPathDelimeter()[0];
 	std::stringstream curpath;
 	for(auto it=tokens.begin(); it!=tokens.end(); ++it){
 		if(it!=tokens.begin()){
-			#if _WIN32
-			curpath << '\\';
-			#else
-			curpath << '/';
-			#endif
+			curpath << delimeter;
 		}
 		curpath << *it;
 		std::wstring text = convertUtf8ToWString(*it);

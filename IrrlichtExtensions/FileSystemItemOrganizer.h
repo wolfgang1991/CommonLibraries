@@ -45,6 +45,8 @@ class FileSystemItemOrganizer : public IItemOrganizer{
 	
 	virtual const std::vector<Place>& getPlaces() const;
 	
+	virtual const std::vector<char>& getPathDelimeter() const;
+	
 };
 
 #endif

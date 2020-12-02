@@ -61,6 +61,9 @@ class IItemOrganizer{
 	//! items are deleted on cd
 	virtual std::vector<Item*> ls(uint32_t fieldIndexForSorting = 0, bool sortAscending = true) = 0;
 	
+	//! size must be >0. The delimeter at index 0 is the preferred delimeter. However it is legal to use all delimeters in a path.
+	virtual const std::vector<char>& getPathDelimeter() const = 0;
+	
 };
 
 //! creates a function which returns true if f1<f2 according to the field with index fieldIndex
