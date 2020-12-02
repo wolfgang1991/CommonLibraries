@@ -34,6 +34,9 @@ class IScrollable{
 	}
 	
 	virtual void OnScrollBarChanged(ScrollBar* scrollbar) = 0;
+	
+	//! used for scrolling with wheel: stepsize depends usually on the content (larger content => smaller stepsize); in [0-1]
+	virtual irr::f32 getScrollStepSize() const = 0;
 
 };
 

@@ -64,7 +64,11 @@ bool ScrollBar::OnEvent(const irr::SEvent& event){
 			}
 			scrolling = false;
 		}else if(m.Event==EMIE_MOUSE_WHEEL){
-			setPos(Clamp(getPos()-m.Wheel*SCROLL_WHEEL_PART, 0.f, 1.f), true);
+			if(scrollable){
+				setPos(Clamp(getPos()-m.Wheel*scrollable->getScrollStepSize(), 0.f, 1.f), true);
+			}else{
+				setPos(Clamp(getPos()-m.Wheel*SCROLL_WHEEL_PART, 0.f, 1.f), true);
+			}
 			return true;
 		}
 	}

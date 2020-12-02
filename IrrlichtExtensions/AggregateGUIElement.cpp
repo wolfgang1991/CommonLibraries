@@ -199,7 +199,16 @@ bool AggregateGUIElement::OnEvent(const irr::SEvent& event){
 				absPosDirty = true;//updateAbsolutePosition();
 			}
 		}else if(m.Event==EMIE_MOUSE_WHEEL && isScrollable){
-			setScrollPosition(Clamp(getScrollPosition()-m.Wheel*SCROLL_WHEEL_PART, 0.f, 1.f), true);
+			//setScrollPosition(Clamp(getScrollPosition()-m.Wheel*SCROLL_WHEEL_PART, 0.f, 1.f), true);
+//			s32 totalSpace = isHorizontal?AbsoluteRect.getWidth():AbsoluteRect.getHeight();
+//			s32 trueMaxScrollPos = Max(maxScrollPos, maxScrollPosActive);
+//			if(trueMaxScrollPos>0){
+//				f32 scrollStep = SCROLL_WHEEL_PART*((f32)totalSpace)/((f32)trueMaxScrollPos);
+//				scrollStep = 1.f/ceilf(1.f/scrollStep);//make sure 1 = n * scrollStep with n = natural number
+//				scrollStep += 1.f/(f32)trueMaxScrollPos;//compensate for rounding errors
+//				setScrollPosition(Clamp(getScrollPosition()-m.Wheel*scrollStep, 0.f, 1.f), true);
+//			}
+			setScrollPosition(Clamp(getScrollPosition()-m.Wheel*getScrollStepSize(), 0.f, 1.f), true);
 			return true;
 		}
 	}else if(event.EventType==EET_GUI_EVENT){
@@ -228,6 +237,18 @@ bool AggregateGUIElement::OnEvent(const irr::SEvent& event){
 		}
 	}
 	return IAggregatableGUIElement::OnEvent(event);
+}
+
+irr::f32 AggregateGUIElement::getScrollStepSize() const{
+	s32 totalSpace = isHorizontal?AbsoluteRect.getWidth():AbsoluteRect.getHeight();
+	s32 trueMaxScrollPos = Max(maxScrollPos, maxScrollPosActive);
+	if(trueMaxScrollPos>0){
+		f32 scrollStep = SCROLL_WHEEL_PART*((f32)totalSpace)/((f32)trueMaxScrollPos);
+		scrollStep = 1.f/ceilf(1.f/scrollStep);//make sure 1 = n * scrollStep with n = natural number
+		scrollStep += 1.f/(f32)trueMaxScrollPos;//compensate for rounding errors
+		return scrollStep;
+	}
+	return 0.f;
 }
 
 void AggregateGUIElement::draw(){
