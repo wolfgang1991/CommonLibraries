@@ -258,6 +258,7 @@ class IRemoteProcedureCaller{
 	virtual void OnProcedureResult(IRPCValue* results, uint32_t id) = 0;
 	
 	//! called in case of a severe error instead of a result
+	//! errorData needs to be deleted in this method
 	virtual void OnProcedureError(int32_t errorCode, const std::string& errorMessage, IRPCValue* errorData, uint32_t id){
 		delete errorData;
 	}

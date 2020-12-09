@@ -25,6 +25,16 @@
 #include <pwd.h>
 #endif
 
+#if defined(__APPLE__)
+#import "../iOS/MCSMKeychainItem.h"
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#include <sys/stat.h>
+#if __DARWIN_ONLY_64_BIT_INO_T
+#define stat64 stat
+#endif
+#endif
+
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
 #include <android/log.h>
@@ -146,7 +156,28 @@ FileSystemItemOrganizer::FileSystemItemOrganizer(irr::IrrlichtDevice* device):fs
 		}
 	}
 	#elif defined(__APPLE__)
-	#error add places FileSystemItemOrganizer: app home dir, documents dir
+	NSString *appSupportDir = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) lastObject];
+	if (![[NSFileManager defaultManager] fileExistsAtPath:appSupportDir isDirectory:NULL]) {//If there isn't an App Support Directory yet ...
+		NSError *error = nil;
+		//Create one
+		if (![[NSFileManager defaultManager] createDirectoryAtPath:appSupportDir withIntermediateDirectories:YES attributes:nil error:&error]) {
+			NSLog(@"%@", error.localizedDescription);
+		}else{
+			// Mark the directory as excluded from iCloud backups
+			NSURL *url = [NSURL fileURLWithPath:appSupportDir];
+			if(![url setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:&error]){
+				NSLog(@"Error excluding %@ from backup %@", url.lastPathComponent, error.localizedDescription);
+			}
+		}
+	}
+	NSURL* docURL = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+	const char* cdoc = [[docURL path] cString];
+	placeLangKeys.push_back(L"Place::DOCUMENTS");
+	places.push_back(IItemOrganizer::Place{L"", std::string(cdoc)});
+	NSURL* homeURL = [[[NSFileManager defaultManager] URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject];
+	const char* chome = [[homeURL path] cString];
+	placeLangKeys.push_back(L"Place::HOME");
+	places.push_back(IItemOrganizer::Place{L"", std::string(chome)});
 	#else//linux or compatible
 		placeLangKeys.push_back(L"Place::HOME");
 		const char* homedir;
@@ -194,6 +225,8 @@ void FileSystemItemOrganizer::updateContent(){
 				if(stat64(filename.c_str(), &s)==0){
 					#ifdef _WIN32
 					modificationTime = s.st_mtime;
+					#elif defined(__APPLE__)
+					modificationTime = s.st_mtimespec.tv_sec;
 					#else
 					modificationTime = s.st_mtim.tv_sec;
 					#endif

@@ -406,8 +406,6 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 				openOrSave(true);
 				return true;
 			}else if(g.Caller==ebimport){
-				//bImport = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::IMPORT", {convertStringToWString(exportPath)}, &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
-				//addChild(bImport);
 				createItemSelectElement(device, drawer, exportPath, regularAggId, noBorderAggId, invisibleAggId, -1, false, [this](IItemSelectCallback::Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer){
 					if(action==IItemSelectCallback::OPEN){
 						IniFile importedIni(absolutePath);
