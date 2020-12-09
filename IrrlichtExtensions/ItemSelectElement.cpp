@@ -101,6 +101,9 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	u32 wh = driver->getScreenSize().Height;
 	u32 pw = w*ww;
 	u32 ph = h*wh;
+	rect<s32> corrected = makeXic(rect<s32>(0,0,pw,ph), 16.0/10.0);
+	pw = corrected.getWidth();
+	ph = corrected.getHeight();
 	double sqrtArea = sqrt(ww*wh);
 	buttonHeight = (s32)(BUTTON_WIDHT_PART*sqrtArea);
 	originalPath = organizer->pwd();
@@ -268,7 +271,7 @@ void ItemSelectElement::createNavigationBar(bool createMkdirButton, irr::s32 mkd
 		curpath << *it;
 		std::wstring text = convertUtf8ToWString(*it);
 		dimension2d<u32> tsize = font->getDimension(text.c_str());
-		f32 space = 0.05f+((f32)tsize.Width)/totalWidth;
+		f32 space = 0.1f+((f32)tsize.Width)/totalWidth;
 //		if(it!=tokens.begin()){
 //			pathAgg->addSubElement(new EmptyGUIElement(env, 0.01f, 1.f, false, false, -1));
 //		}
