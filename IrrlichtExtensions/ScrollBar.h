@@ -5,7 +5,7 @@
 
 #include <rect.h>
 
-#define SCROLL_WHEEL_PART 0.1f//defines how much a scroll wheel tick shall influence the scroll position 0.1f==10%
+#define SCROLL_WHEEL_PART 0.25f//defines how much a scroll wheel tick shall influence the scroll position 0.25f==25%
 
 class IScrollable;
 class AggregateGUIElement;

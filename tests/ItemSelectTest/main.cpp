@@ -48,48 +48,6 @@ class AppSkin : public IExtendableSkin {
 		
 };
 
-class IconSource : public IItemSelectIconSource{
-
-	private:
-	
-	irr::video::ITexture* ascending;
-	irr::video::ITexture* descending;
-	irr::video::ITexture* mkdir;
-	irr::video::ITexture* file;
-	irr::video::ITexture* folder;
-	
-	public:
-	
-	IconSource(IVideoDriver* driver){
-		ascending = driver->getTexture("ascending.png");
-		descending = driver->getTexture("descending.png");
-		mkdir = driver->getTexture("mkdir.png");
-		file = driver->getTexture("file.png");
-		folder = driver->getTexture("folder.png");
-	}
-	
-	irr::video::ITexture* getAscendingIcon(){
-		return ascending;
-	}
-	
-	irr::video::ITexture* getDescendingIcon(){
-		return descending;
-	}
-	
-	irr::video::ITexture* getMkdirIcon(){
-		return mkdir;
-	}
-	
-	irr::video::ITexture* getItemIcon(const IItemOrganizer::Item& item){
-		return file;
-	}
-	
-	irr::video::ITexture* getFolderIcon(){
-		return folder;
-	}
-	
-};
-
 class TestItemSelectCallack : public IItemSelectCallback{
 	
 	public:
@@ -134,13 +92,13 @@ int main(int argc, char *argv[]){
 	ff->setDefaultMaterialType(fmgr->getSDFFMaterialType());
 	skin->setFont(ff);
 	
-	IItemOrganizer* fso = new FileSystemItemOrganizer(device->getFileSystem());
+	IItemOrganizer* fso = new FileSystemItemOrganizer(device);
 	
-	IconSource is(driver);
+	IItemSelectIconSource is(driver->getTexture("ascending.png"), driver->getTexture("descending.png"), driver->getTexture("mkdir.png"), driver->getTexture("file.png"), driver->getTexture("folder.png"));
 	
 	TestItemSelectCallack isc;
 	
-	ItemSelectElement* savediag = new ItemSelectElement(device, drawer, L"test.save", fso, &isc, AppSkin::REGULAR_AGGREGATION, AppSkin::LIST_ELE_AGGREGATION, AppSkin::INVISIBLE_AGGREGATION, -1, false, &is);
+	ItemSelectElement* savediag = new ItemSelectElement(device, drawer, "test.save", fso, &isc, AppSkin::REGULAR_AGGREGATION, AppSkin::LIST_ELE_AGGREGATION, AppSkin::INVISIBLE_AGGREGATION, -1, true, &is, {}, .75f, .75f, NULL, true);//, std::regex(".*(svg|png)"));
 	
 	while(device->run()){
 		if(device->isWindowActive()){

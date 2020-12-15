@@ -17,6 +17,7 @@ class CMBox;
 class LoadSaveSettingsDialog;
 class EditBoxDialog;
 class NameEditCallback;
+class IItemSelectIconSource;
 
 class ILoadSaveSettingsCallback{
 
@@ -66,8 +67,6 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 	std::string exportPath;
 	GUI* gui;
 	
-	CMBox* bImport;
-	CMBox* bExport;
 	CMBox* bDeleteAll;
 	
 	EditBoxDialog* bRename;
@@ -109,6 +108,8 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 	
 	IndicationFunction calculateIndication;
 	
+	IItemSelectIconSource* iconsource;
+	
 	public:
 
 	irr::gui::IGUIWindow* win;
@@ -128,7 +129,7 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 	const ILanguagePhrases* phrases;
 	
 	//! the .*AggId parameters define the ids for the skin for the aggregation
-	LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, const char* exportPath = NULL, irr::video::ITexture* folderIcon = NULL, irr::video::ITexture* settingsIcon = NULL, bool isModal = true, irr::s32 deleteId = -1, irr::s32 renameId = -1, const wchar_t* defaultFileName = L"", const IndicationFunction* calculateIndication = NULL);
+	LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, irr::IrrlichtDevice* device, Drawer2D* drawer, IniFile* ini, const wchar_t* title, Capabilities caps, irr::s32 defaultAggId, irr::s32 noBorderAggId, irr::s32 invisibleAggId, irr::s32 regularAggId, IItemSelectIconSource* iconsource, const char* exportPath = NULL, bool isModal = true, irr::s32 deleteId = -1, irr::s32 renameId = -1, const wchar_t* defaultFileName = L"", const IndicationFunction* calculateIndication = NULL);
 	
 	~LoadSaveSettingsDialog();
 	

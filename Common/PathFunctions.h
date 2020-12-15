@@ -49,7 +49,7 @@ bool isAbsolutePath(const std::basic_string<T>& filePath){
 	if(filePath.size()<=1){
 		return false;
 	}else{
-		return filePath[1]==(T)':'
+		return filePath[1]==(T)':';
 	}
 	#else
 	if(filePath.empty()){

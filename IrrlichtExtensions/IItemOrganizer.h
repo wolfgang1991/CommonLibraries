@@ -19,7 +19,7 @@ class IItemOrganizer{
 		bool isDirectory;
 		std::string relativePath;//! relative to current directory for which this item was created
 		std::vector<std::wstring> fields;
-		void* additionalData;//! implementation specific
+		const void* additionalData;//! implementation specific
 		uint32_t additionalID;//! implementation specific
 	};
 	
@@ -60,6 +60,9 @@ class IItemOrganizer{
 	//! returns the content (relative pathes) of the current working directory
 	//! items are deleted on cd
 	virtual std::vector<Item*> ls(uint32_t fieldIndexForSorting = 0, bool sortAscending = true) = 0;
+	
+	//! size must be >0. The delimeter at index 0 is the preferred delimeter. However it is legal to use all delimeters in a path.
+	virtual const std::vector<char>& getPathDelimeter() const = 0;
 	
 };
 

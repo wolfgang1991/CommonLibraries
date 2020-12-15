@@ -80,6 +80,20 @@ inline bool isSuffixEqual(const std::wstring& s, const std::wstring& prefix){
 	return isStringSuffixEqual<std::wstring>(s, prefix);
 }
 
+template <typename TString>
+bool isSuffixEqual(const TString& s, const TString& suffix){
+	if(s.size()<suffix.size()){return false;}
+	return s.substr(s.size()-suffix.size(), suffix.size()).compare(suffix)==0;
+}
+
+inline bool isSuffixEqual(const std::string& s, const std::string& prefix){
+	return isSuffixEqual<std::string>(s, prefix);
+}
+
+inline bool isSuffixEqual(const std::wstring& s, const std::wstring& prefix){
+	return isSuffixEqual<std::wstring>(s, prefix);
+}
+
 //! Convert String to WString
 std::wstring convertStringToWString(const std::string& str);
 

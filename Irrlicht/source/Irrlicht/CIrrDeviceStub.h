@@ -177,6 +177,12 @@ namespace irr
 
 		//! Resize the render window.
 		virtual void setWindowSize(const irr::core::dimension2d<u32>& size) _IRR_OVERRIDE_ {}
+		
+		//changed:
+		virtual const irr::SIrrlichtCreationParameters& getCreationParams() const{
+			return CreationParams;
+		}
+		//changed end
 
 	protected:
 

@@ -8,5 +8,7 @@
 #define STRING_EDIT -3
 #define NO_EDIT -4
 #define MULTILINE_STRING_EDIT -5
+#define DESTINATION_EDIT -6
+#define TERMINAL_EDIT -7
 
 #endif

@@ -8,8 +8,10 @@
 #include "BeautifulGUIButton.h"
 #include "BeautifulGUIImage.h"
 #include "EditBoxDialog.h"
+#include "FileSystemItemOrganizer.h"
 
 #include <utf8.h>
+#include <StringHelpers.h>
 
 #include <IrrlichtDevice.h>
 #include <IGUIWindow.h>
@@ -28,14 +30,16 @@ using namespace core;
 using namespace gui;
 using namespace video;
 
-static void printItemVector(const std::vector<IItemOrganizer::Item*>& v){
-	for(uint32_t i=0; i<v.size(); i++){
-		IItemOrganizer::Item* item = v[i];
-		for(uint32_t j=0; j<item->fields.size(); j++){
-			std::cout << "field[" << j << "] = \"" << convertWStringToUtf8String(item->fields[j]) << "\"" << std::endl;
-		}
-	}
-}
+#define BUTTON_WIDHT_PART (0.0625*0.79057)
+
+//static void printItemVector(const std::vector<IItemOrganizer::Item*>& v){
+//	for(uint32_t i=0; i<v.size(); i++){
+//		IItemOrganizer::Item* item = v[i];
+//		for(uint32_t j=0; j<item->fields.size(); j++){
+//			std::cout << "field[" << j << "] = \"" << convertWStringToUtf8String(item->fields[j]) << "\"" << std::endl;
+//		}
+//	}
+//}
 
 static const ConstantLanguagePhrases defaultPhrases({
 	{L"ItemSelectElement::NAME",L"Name:"},
@@ -50,7 +54,8 @@ static const ConstantLanguagePhrases defaultPhrases({
 	{L"ItemSelectElement::ASK_OVERWRITE",L"Do you want to overwrite the existing file?"},
 	{L"ItemSelectElement::YES",L"Yes"},
 	{L"ItemSelectElement::NO",L"No"},
-	{L"ItemSelectElement::NO_SELECTION",L"Error: No file selected."}
+	{L"ItemSelectElement::NO_SELECTION",L"Error: No file selected."},
+	{L"ItemSelectElement::UNSUCCESSFUL_CD",L"Error: Unable to change directory.\nPlease check your permissions."}
 });
 
 class ItemSelectEditBoxCallback : public IEditBoxDialogCallback{
@@ -76,8 +81,9 @@ class ItemSelectEditBoxCallback : public IEditBoxDialogCallback{
 
 };
 
-ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::wstring& defaultSaveFileName, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, IItemSelectIconSource* source, const std::initializer_list<IAggregatableGUIElement*>& subElements, irr::f32 w, irr::f32 h, ILanguagePhrases* phrases, bool modal):
-	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)){
+ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::string& defaultPath, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, IItemSelectIconSource* source, const std::initializer_list<IAggregatableGUIElement*>& subElements, irr::f32 w, irr::f32 h, const ILanguagePhrases* phrases, bool modal, const std::regex& regex):
+	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)),
+	regex(regex){
 	this->device = device;
 	this->organizer = organizer;
 	this->itemcbk = itemcbk;
@@ -95,8 +101,14 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	u32 wh = driver->getScreenSize().Height;
 	u32 pw = w*ww;
 	u32 ph = h*wh;
+	rect<s32> corrected = makeXic(rect<s32>(0,0,pw,ph), 16.0/10.0);
+	pw = corrected.getWidth();
+	ph = corrected.getHeight();
 	double sqrtArea = sqrt(ww*wh);
-	buttonHeight = (s32)(0.0625*0.79057*sqrtArea);
+	buttonHeight = (s32)(BUTTON_WIDHT_PART*sqrtArea);
+	originalPath = organizer->pwd();
+	std::string folderPath = stripFile(defaultPath);
+	if(!folderPath.empty()){organizer->cd(folderPath);}
 	cbk = new ItemSelectEditBoxCallback(this);
 	IGUIWindow* win = env->addWindow(rect<s32>(ww/2-pw/2, wh/2-ph/2, ww/2+pw/2, wh/2+ph/2), modal, L"", this, -1);
 	win->getCloseButton()->setVisible(false); win->setDrawTitlebar(false); win->setNotClipped(true);
@@ -111,7 +123,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	s32 startY = 0;
 	if(isSaveDialog){
 		new BeautifulGUIText(nameLabel.c_str(), textColor, 0.f, NULL, true, true, env, 1.f, -1, 1.f, NULL, win, rect<s32>(padding,padding,padding+nameLabelSize.Width, padding+buttonHeight));
-		nameEdit = env->addEditBox(defaultSaveFileName.c_str(), rect<s32>(2*padding+nameLabelSize.Width, padding, pw-padding, padding+buttonHeight), true, win, STRING_EDIT);
+		nameEdit = env->addEditBox(convertUtf8ToWString(stripDir(defaultPath)).c_str(), rect<s32>(2*padding+nameLabelSize.Width, padding, pw-padding, padding+buttonHeight), true, win, STRING_EDIT);
 		startY = padding+buttonHeight;
 		env->setFocus(nameEdit);
 		//put cursor to the end:
@@ -150,12 +162,50 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 			new BeautifulGUIText(isSaveDialog?(lang->getPhrase(L"ItemSelectElement::SAVE", &defaultPhrases).c_str()):(lang->getPhrase(L"ItemSelectElement::OPEN", &defaultPhrases).c_str()), textColor, 0.f, NULL, true, true, env, 1.f)
 		}, {}, -1)
 	}, {}, false, invisibleAggregationID, NULL, win, rect<s32>(padding, ph-padding-buttonHeight, pw-padding, ph-padding));
-	printItemVector(organizer->ls(1));
-	
+	//printItemVector(organizer->ls(1));
+}
+
+ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, IItemOrganizer* organizer, IItemSelectCallback* itemcbk, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, IItemSelectIconSource* source, const irr::core::rect<irr::s32>& rectangle, irr::f32 placesPart, irr::f32 pathPart, const ILanguagePhrases* phrases, irr::gui::IGUIElement* parent, const std::regex& regex):
+	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, rectangle),
+	regex(regex){
+	this->device = device;
+	this->organizer = organizer;
+	this->itemcbk = itemcbk;
+	this->isSaveDialog = false;
+	this->aggregationID = aggregationID;
+	this->source = source;
+	this->listElementAggregationID = listElementAggregationID;
+	this->invisibleAggregationID = invisibleAggregationID;
+	this->drawer = drawer;
+	env = device->getGUIEnvironment();
+	if(parent==NULL){parent = env->getRootGUIElement();}
+	parent->addChild(this);
+	this->parent = this;
+	driver = device->getVideoDriver();
+	lang = phrases==NULL?&defaultPhrases:phrases;
+	u32 ww = driver->getScreenSize().Width;
+	u32 wh = driver->getScreenSize().Height;
+	double sqrtArea = sqrt(ww*wh);
+	buttonHeight = (s32)(BUTTON_WIDHT_PART*sqrtArea);
+	s32 padding = 0.015*sqrtArea;
+	nameEdit = NULL;
+	pathAgg = placesAgg = filesAgg = filesAndHeaderAgg = NULL;
+	negative = positive = NULL;
+	overwritebox = NULL;
+	selectedIndex = -1;
+	s32 placesLowerY = placesPart*rectangle.getHeight();
+	s32 navBarLowerY = placesLowerY+pathPart*rectangle.getHeight();
+	createPlacesGUI(rect<s32>(0, 0, rectangle.getWidth(), placesLowerY), padding/2, this, buttonHeight);
+	navBarRect = rect<s32>(0, placesLowerY, rectangle.getWidth(), navBarLowerY);
+	createNavigationBar(false, -1);
+	sortIndex = 0; sortAscending = true;
+	fileListRect = rect<s32>(0, navBarLowerY, rectangle.getWidth(), rectangle.getHeight());
+	createFileList();
+	originalPath = organizer->pwd();
 }
 
 ItemSelectElement::~ItemSelectElement(){
-	delete cbk;
+	delete cbk; cbk = NULL;
 }
 
 void ItemSelectElement::createPlacesGUI(const irr::core::rect<irr::s32>& r, irr::s32 padding, irr::gui::IGUIElement* parent, irr::s32 buttonHeight){
@@ -212,19 +262,16 @@ void ItemSelectElement::createNavigationBar(bool createMkdirButton, irr::s32 mkd
 	IGUIFont* font = env->getSkin()->getFont();
 	f32 totalWidth = (f32)navBarRect.getWidth();
 	SColor textColor = env->getSkin()->getColor(EGDC_BUTTON_TEXT);
+	char delimeter = organizer->getPathDelimeter()[0];
 	std::stringstream curpath;
 	for(auto it=tokens.begin(); it!=tokens.end(); ++it){
 		if(it!=tokens.begin()){
-			#if _WIN32
-			curpath << '\\';
-			#else
-			curpath << '/';
-			#endif
+			curpath << delimeter;
 		}
 		curpath << *it;
 		std::wstring text = convertUtf8ToWString(*it);
 		dimension2d<u32> tsize = font->getDimension(text.c_str());
-		f32 space = 0.05f+((f32)tsize.Width)/totalWidth;
+		f32 space = 0.1f+((f32)tsize.Width)/totalWidth;
 //		if(it!=tokens.begin()){
 //			pathAgg->addSubElement(new EmptyGUIElement(env, 0.01f, 1.f, false, false, -1));
 //		}
@@ -294,31 +341,42 @@ void ItemSelectElement::createFileList(){
 	filesAgg = new AggregateGUIElement(env, 1.f-vspaceHeader, 1.f, 1.f-vspaceHeader, 1.f, false, false, true, {}, {}, false, invisibleAggregationID);
 	filesAndHeaderAgg->addSubElement(filesAgg);
 	//Items:
+	lineIndex2ItemIndex.clear();
+	lineIndex2ItemIndex.reserve(items.size());//upper limit
 	for(uint32_t i=0; i<items.size(); i++){
 		IItemOrganizer::Item* item = items[i];
-		AggregateGUIElement* line = new AggregateGUIElement(env, vspace, 1.f, vspace, 1.f, false, true, false, {}, {}, true, listElementAggregationID);
-		ITexture* icon = item->isDirectory?source->getFolderIcon():source->getItemIcon(*item);
-		line->addSubElement(new BeautifulGUIImage(drawer, icon, env, iconspace, true, -1));
-		assert(labels.size()==item->fields.size());
-		for(uint32_t j=0; j<item->fields.size(); j++){
-			line->addSubElement(new BeautifulGUIText(item->fields[j].c_str(), textColor, 0.f, NULL, j!=0, true, env, hspaces[j]));
+		if(item->isDirectory || std::regex_match(item->relativePath, regex)){
+			AggregateGUIElement* line = new AggregateGUIElement(env, vspace, 1.f, vspace, 1.f, false, true, false, {}, {}, true, listElementAggregationID);
+			ITexture* icon = item->isDirectory?source->getFolderIcon():source->getItemIcon(*item);
+			line->addSubElement(new BeautifulGUIImage(drawer, icon, env, iconspace, true, -1));
+			assert(labels.size()==item->fields.size());
+			for(uint32_t j=0; j<item->fields.size(); j++){
+				line->addSubElement(new BeautifulGUIText(item->fields[j].c_str(), textColor, 0.f, NULL, j!=0, true, env, hspaces[j]));
+			}
+			filesAgg->addSubElement(line);
+			lineIndex2ItemIndex.push_back(i);
 		}
-		filesAgg->addSubElement(line);
 	}
+	Environment->setFocus(filesAgg);
 }
 
 void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
+	itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
+	selectedIndex = -1;
 	if(organizer->cd(path)){
 		itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
 		selectedIndex = -1;
-		filesAndHeaderAgg->remove();
+		filesAndHeaderAgg->setVisible(false);//remove();//
+		toRemove.push_back(filesAndHeaderAgg);
 		bool createMkdirButton = mkdirBut!=NULL;
 		s32 mkdirButtonID = -1;
 		if(createMkdirButton){
 			mkdirButtonID = mkdirBut->getID();
-			mkdirBut->remove();
+			mkdirBut->setVisible(false);//remove();//
+			toRemove.push_back(mkdirBut);
 		}
-		pathAgg->remove();
+		pathAgg->setVisible(false);//remove();//
+		toRemove.push_back(pathAgg);
 		button2path.clear();
 		createNavigationBar(createMkdirButton, mkdirButtonID);
 		createFileList();
@@ -328,6 +386,12 @@ void ItemSelectElement::cd(const std::string& path, bool resetPlacesSelection){
 				placesAgg->getSubElement(selected)->setActive(false);
 			}
 		}
+	}else{
+		int32_t selected = filesAgg->getSingleSelected();
+		if(selected>=0){
+			filesAgg->getSubElement(selected)->setActive(false);
+		}
+		new CMBox(device, lang->getPhrase(L"ItemSelectElement::UNSUCCESSFUL_CD", &defaultPhrases).c_str());
 	}
 }
 
@@ -337,14 +401,17 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 		if(g.EventType==EGET_BUTTON_CLICKED){
 			auto it = button2path.find(g.Caller);
 			if(it!=button2path.end()){
-				std::cout << "cd to: " << it->second << std::endl;
 				cd(it->second);
+				return true;
 			}else if(g.Caller==mkdirBut){
 				new EditBoxDialog(cbk, device, lang->getPhrase(L"ItemSelectElement::MKDIR_DESC", &defaultPhrases).c_str(), lang->getPhrase(L"ItemSelectElement::OK", &defaultPhrases).c_str(), lang->getPhrase(L"ItemSelectElement::CANCEL", &defaultPhrases).c_str());
+				return true;
 			}else if(g.Caller==negative){
+				organizer->cd(originalPath);//restore working directory to avoid side effects
 				itemcbk->OnItemSelect(IItemSelectCallback::CANCEL, NULL, "", this, organizer);
 				remove();
 				drop();
+				return true;
 			}else if(g.Caller==positive){
 				if(isSaveDialog){//Save
 					std::string filename = convertWStringToUtf8String(nameEdit->getText());
@@ -354,17 +421,24 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 						overwritebox = new CMBox(device, lang->getPhrase(L"ItemSelectElement::ASK_OVERWRITE", &defaultPhrases).c_str(), .75, .75, lang->getPhrase(L"ItemSelectElement::YES", &defaultPhrases).c_str(), lang->getPhrase(L"ItemSelectElement::NO", &defaultPhrases).c_str());
 						addChild(overwritebox);
 					}else{
-						itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, organizer->getAbsolutePath(filename), this, organizer);
+						std::string absPath = organizer->getAbsolutePath(filename);
+						organizer->cd(originalPath);//restore working directory to avoid side effects
+						itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, absPath, this, organizer);
 						remove();
 						drop();
+						return true;
 					}
 				}else if(selectedIndex>=0){//Open
-					itemcbk->OnItemSelect(IItemSelectCallback::OPEN, items[selectedIndex], organizer->getAbsolutePath(items[selectedIndex]->relativePath), this, organizer);
+					std::string absPath = organizer->getAbsolutePath(items[selectedIndex]->relativePath);
+					organizer->cd(originalPath);//restore working directory to avoid side effects
+					itemcbk->OnItemSelect(IItemSelectCallback::OPEN, items[selectedIndex], absPath, this, organizer);
 					remove();
 					drop();
+					return true;
 				}else{
 					new CMBox(device, lang->getPhrase(L"ItemSelectElement::NO_SELECTION", &defaultPhrases).c_str());
 				}
+				return true;
 			}else{
 				for(uint32_t i=0; i<fieldButtons.size(); i++){
 					if(g.Caller==fieldButtons[i]){
@@ -374,9 +448,10 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 							sortIndex = i;
 							sortAscending = true;
 						}
-						filesAndHeaderAgg->remove();
+						filesAndHeaderAgg->setVisible(false);//remove();
+						toRemove.push_back(filesAndHeaderAgg);
 						createFileList();
-						break;
+						return true;
 					}
 				}
 			}
@@ -387,21 +462,25 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 					const std::vector<IItemOrganizer::Place>& p = organizer->getPlaces();
 					cd(p[selected].path, false);
 				}
+				return true;
 			}else if(g.Caller==filesAgg){
 				int32_t selected = filesAgg->getSingleSelected();
-				selectedIndex = selected;
 				if(selected>=0){
-					assert(selected<(int32_t)items.size());
-					IItemOrganizer::Item* item = items[selected];
+					selectedIndex = lineIndex2ItemIndex[selected];
+					assert(selectedIndex<(int32_t)items.size());
+					IItemOrganizer::Item* item = items[selectedIndex];
 					if(item->isDirectory){
 						cd(std::string(item->relativePath.c_str()));//create string copy since item pointer will become invalid during cd
-					}else if(nameEdit!=NULL){
-						nameEdit->setText(convertUtf8ToWString(item->relativePath).c_str());
+					}else{
+						if(nameEdit!=NULL){nameEdit->setText(convertUtf8ToWString(item->relativePath).c_str());}
 						itemcbk->OnItemSelect(IItemSelectCallback::SELECT, item, organizer->getAbsolutePath(item), this, organizer);
 					}
 				}else{
+					selectedIndex = -1;
 					itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
 				}
+				std::cout << "return true" << std::endl;
+				return true;
 			}
 		}else if(g.EventType==EGET_EDITBOX_CHANGED){
 			if(g.Caller==nameEdit){
@@ -409,23 +488,90 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 				if(selected>=0){
 					filesAgg->getSubElement(selected)->setActive(false);
 				}
+				return true;
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_YES){
 			if(g.Caller==overwritebox){
 				std::string filename = convertWStringToUtf8String(nameEdit->getText());
-				itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, organizer->getAbsolutePath(filename), this, organizer);
+				std::string absPath = organizer->getAbsolutePath(filename);
+				organizer->cd(originalPath);//restore working directory to avoid side effects
+				itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, absPath, this, organizer);
 				remove();
 				drop();
+				return true;
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_NO){
-			if(g.Caller==overwritebox){overwritebox = NULL;}
+			if(g.Caller==overwritebox){
+				overwritebox = NULL;
+				return true;
+			}
 		}
 	}
 	return IGUIElement::OnEvent(event);
 }
 
-void ItemSelectElement::OnPostRender(irr::u32 timeMs){
-	IGUIElement::OnPostRender(timeMs);
-	//std::cout << "pos: " << pathAgg->getScrollPosition() << std::endl;
+void ItemSelectElement::clearSelection(){
+	int32_t selected = filesAgg->getSingleSelected();
+	if(selected>=0){
+		filesAgg->getSubElement(selected)->setActive(false);
+		itemcbk->OnItemSelect(IItemSelectCallback::DESELECT, NULL, "", this, organizer);
+	}
 }
 
+void ItemSelectElement::OnPostRender(irr::u32 timeMs){
+	for(IGUIElement* ele : toRemove){
+		ele->remove();
+	}
+	toRemove.clear();
+	IGUIElement::OnPostRender(timeMs);
+}
+
+AggregateGUIElement* ItemSelectElement::getFilesAggregation() const{
+	return filesAgg;
+}
+
+IItemSelectIconSource::IItemSelectIconSource(irr::video::ITexture* ascending, irr::video::ITexture* descending, irr::video::ITexture* mkdir, irr::video::ITexture* file, irr::video::ITexture* folder):
+	ascending(ascending), descending(descending), mkdir(mkdir), file(file), folder(folder){}
+	
+irr::video::ITexture* IItemSelectIconSource::getAscendingIcon(){
+	return ascending;
+}
+	
+irr::video::ITexture* IItemSelectIconSource::getDescendingIcon(){
+	return descending;
+}
+	
+irr::video::ITexture* IItemSelectIconSource::getMkdirIcon(){
+	return mkdir;
+}
+	
+irr::video::ITexture* IItemSelectIconSource::getFolderIcon(){
+	return folder;
+}
+	
+irr::video::ITexture* IItemSelectIconSource::getItemIcon(const IItemOrganizer::Item& item){
+	return file;
+}
+
+class EasyWindowItemSelectCallback : public IItemSelectCallback{
+	
+	public:
+	
+	ItemSelectCallbackFunction function;
+	FileSystemItemOrganizer organizer;
+	
+	EasyWindowItemSelectCallback(irr::IrrlichtDevice* device, const ItemSelectCallbackFunction& function):function(function),organizer(device){}
+	
+	virtual void OnItemSelect(Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer){
+		function(action, item, absolutePath, ele, organizer);
+		if(action==SAVE || action==OPEN || action==CANCEL){
+			delete this;
+		}
+	}
+	
+};
+
+ItemSelectElement* createItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::string& defaultPath, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, const ItemSelectCallbackFunction& OnItemSelect, IItemSelectIconSource* source, irr::f32 w, irr::f32 h, const ILanguagePhrases* phrases, bool modal, const std::regex& regex){
+	EasyWindowItemSelectCallback* cbk = new EasyWindowItemSelectCallback(device, OnItemSelect);
+	return new ItemSelectElement(device, drawer, defaultPath, &(cbk->organizer), cbk, aggregationID, listElementAggregationID, invisibleAggregationID, mkdirButtonID, isSaveDialog, source, {}, .75f, .75f, phrases, modal, regex);
+}

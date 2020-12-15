@@ -104,6 +104,8 @@ class AggregateGUIElement : public IAggregatableGUIElement, public IScrollable{
 	//! only applicable if only one sub element selectable, returns the index of the sub element and fills outGUIElement if outGUIElement!=NULL
 	//! -1 if no selection found (in case of multi select: the first selection is returned which makes usually no sense)
 	int32_t getSingleSelected(IAggregatableGUIElement** outGUIElement = NULL);
+	
+	irr::f32 getScrollStepSize() const;
 
 };
 

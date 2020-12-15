@@ -22,6 +22,11 @@ std::ostream& operator<<(std::ostream &out, const irr::core::vector3d<TScalar>& 
 	return out << v.X << ", " << v.Y << ", " << v.Z;
 }
 
+template <typename TScalar>
+std::ostream& operator<<(std::ostream &out, const irr::core::rect<TScalar>& v){
+	return out << v.UpperLeftCorner << ", " << v.LowerRightCorner;
+}
+
 class IniFile;
 
 void readIniWithAssetSupport(irr::io::IFileSystem* fsys, const std::string& file, IniFile& ini);

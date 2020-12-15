@@ -25,7 +25,7 @@ class FileSystemItemOrganizer : public IItemOrganizer{
 	
 	public:
 	
-	FileSystemItemOrganizer(irr::io::IFileSystem* fsys);
+	FileSystemItemOrganizer(irr::IrrlichtDevice* device);
 	
 	virtual bool doesExist(const std::string& path) const;
 	
@@ -44,6 +44,8 @@ class FileSystemItemOrganizer : public IItemOrganizer{
 	virtual std::vector<IItemOrganizer::Item*> ls(uint32_t fieldIndexForSorting = 0, bool sortAscending = true);
 	
 	virtual const std::vector<Place>& getPlaces() const;
+	
+	virtual const std::vector<char>& getPathDelimeter() const;
 	
 };
 
