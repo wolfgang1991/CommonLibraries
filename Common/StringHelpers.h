@@ -53,31 +53,17 @@ inline std::wstring convertToWString(T Number){
 
 //! Check if prefix of s matches
 template <typename TString>
-bool isStringPrefixEqual(const TString& s, const TString& prefix){
+bool isPrefixEqual(const TString& s, const TString& prefix){
 	if(s.size()<prefix.size()){return false;}
 	return s.substr(0, prefix.size()).compare(prefix)==0;
 }
 
 inline bool isPrefixEqual(const std::string& s, const std::string& prefix){
-	return isStringPrefixEqual<std::string>(s, prefix);
+	return isPrefixEqual<std::string>(s, prefix);
 }
 
 inline bool isPrefixEqual(const std::wstring& s, const std::wstring& prefix){
-	return isStringPrefixEqual<std::wstring>(s, prefix);
-}
-
-template <typename TString>
-bool isStringSuffixEqual(const TString& s, const TString& suffix){
-	if(s.size()<suffix.size()){return false;}
-	return s.substr(s.size()-suffix.size(), suffix.size()).compare(suffix)==0;
-}
-
-inline bool isSuffixEqual(const std::string& s, const std::string& prefix){
-	return isStringSuffixEqual<std::string>(s, prefix);
-}
-
-inline bool isSuffixEqual(const std::wstring& s, const std::wstring& prefix){
-	return isStringSuffixEqual<std::wstring>(s, prefix);
+	return isPrefixEqual<std::wstring>(s, prefix);
 }
 
 template <typename TString>

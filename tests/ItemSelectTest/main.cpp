@@ -32,13 +32,13 @@ class AppSkin : public IExtendableSkin {
 		ID_COUNT
 	};
 
-	AppSkin(irr::IrrlichtDevice* device):
-		IExtendableSkin(device->getGUIEnvironment()->createSkin(gui::EGST_WINDOWS_CLASSIC), device){
+	AppSkin(Drawer2D* drawer):
+		IExtendableSkin(drawer->getDevice()->getGUIEnvironment()->createSkin(gui::EGST_WINDOWS_CLASSIC), drawer){
 		registerExtension(new ScrollBarSkinExtension(this, {SColor(255,255,255,255), SColor(255,196,198,201)}, .1f, .3f), REGULAR_SCROLLBAR);
 		registerExtension(new AggregateSkinExtension(this, true, true), REGULAR_AGGREGATION);
 		registerExtension(new AggregateSkinExtension(this, false, true), NO_HIGHLIGHT_AGGREGATION);
 		registerExtension(new AggregateSkinExtension(this, false, false), INVISIBLE_AGGREGATION);
-		registerExtension(new AggregateSkinExtension(this, true, false, NULL, true), LIST_ELE_AGGREGATION);
+		registerExtension(new AggregateSkinExtension(this, true, false, NULL, NULL, true), LIST_ELE_AGGREGATION);
 		registerExtension(new DefaultAggregatableSkin(this, true), DEFAULT_AGGREGATABLE);
 	}
 		
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]){
 	fmgr->addFontLoader(bmFontLoader);
 	bmFontLoader->drop();
 	
-	AppSkin* skin = new AppSkin(device);
+	AppSkin* skin = new AppSkin(drawer);
 	assert(isExtendableSkin(skin));
 	env->setSkin(skin);
 	skin->drop();
