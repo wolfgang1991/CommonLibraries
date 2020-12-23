@@ -75,8 +75,8 @@
 #define ONSEND delay(SEND_DELAY);
 #define ONRECEIVE(BLOCKING) if(BLOCKING){delay(RECV_DELAY);}
 #define ONCLOSE delay(CLOSE_DELAY);
-#define BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER 5 // useful to simulate "fragmentation" and slow receiving (used in ISocket::recv)
-#define BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND 5 // useful to simulate "fragmentation" and slow sending (used in ISocket::send)
+#define BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER 5 // useful to simulate "fragmentation" and slow receiving (used in ASocket::recv)
+#define BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND 5 // useful to simulate "fragmentation" and slow sending (used in ASocket::send)
 #else
 #define ONCONNECT ;
 #define ONSEND ;
@@ -281,11 +281,11 @@ void IPv6Address::setInternalRepresentation(const sockaddr_in6& r){
 	addr = r;
 }
 
-int ISocket::getSocketHandle() const{
+int ASocket::getSocketHandle() const{
 	return socketHandle;
 }
 
-bool ISocket::setReceiveBufferSize(uint32_t size){
+bool ASocket::setReceiveBufferSize(uint32_t size){
 	#ifdef SIMPLESOCKETS_WIN
 	int s = size;
 	if(setsockopt(socketHandle, SOL_SOCKET, SO_RCVBUF, (const char*)&s, sizeof(size))!=-1){
@@ -298,14 +298,14 @@ bool ISocket::setReceiveBufferSize(uint32_t size){
 	return false;
 }
 
-bool ISocket::restore(){
+bool ASocket::restore(){
 	if(restoreReceiveSize>=0){
 		return setReceiveBufferSize(restoreReceiveSize);
 	}
 	return true;
 }
 
-ISocket::ISocket(){
+ASocket::ASocket(){
 	checkAndInitGlobally();
 	restoreReceiveSize = -1;
 	socketHandle = -1;
@@ -316,7 +316,7 @@ ISocket::ISocket(){
 }
 
 #if SIMPLESOCKETS_WIN
-void ISocket::handleBlocking(bool shallBeBlocking){
+void ASocket::handleBlocking(bool shallBeBlocking){
 	if(socketHandle!=-1 && isBlocking!=(int)shallBeBlocking){
 		isBlocking = (int)shallBeBlocking;
 		unsigned long mode = shallBeBlocking?0:1;
@@ -327,7 +327,7 @@ void ISocket::handleBlocking(bool shallBeBlocking){
 }
 #endif
 
-bool ISocket::tryRestoreOnce(){
+bool ASocket::tryRestoreOnce(){
 	if(shallTryRestore){
 		shallTryRestore = restore();
 		return shallTryRestore;
@@ -335,7 +335,7 @@ bool ISocket::tryRestoreOnce(){
 	return false;
 }
 
-ISocket::~ISocket(){
+ASocket::~ASocket(){
 	if(socketHandle!=-1){
 		ONCLOSE
 		#if SIMPLESOCKETS_WIN
@@ -352,7 +352,7 @@ ISocket::~ISocket(){
 	}
 }
 
-uint32_t ISocket::getAvailableBytes() const{
+uint32_t ASocket::getAvailableBytes() const{
 	#if SIMPLESOCKETS_WIN
 	u_long res = 0;
 	if(ioctlsocket(socketHandle, FIONREAD, &res)!=0){
@@ -367,7 +367,7 @@ uint32_t ISocket::getAvailableBytes() const{
 	return (uint32_t)res;
 }
 	
-uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
+uint32_t ASocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	ONRECEIVE(readBlocking)
 	#ifdef BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER
 	bufSize = bufSize>BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER?BAD_CONN_SIM_LIMIT_RECEIVE_BUFFER:bufSize;
@@ -407,7 +407,7 @@ uint32_t ISocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	return read;
 }
 
-static inline bool hlp_send(ISocket* socket, const char* buf, uint32_t bufSize){
+static inline bool hlp_send(ASocket* socket, const char* buf, uint32_t bufSize){
 	ONSEND
 	#if SIMPLESOCKETS_WIN
 	bool success = ::send(socket->getSocketHandle(), buf, bufSize, 0)!=SOCKET_ERROR;
@@ -431,7 +431,7 @@ static inline bool hlp_send(ISocket* socket, const char* buf, uint32_t bufSize){
 	#endif
 }
 	
-bool ISocket::send(const char* buf, uint32_t bufSize){
+bool ASocket::send(const char* buf, uint32_t bufSize){
 	#ifdef BAD_CONN_SIM_LIMIT_SIMULTANEOUS_SEND
 		bool success = true;
 		while(success && bufSize>0){
@@ -454,7 +454,7 @@ bool IPv4Socket::restore(){
 	if(restoreBind>=0){
 		res = res && bind(restoreBind, restoreReusePort);
 	}
-	res = res && ISocket::restore();
+	res = res && ASocket::restore();
 	return res;
 }
 
@@ -603,7 +603,7 @@ bool IPv6Socket::restore(){
 	if(restoreBind>=0){
 		res = res && bind(restoreBind, restoreReusePort);
 	}
-	res = res && ISocket::restore();
+	res = res && ASocket::restore();
 	return res;
 }
 
@@ -933,7 +933,7 @@ bool IPv6TCPSocket::connect(const IPv6Address& address, uint32_t timeout){
 	return false;
 }
 
-ISocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout){
+ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout){
 	for(std::list<IIPAddress*>::const_iterator it = addressList.begin(); it != addressList.end(); ++it){
 		if((*it)->getIPVersion()==IIPAddress::IPV6){
 			IPv6TCPSocket* s = new IPv6TCPSocket();
