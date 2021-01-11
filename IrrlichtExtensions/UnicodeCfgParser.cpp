@@ -22,6 +22,7 @@ void UnicodeCfgParser::parse(const std::wstring& str){
 	std::wstringstream token;
 	uint32_t tokenIndex = 0;
 	bool isEscape = false;
+	bool isLeadingChar = true;
 	for(uint32_t i=0; i<str.size(); i++){
 		wchar_t c = str[i];
 		if(isEscape){
@@ -47,10 +48,13 @@ void UnicodeCfgParser::parse(const std::wstring& str){
 			}else{
 				tokenIndex++;
 			}
+			isLeadingChar = true;
 		}else if(c==L'\\'){
 			isEscape = true;
-		}else if(c!=L'\n' && c!=L'\r'){
+			isLeadingChar = false;
+		}else if(c!=L'\n' && c!=L'\r' && ((c!=L' ' && c!=L'\t') || !isLeadingChar)){//ignore LF,CR and leading whitespaces
 			token << c;
+			isLeadingChar = false;
 		}
 	}
 	if(tokenIndex==0 && (*line)[0].empty()){
