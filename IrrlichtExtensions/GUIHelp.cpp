@@ -10,6 +10,7 @@
 #include <IrrlichtDevice.h>
 #include <irrArray.h>
 #include <IGUIElement.h>
+#include <cassert>
 
 #include <iostream>
 
@@ -60,7 +61,7 @@ void GUIHelp::initHelpFromCfgResult(const UnicodeCfgParser& parser){
 		bool showLine = (bool)convertWStringTo<int>(line[4]);
 		const std::wstring& helpText = line[5];
 		bubbles.push_back(Bubble(ele, orientation, width, padding, makeWordWrappedText(helpText, width, font), drawer, font, bubble, cornerSize, realCornerSize, fontColor, showLine));
-		//std::cout << convertWStringToString(helpText) << std::endl;
+		id2bubble[id] = &(bubbles.back());
 		if(!ele){
 			bubbles.back().alternativeRectangle = gui->getSpecialRectangle(id);
 			if(bubbles.back().alternativeRectangle.getArea()==0){
@@ -68,7 +69,6 @@ void GUIHelp::initHelpFromCfgResult(const UnicodeCfgParser& parser){
 			}
 		}
 	}
-	//std::cout << "---" << std::endl;
 }
 
 void GUIHelp::initHelp(const std::wstring& help){
@@ -100,6 +100,7 @@ void GUIHelp::render(){
 		for(auto it=bubbles.begin(); it!=bubbles.end(); ++it){
 			auto rgdRect = it->rgdRect;
 			if(rgdRect){
+				if(!it->isVisible){continue;}
 				IGUIElement* ele = it->ele;
 				if(ele){
 					if(!ele->isVisible()){continue;}
@@ -165,6 +166,23 @@ bool GUIHelp::isVisible(){
 	return visible;
 }
 
+void GUIHelp::setBubbleVisible(const std::string& id, bool visible){
+	auto it = id2bubble.find(id);
+	assert(it!=id2bubble.end());
+	it->second->isVisible = visible;
+}
+
+void GUIHelp::setBubbleOrientation(const std::string& id, double orientation){
+	auto it = id2bubble.find(id);
+	assert(it!=id2bubble.end());
+	it->second->orientation = orientation;
+	RectangleGradientDescent::RectanglePair* rgdRect = it->second->rgdRect;
+	if(rgdRect){
+		rgdRect->first.angle = orientation/DEG_RAD;
+		rgdRect->second = rgdRect->first.convertToRect();
+	}
+}
+
 GUIHelp::Bubble::Bubble(irr::gui::IGUIElement* ele, double orientation, double width, double padding, const std::wstring& text, Drawer2D* drawer, FlexibleFont* font, irr::video::ITexture* bubble, irr::f32 cornerSize, irr::f32 realCornerSize, irr::video::SColor fontColor, bool showLine):
 	ele(ele),
 	alternativeRectangle(0,0,0,0),
@@ -172,7 +190,8 @@ GUIHelp::Bubble::Bubble(irr::gui::IGUIElement* ele, double orientation, double w
 	width(width),
 	padding(padding),
 	text(text),
-	showLine(showLine){
+	showLine(showLine),
+	isVisible(true){
 	dim = font->getDimension(text.c_str());
 	rgdRect = NULL;
 	bubbleMb.setHardwareMappingHint(EHM_STATIC);
@@ -180,5 +199,4 @@ GUIHelp::Bubble::Bubble(irr::gui::IGUIElement* ele, double orientation, double w
 	set2DMaterialParams(bubbleMb.Material, ETC_CLAMP, ETC_CLAMP, EMT_TRANSPARENT_ALPHA_CHANNEL);
 	drawer->fillRectWithCornerMeshBuffer(&bubbleMb, rect<f32>(0,0,dim.Width,dim.Height), cornerSize, realCornerSize, bubble, SColor(255,255,255,255));
 	font->fillMeshBuffer(textMb, text.c_str(), 4, false, fontColor, 0.f, NULL, font->getDefaultMaterialType());
-	//std::cout << "added bubble: " << convertWStringToString(text) << std::endl;
 }

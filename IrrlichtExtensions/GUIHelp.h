@@ -8,6 +8,7 @@
 
 #include <string>
 #include <list>
+#include <unordered_map>
 
 class GUI;
 class FlexibleFont;
@@ -28,6 +29,7 @@ class GUIHelp : public irr::IEventReceiver{
 		double padding;
 		std::wstring text;
 		bool showLine;
+		bool isVisible;//truly visible <=> isVisible && (!ele || ele->isVisible)
 		
 		irr::core::dimension2d<irr::u32> dim;
 		RectangleGradientDescent::RectanglePair* rgdRect;
@@ -39,6 +41,7 @@ class GUIHelp : public irr::IEventReceiver{
 	};
 	
 	std::list<Bubble> bubbles;
+	std::unordered_map<std::string, Bubble*> id2bubble;
 	ConcurrentRectangleGradientDescent crgd;
 	
 	GUI* gui;
@@ -78,6 +81,11 @@ class GUIHelp : public irr::IEventReceiver{
 	void setVisible(bool visible);
 	
 	bool isVisible();
+	
+	void setBubbleVisible(const std::string& id, bool visible);
+	
+	void setBubbleOrientation(const std::string& id, double orientation);
+	
 };
 
 #endif
