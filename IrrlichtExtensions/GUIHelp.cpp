@@ -176,10 +176,12 @@ void GUIHelp::setBubbleOrientation(const std::string& id, double orientation){
 	auto it = id2bubble.find(id);
 	assert(it!=id2bubble.end());
 	it->second->orientation = orientation;
-	RectangleGradientDescent::RectanglePair* rgdRect = it->second->rgdRect;
-	if(rgdRect){
-		rgdRect->first.angle = orientation/DEG_RAD;
-		rgdRect->second = rgdRect->first.convertToRect();
+	if(!crgd.isRunning()){
+		RectangleGradientDescent::RectanglePair* rgdRect = it->second->rgdRect;
+		if(rgdRect){
+			rgdRect->first.angle = orientation/DEG_RAD;
+			rgdRect->second = rgdRect->first.convertToRect();
+		}
 	}
 }
 
