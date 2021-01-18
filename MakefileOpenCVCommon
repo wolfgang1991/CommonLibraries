@@ -2,4 +2,4 @@
 OPENCVMODULES = $(OPENCVDIR)/modules
 OPENCVINCLUDES = -I$(OPENCVDIR)/include -I$(OPENCVDIR)/build -I$(OPENCVMODULES)/calib3d/include -I$(OPENCVMODULES)/features2d/include -I$(OPENCVMODULES)/imgproc/include -I$(OPENCVMODULES)/flann/include -I$(OPENCVMODULES)/core/include
 OPENCVLIBS = -L$(OPENCVDIR)/build/lib -lopencv_calib3d -lopencv_features2d -lopencv_imgproc -lopencv_core -lopencv_flann
-OPENCVLIBS_WIN32 = -L$(OPENCVDIR)/build/lib -lopencv_calib3d412 -lopencv_features2d412 -lopencv_imgproc412 -lopencv_core412 -lopencv_flann412
+OPENCVLIBS_WIN32 = -L$(OPENCVDIR)/build/lib -lopencv_calib3d451 -lopencv_features2d451 -lopencv_imgproc451 -lopencv_core451 -lopencv_flann451
