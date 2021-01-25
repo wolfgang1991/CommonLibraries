@@ -97,6 +97,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	env->getRootGUIElement()->addChild(this);
 	driver = device->getVideoDriver();
 	lang = phrases==NULL?&defaultPhrases:phrases;
+	organizer->setLanguage(lang);
 	u32 ww = driver->getScreenSize().Width;
 	u32 wh = driver->getScreenSize().Height;
 	u32 pw = w*ww;
@@ -183,6 +184,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	this->parent = this;
 	driver = device->getVideoDriver();
 	lang = phrases==NULL?&defaultPhrases:phrases;
+	organizer->setLanguage(lang);
 	u32 ww = driver->getScreenSize().Width;
 	u32 wh = driver->getScreenSize().Height;
 	double sqrtArea = sqrt(ww*wh);
