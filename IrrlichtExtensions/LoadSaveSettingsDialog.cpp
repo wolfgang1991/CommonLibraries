@@ -68,7 +68,7 @@ class NameEditCallback : public IEditBoxDialogCallback{
 	
 	void OnResult(EditBoxDialog* dialog, const wchar_t* text, bool positivePressed){
 		if(positivePressed){
-			std::string newName = convertWStringToString(text);
+			std::string newName = convertWStringToUtf8String(text);
 			if(newName.empty()){
 				new CMBox(lssDialog->device, lssDialog->phrases->getPhrase(L"LoadSaveSettingsDialog::EMPTY_NAMES", &defaultPhrases).c_str());
 				return;
@@ -304,7 +304,7 @@ void LoadSaveSettingsDialog::addRowToList(irr::video::ITexture* fittingIcon, con
 		:
 			(IAggregatableGUIElement*)new EmptyGUIElement(Environment, .2f, 1.f/1.f, false, false, defaultAggId),
 		new EmptyGUIElement(Environment, .025f, 1.f/1.f, false, false, defaultAggId),
-		new BeautifulGUIText(calculateIndication(convertUtf8ToWString(indication),ini,std::string(currentPrefix).append(indication[0]=='/'?"":"/").append(indication)).c_str(), Environment->getSkin()->getColor(EGDC_BUTTON_TEXT), 0.f, NULL, false, true, Environment, 1.3f),//addAggregatableStaticText(Environment, convertStringToWString(indication).c_str(), EGUIA_UPPERLEFT, EGUIA_CENTER, 1.3f),
+		new BeautifulGUIText(calculateIndication(convertUtf8ToWString(indication),ini,std::string(currentPrefix).append(indication[0]=='/'?"":"/").append(indication)).c_str(), Environment->getSkin()->getColor(EGDC_BUTTON_TEXT), 0.f, NULL, false, true, Environment, 1.3f),
 		createButtons?
 			(IAggregatableGUIElement*)new AggregatableGUIElementAdapter(Environment, .2f, 7.f/4.f, true, Environment->addButton(rect<s32>(0,0,0,0), NULL, renameId, renameId<0?L"Move":L""), false, defaultAggId)//Attention: indices in OnEvent must match the order, else => crash
 		:
@@ -369,7 +369,7 @@ void LoadSaveSettingsDialog::fillList(const wchar_t* name){
 }
 
 void LoadSaveSettingsDialog::openOrSave(bool open){
-	std::string text = convertWStringToString(eeName->getText());
+	std::string text = convertWStringToUtf8String(eeName->getText());
 	if(text.empty() || text.find("..")!=std::string::npos || text[text.size()-1]=='/'){
 		new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::INVALID_SELECTION", &defaultPhrases).c_str(), .75f, .75f, phrases->getPhrase(L"LoadSaveSettingsDialog::OK", &defaultPhrases).c_str());
 	}else if(text.find("//")!=std::string::npos || text.find('\0')!=std::string::npos || text.find('\n')!=std::string::npos){
@@ -378,7 +378,7 @@ void LoadSaveSettingsDialog::openOrSave(bool open){
 		text = std::string(currentPrefix).append(text[0]=='/'?"":"/").append(text);
 		if(ini->isSectionAvailable(text)){
 			if(!open){
-				bOverwrite = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::OVERWRITE", {convertStringToWString(text)}, &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
+				bOverwrite = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::OVERWRITE", {convertUtf8ToWString(text)}, &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
 				addChild(bOverwrite);
 				return;
 			}
@@ -444,12 +444,12 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 					IGUIElement* bmove = getFirstGUIElementChild(row->getSubElement(4));//Attention: indices in OnEvent must match the order, else => crash
 					IGUIElement* bdelete = getFirstGUIElementChild(row->getSubElement(5));
 					if(g.Caller==bmove){
-						bRename = new EditBoxDialog(nameCbk, device, phrases->getPhrase(L"LoadSaveSettingsDialog::RENAME", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::OK", &defaultPhrases).c_str(),  phrases->getPhrase(L"LoadSaveSettingsDialog::CANCEL", &defaultPhrases).c_str(), convertStringToWString(entries[i].path).c_str(), true);
+						bRename = new EditBoxDialog(nameCbk, device, phrases->getPhrase(L"LoadSaveSettingsDialog::RENAME", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::OK", &defaultPhrases).c_str(),  phrases->getPhrase(L"LoadSaveSettingsDialog::CANCEL", &defaultPhrases).c_str(), convertUtf8ToWString(entries[i].path).c_str(), true);
 						addChild(bRename);
 						renameIndex = i;
 						return true;
 					}else if(g.Caller==bdelete){
-						bDeleteOne = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::DELETE", {convertStringToWString(entries[i].path)}, &defaultPhrases).c_str(), 0.75, 0.75, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
+						bDeleteOne = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::DELETE", {convertUtf8ToWString(entries[i].path)}, &defaultPhrases).c_str(), 0.75, 0.75, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
 						deleteIndex = i;
 						addChild(bDeleteOne);
 						return true;
@@ -483,7 +483,7 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 				bDeleteOne = NULL;
 				return true;
 			}else if(g.Caller==(IGUIElement*)bOverwrite){
-				std::string text = convertWStringToString(eeName->getText());
+				std::string text = convertWStringToUtf8String(eeName->getText());
 				text = std::string(currentPrefix).append(text[0]=='/'?"":"/").append(text);
 				cbk->OnResult(this, ini, ILoadSaveSettingsCallback::SAVE, text.c_str(), iniDirty);
 				remove();
@@ -511,7 +511,7 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 						return true;
 					}else{
 						int32_t lastSlash = findLastSlash(e.path);
-						eeName->setText(convertStringToWString(lastSlash>=0?e.path.substr(lastSlash+1,std::string::npos):e.path).c_str());
+						eeName->setText(convertUtf8ToWString(lastSlash>=0?e.path.substr(lastSlash+1,std::string::npos):e.path).c_str());
 					}
 				}
 				double t = getSecs();

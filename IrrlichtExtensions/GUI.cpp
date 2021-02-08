@@ -7,6 +7,7 @@
 #include <GUI.h>
 #include <IniFile.h>
 #include <StringHelpers.h>
+#include <utf8.h>
 
 using namespace std;
 using namespace irr;
@@ -49,7 +50,7 @@ ExtendedGUIElement::~ExtendedGUIElement(){
 ExtendedEditBox::ExtendedEditBox(irr::gui::IGUIElement* ele, int visDomain, const std::string& defaults):ExtendedGUIElement(ele, visDomain, defaults){}
 
 void ExtendedEditBox::setDefaults(){
-	ele->setText(convertStringToWString(defaults).c_str());
+	ele->setText(convertUtf8ToWString(defaults).c_str());
 }
 
 ExtendedCheckBox::ExtendedCheckBox(irr::gui::IGUIElement* ele, int visDomain, const std::string& defaults, int hides, int switches, const std::list<std::string>& exclusiveCounterParts):ExtendedGUIElement(ele, visDomain, defaults){
@@ -161,10 +162,10 @@ GUI::GUI(irr::gui::IGUIEnvironment* env, IniFile* ini, irr::core::rect<s32> r, i
 		}
 		//printf("%i %i %i %i\n", fr.UpperLeftCorner.X, fr.UpperLeftCorner.Y, fr.LowerRightCorner.X, fr.LowerRightCorner.Y);
 		if(type.compare("Button")==0){
-			IGUIButton* but = env->addButton(fr, parent, -1, convertStringToWString(text).c_str(), NULL);
+			IGUIButton* but = env->addButton(fr, parent, -1, convertUtf8ToWString(text).c_str(), NULL);
 			elements[uuid] = new ExtendedGUIElement(but, visibilityDomain, standardValue);
 		}else if(type.compare("Text")==0){
-			IGUIStaticText* but = env->addStaticText(convertStringToWString(text).c_str(), fr, false, true, parent, -1, false);
+			IGUIStaticText* but = env->addStaticText(convertUtf8ToWString(text).c_str(), fr, false, true, parent, -1, false);
 			but->setTextAlignment(hori,verti);
 			elements[uuid] = new ExtendedGUIElement(but, visibilityDomain, standardValue);
 		}else if(type.compare("ListBox")==0){
@@ -174,7 +175,7 @@ GUI::GUI(irr::gui::IGUIEnvironment* env, IniFile* ini, irr::core::rect<s32> r, i
 			IGUIComboBox* but = env->addComboBox(fr, parent, -1);
 			elements[uuid] = new ExtendedGUIElement(but, visibilityDomain, standardValue);
 		}else if(type.compare("CheckBox")==0){
-			IGUICheckBox* but = env->addCheckBox(false, fr, parent, -1, convertStringToWString(text).c_str());
+			IGUICheckBox* but = env->addCheckBox(false, fr, parent, -1, convertUtf8ToWString(text).c_str());
 			ExtendedGUIElement* ee = new ExtendedCheckBox(but, visibilityDomain, standardValue, convertStringTo<int>(ini->get(section,"Hides")), convertStringTo<int>(ini->get(section,"Switches")), parseSeparatedString(ini->get(section,"ExclusiveCounterParts"),','));
 			ee->setDefaults();
 			elements[uuid] = ee;
