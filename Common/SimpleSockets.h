@@ -101,7 +101,29 @@ class IPv6Address : public IIPAddress{
 
 };
 
+//! general interface for sockets
 class ISocket : public ICommunicationEndpoint{
+
+	public:
+	
+	//! returns the amount of readable bytes
+	virtual uint32_t getAvailableBytes() const = 0;
+	
+	virtual uint32_t recv(char* buf, uint32_t bufSize, bool readBlocking) = 0;
+
+	int32_t recv(char* buf, uint32_t bufSize){
+		return recv(buf, bufSize, false);
+	}
+	
+	//! true if buf has been sent (does not gurantee reception on other side)
+	virtual bool send(const char* buf, uint32_t bufSize) = 0;
+	
+	virtual ~ISocket(){}
+
+};
+
+//! general implementation for "true" sockets like tcp and udp sockets
+class ASocket : public ISocket{
 
 	protected:
 	
@@ -111,7 +133,7 @@ class ISocket : public ICommunicationEndpoint{
 	
 	int32_t restoreReceiveSize;
 	
-	ISocket();
+	ASocket();
 	
 	#if SIMPLESOCKETS_WIN
 	int isBlocking;//! 0 false, 1 true, 2 undefined
@@ -123,11 +145,7 @@ class ISocket : public ICommunicationEndpoint{
 	//! returns the amount of readable bytes
 	virtual uint32_t getAvailableBytes() const;
 	
-	virtual uint32_t recv(char* buf, uint32_t bufSize, bool readBlocking);
-	
-	int32_t recv(char* buf, uint32_t bufSize){
-		return recv(buf, bufSize, false);
-	}
+	virtual uint32_t recv(char* buf, uint32_t bufSize, bool readBlocking = false) override;
 	
 	//! true if buf has been sent (does not gurantee reception on other side)
 	virtual bool send(const char* buf, uint32_t bufSize);
@@ -145,11 +163,11 @@ class ISocket : public ICommunicationEndpoint{
 	
 	virtual bool setReceiveBufferSize(uint32_t size);
 	
-	virtual ~ISocket();
+	virtual ~ASocket();
 
 };
 
-class IPv4Socket : public ISocket{
+class IPv4Socket : public ASocket{
 	
 	protected:
 	
@@ -168,7 +186,7 @@ class IPv4Socket : public ISocket{
 
 };
 
-class IPv6Socket : public ISocket{
+class IPv6Socket : public ASocket{
 	
 	protected:
 	
@@ -327,7 +345,7 @@ class IPv6TCPSocket : public IPv6Socket{
 };
 
 //! returns NULL if unsuccessful, timeout in ms (total timeout = timeout * addressList.size())
-ISocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout);
+ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout);
 
 //! WARNING: NO TIMEOUT; portToFill: port which is filled into the results
 std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_t portToFill = 0);
