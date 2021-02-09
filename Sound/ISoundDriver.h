@@ -16,6 +16,9 @@ class ISoundDriver{
 	//! created the driver dependent context (may be called from different threads)
 	virtual IPCMPlaybackContext* createPlaybackContext(ISoundSource* source) = 0;
 	
+	//! return the next higher sampling frequency which is supported by the driver / underlying hardware
+	virtual uint32_t getNextAcceptableSamplingFrequency(uint32_t desiredFrequency) = 0;
+	
 };
 
 // driver dependent required structures for ISoundSource playpack, this needs to be extended for each sound driver

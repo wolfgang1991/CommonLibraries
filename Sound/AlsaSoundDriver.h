@@ -15,6 +15,10 @@ class AlsaSoundDriver : public ISoundDriver{
 	
 	IPCMPlaybackContext* createPlaybackContext(ISoundSource* source);
 	
+	uint32_t getNextAcceptableSamplingFrequency(uint32_t desiredFrequency){
+		return desiredFrequency;
+	}
+	
 };
 
 #endif

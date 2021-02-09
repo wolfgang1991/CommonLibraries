@@ -1,5 +1,5 @@
 #List of object files without path
-_LINKOBJ = 	SineWaveSoundSource.o SoundManager.o AlsaSoundDriver.o StaticWaveFileSource.o
+_LINKOBJ = 	SineWaveSoundSource.o SoundManager.o AlsaSoundDriver.o StaticWaveFileSource.o OpenSLESSoundDriver.o
 
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj

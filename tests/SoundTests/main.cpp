@@ -4,31 +4,59 @@
 #include <timing.h>
 
 #include <cmath>
+#include <csignal>
 #include <iostream>
 
+volatile bool running = true;
+
+void sigfunc(int sig){
+	running = false;
+}
+
 int main(int argc, char *argv[]){
+
+	signal(SIGINT, sigfunc);
 	
-	SineWaveSoundSource sine(200, 1000);
+	SoundManager soundmgr;
 	
-	StaticWaveFileSource theme("IrrlichtThemeCutted.wav");
-	theme.setLoop(true);
+	SineWaveSoundSource* sine = soundmgr.create<SineWaveSoundSource>(200, 2000);
 	
-	StaticWaveFileSource impact("impact.wav");
+	StaticWaveFileSource* theme = soundmgr.create<StaticWaveFileSource>("IrrlichtThemeCutted.wav");
+	//theme->setLoop(true);
 	
-	SoundManager soundmgr;//(10.0);
+	StaticWaveFileSource* impact = soundmgr.create<StaticWaveFileSource>("impact.wav");
 	
-	//soundmgr.play(&theme);
-	soundmgr.play(&sine);
-	//soundmgr.play(&impact);
+	soundmgr.play(theme);
+	soundmgr.play(sine);
+	soundmgr.play(impact);
 	
-	impact.setLoop(true);
+	impact->setLoop(true);
 	
-	//TODO Test pause, get rid of distortions
+	//TODO Test pause
+	//TODO test play after finish (no loop)
 	
-	while(true){
+	uint32_t delayTime = 2000;
+	std::cout << "playing" << std::endl;
+	delay(delayTime);
+	std::cout << "pause" << std::endl;
+	soundmgr.pause(theme);
+	delay(delayTime);
+	std::cout << "continue" << std::endl;
+	soundmgr.play(theme);
+	delay(delayTime);
+	std::cout << "seek" << std::endl;
+	theme->seek(0.5f);
+	
+	while(running){
 		delay(10);
-		double f = 600+400*sin(2*3.14*0.25*getSecs());
-		sine.setFrequency(f);
+		double f = 600+400*sin(2*3.14*0.025*getSecs());
+		sine->setFrequency(f);
+		soundmgr.update();
+		if(!theme->isPlayingOrReady()){
+			soundmgr.update();
+			delay(1000);
+			soundmgr.play(theme);//restart after 1s
+		}
 	}
 	
 	return 0;

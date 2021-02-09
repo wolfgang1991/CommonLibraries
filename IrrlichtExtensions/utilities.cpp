@@ -65,6 +65,24 @@ void readIniWithAssetSupport(irr::io::IFileSystem* fsys, const std::string& file
 	}
 }
 
+bool loadFileWithAssetSupport(irr::io::IFileSystem* fsys, const std::string& file, char*& bufferOut, uint32_t& bufferSizeOut){
+	IReadFile* rf = fsys->createAndOpenFile(file.c_str());
+	if(rf){
+		bufferSizeOut = rf->getSize();
+		bufferOut = new char[bufferSizeOut];
+		rf->read(bufferOut, bufferSizeOut);
+		rf->drop();
+		return true;
+	}
+	return false;
+}
+
+std::function<bool(char*&, uint32_t&)> createLoadFileFunction(irr::io::IFileSystem* fsys, const std::string& file){
+	return [fsys, file](char*& bufferOut, uint32_t& bufferSizeOut){
+		return loadFileWithAssetSupport(fsys, file, bufferOut, bufferSizeOut);
+	};
+}
+
 bool isOverlayedBySingleGUIElement(irr::gui::IGUIElement* ele, const irr::core::rect<s32>& rectangle){
 	if(!ele->isTrulyVisible()){return false;}
 	return ele->getAbsolutePosition().isRectCollided(rectangle);

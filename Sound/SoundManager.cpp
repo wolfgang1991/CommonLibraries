@@ -1,6 +1,7 @@
 #include "SoundManager.h"
 #include "ISoundDriver.h"
 #include "AlsaSoundDriver.h"
+#include "OpenSLESSoundDriver.h"
 
 #include <Threading.h>
 #include <platforms.h>
@@ -8,6 +9,7 @@
 
 #include <map>
 #include <cassert>
+#include <set>
 #include <iostream>
 
 class SoundManagerPrivate{
@@ -34,7 +36,6 @@ class SoundManagerPrivate{
 		uint32_t bytesPerSecond = tc->source->getChannelCount()*tc->source->getSampleRate();
 		uint32_t maxBytesUpdate = bytesPerSecond*maxBufferTime;
 		double secondsPerFrame = 1.0/tc->source->getSampleRate();
-//		double bufferedUntil = getSecs();
 		bool running = true;
 		bool isPause = false;
 		while(running){
@@ -43,13 +44,8 @@ class SoundManagerPrivate{
 			running = !tc->mustExit;
 			unlockMutex(tc->m);
 			uint32_t bytesUpdated = 0;
-//			double t = getSecs();
-//			if(t>=bufferedUntil-maxBufferTime){
-//				bytesUpdated = c->update(isPause, maxBytesUpdate);
-//				bufferedUntil = bufferedUntil+((double)bytesUpdated)/bytesPerSecond;
-//			}
 			double bufferTime = c->getDelayFrameCount()*secondsPerFrame;
-			std::cout << "bufferTime: " << bufferTime << std::endl;
+			//std::cout << "bufferTime: " << bufferTime << std::endl;
 			if(bufferTime<maxBufferTime){
 				bytesUpdated = c->update(isPause, maxBytesUpdate);
 			}
@@ -60,6 +56,7 @@ class SoundManagerPrivate{
 	}
 	
 	std::map<ISoundSource*, ThreadContext> c;
+	std::set<ISoundSource*> pool;
 	
 	void stop(ThreadContext* tc){
 		lockMutex(tc->m);
@@ -73,6 +70,8 @@ class SoundManagerPrivate{
 	SoundManagerPrivate(double maxBufferTime):maxBufferTime(maxBufferTime){
 		#ifdef LINUX_PLATFORM
 		driver = new AlsaSoundDriver();
+		#elif defined(ANDROID_PLATFORM)
+		driver = new OpenSLESSoundDriver();
 		#else
 		#error Unsupported Operating System: Missing ISoundDriver implementation
 		#endif
@@ -92,12 +91,17 @@ SoundManager::SoundManager(double maxBufferTime){
 }
 	
 SoundManager::~SoundManager(){
+	for(auto it = p->pool.begin(); it!=p->pool.end(); ++it){
+		stop(*it);
+		delete *it;
+	}
 	delete p;
 }
 	
 void SoundManager::play(ISoundSource* source){
 	auto it = p->c.find(source);
 	if(it==p->c.end()){
+		source->seek(0.f);
 		p->c[source] = SoundManagerPrivate::ThreadContext();
 		SoundManagerPrivate::ThreadContext& tc = p->c[source];
 		initMutex(tc.m);
@@ -129,4 +133,31 @@ void SoundManager::stop(ISoundSource* source){
 		p->stop(&(it->second));
 		p->c.erase(it);
 	}
+}
+
+ISoundDriver* SoundManager::getSoundDriver() const{
+	return p->driver;
+}
+
+void SoundManager::update(){
+	auto it=p->c.begin();
+	while(it!=p->c.end()){
+		if(it->first->isPlayingOrReady()){
+			++it;
+		}else{
+			p->stop(&(it->second));
+			p->c.erase(it);
+			it = p->c.begin();
+		}
+	}
+}
+
+void SoundManager::addToPool(ISoundSource* src){
+	p->pool.insert(src);
+}
+
+void SoundManager::deleteSource(ISoundSource* source){
+	stop(source);
+	delete source;
+	p->pool.erase(source);
 }

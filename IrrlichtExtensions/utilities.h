@@ -9,6 +9,7 @@
 #include <vector3d.h>
 
 #include <string>
+#include <functional>
 
 #include "ForwardDeclarations.h"
 
@@ -30,6 +31,12 @@ std::ostream& operator<<(std::ostream &out, const irr::core::rect<TScalar>& v){
 class IniFile;
 
 void readIniWithAssetSupport(irr::io::IFileSystem* fsys, const std::string& file, IniFile& ini);
+
+//! true if successful
+bool loadFileWithAssetSupport(irr::io::IFileSystem* fsys, const std::string& file, char*& bufferOut, uint32_t& bufferSizeOut);
+
+//! creates a function for loadFileWithAssetSupport (useful to reduce boilerplate code)
+std::function<bool(char*&, uint32_t&)> createLoadFileFunction(irr::io::IFileSystem* fsys, const std::string& file);
 
 bool isOverlayedBySingleGUIElement(irr::gui::IGUIElement* ele, const irr::core::rect<irr::s32>& rectangle);
 

@@ -3,11 +3,19 @@
 
 #include <cstdint>
 
+class SoundManager;
+
 //! Interface for a source of pcm data
 //! the ISoundSource is usually used from a different thread than it is created / modified, implementation dependent synchonization may be necessary
 class ISoundSource{
+
+	protected:
+	
+	SoundManager* soundmgr;
 	
 	public:
+	
+	ISoundSource(SoundManager* soundmgr):soundmgr(soundmgr){}
 	
 	enum PCMFormat{
 		MONO8,//! uint8_t
@@ -30,6 +38,12 @@ class ISoundSource{
 	//! samples are "interleaved" in case of stereo
 	//! this method MUST NOT return bad frames (e.g. just one sample in case of interleaved)
 	virtual uint32_t fillNextBytes(uint8_t* buffer, uint32_t bufferSize) = 0;
+	
+	//! true if it is generally ready to deliver bytes via fillNextBytes
+	virtual bool isPlayingOrReady() = 0;
+	
+	//! seeks if applicable to the given position in [0-1]
+	virtual void seek(float position){};
 	
 	virtual ~ISoundSource(){}
 	

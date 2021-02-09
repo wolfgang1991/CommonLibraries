@@ -50,7 +50,7 @@ class AlsaPCMPlaybackContext : public IPCMPlaybackContext{
 			std::cerr << "ERROR: Unable to open PCM device: " << PCM_DEVICE << " (error: " << snd_strerror(result) << ")" << std::endl;
 		}
 		//Set parameters
-		snd_pcm_hw_params_alloca(&params);
+		snd_pcm_hw_params_malloc(&params);
 		snd_pcm_hw_params_any(pcm_handle, params);
 		ISoundSource::PCMFormat format = source->getPCMFormat();
 		if((result = snd_pcm_hw_params_set_access(pcm_handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0){
@@ -79,6 +79,8 @@ class AlsaPCMPlaybackContext : public IPCMPlaybackContext{
 	~AlsaPCMPlaybackContext(){
 		delete[] buffer;
 		snd_pcm_hw_params_free(params);
+		snd_pcm_close(pcm_handle);
+		snd_config_update_free_global();
 	}
 	
 	uint32_t update(bool pause, uint32_t maxBytes){
@@ -109,7 +111,8 @@ class AlsaPCMPlaybackContext : public IPCMPlaybackContext{
 		snd_pcm_sframes_t delayFrames;
 		int result;
 		if((result = snd_pcm_delay(pcm_handle, &delayFrames)) < 0){
-			std::cerr << "ERROR: Can't get pcm delay (error: " << snd_strerror(result) << ")." << std::endl;
+			delayFrames = 0;
+			std::cerr << "Can't get pcm delay (" << snd_strerror(result) << ") (probably nothing playing yet?)." << std::endl;
 		}
 		return delayFrames;
 	}
