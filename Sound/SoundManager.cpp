@@ -49,7 +49,7 @@ class SoundManagerPrivate{
 			if(bufferTime<maxBufferTime){
 				bytesUpdated = c->update(isPause, maxBytesUpdate);
 			}
-			if(bytesUpdated==0){delay(2);}//avoid busy wait if no update
+			if(bytesUpdated==0){delay(1);}//avoid busy wait if no update
 		}
 		delete c;
 		return NULL;

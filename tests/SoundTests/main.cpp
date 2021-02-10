@@ -17,7 +17,7 @@ int main(int argc, char *argv[]){
 
 	signal(SIGINT, sigfunc);
 	
-	SoundManager soundmgr;
+	SoundManager soundmgr(0.1);
 	
 	SineWaveSoundSource* sine = soundmgr.create<SineWaveSoundSource>(200, 2000);
 	

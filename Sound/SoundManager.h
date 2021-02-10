@@ -17,7 +17,7 @@ class SoundManager{
 	
 	public:
 	
-	SoundManager(double maxBufferTime = 0.25);
+	SoundManager(double maxBufferTime = 0.1);
 	
 	~SoundManager();
 	

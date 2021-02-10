@@ -252,7 +252,7 @@ class OpenSLESPlaybackContext : public IPCMPlaybackContext{
 				nextToFillIndex = (nextToFillIndex+1)%QUEUED_BUFFERS;
 				b.filledSize = pause?0:(source->fillNextBytes(b.buffer, maxBytes<b.bufferSize?maxBytes:b.bufferSize));
 				if(b.filledSize==0){//fill silence
-					b.filledSize = maxBytes<b.bufferSize?maxBytes:b.bufferSize;
+					b.filledSize = source->alignBytesToFrames(maxBytes<b.bufferSize?maxBytes:b.bufferSize);
 					memset(b.buffer, 0, b.filledSize);
 				}
 				#ifdef ANDROID_PLATFORM

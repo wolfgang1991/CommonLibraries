@@ -25,6 +25,18 @@ class ISoundSource{
 		FORMAT_COUNT
 	};
 	
+	virtual uint8_t getBytesPerFrame(){
+		static const uint8_t bytesPerFrame[FORMAT_COUNT] = {1, 2, 2, 4};
+		return bytesPerFrame[getPCMFormat()];
+	}
+	
+	//! returns the next smaller amount of bytes which result in a integer amount of frames
+	virtual uint32_t alignBytesToFrames(uint32_t byteCount){
+		uint8_t bpf = getBytesPerFrame();
+		uint32_t frameCount = byteCount/bpf;//integer division
+		return frameCount*bpf;
+	}
+	
 	virtual PCMFormat getPCMFormat() const = 0;
 	
 	virtual uint32_t getSampleRate() const = 0;

@@ -4,6 +4,8 @@
 
 #include "ISoundSource.h"
 
+#include <timing.h>
+
 #include <alsa/asoundlib.h>
 #include <iostream>
 
@@ -43,7 +45,12 @@ class AlsaPCMPlaybackContext : public IPCMPlaybackContext{
 	
 	uint32_t bytesPerFrame;
 	
+	double filledUntilTime;
+	double framesPerSecond;
+	
 	AlsaPCMPlaybackContext(ISoundSource* source):IPCMPlaybackContext(source){
+		framesPerSecond = source->getSampleRate();
+		filledUntilTime = getSecs();
 		int result;
 		//Open the PCM device in playback mode
 		if((result = snd_pcm_open(&pcm_handle, PCM_DEVICE, SND_PCM_STREAM_PLAYBACK, 0)) < 0){
@@ -88,19 +95,25 @@ class AlsaPCMPlaybackContext : public IPCMPlaybackContext{
 		if(maxBytes>bufferSize){maxBytes = bufferSize;}
 		uint32_t filledBytes;
 		if(pause){
-			filledBytes = maxBytes;
+			filledBytes = source->alignBytesToFrames(maxBytes);
 			memset(buffer, 0, maxBytes);//TODO notice pause change and fill last frame once when switched to pause
 		}else{
 			filledBytes = source->fillNextBytes(buffer, maxBytes);
 		}
 		if(filledBytes>0){
 			snd_pcm_uframes_t actualFrames = filledBytes/bytesPerFrame;
+			//std::cout << "actualFrames: " << actualFrames << std::endl;
+			filledUntilTime = filledUntilTime + actualFrames/framesPerSecond;
 			int result = snd_pcm_writei(pcm_handle, buffer, actualFrames);
 			if(result == -EPIPE){
 				std::cerr << "Underrun occured" << std::endl;
 				snd_pcm_prepare(pcm_handle);
+				//snd_pcm_recover(pcm_handle,result,1);//0);
+				//snd_pcm_writei(pcm_handle, buffer, actualFrames);
+				filledUntilTime = getSecs();
 			}else if(result<0){
 				std::cerr << "ERROR: Can't write to PCM device (error: " << snd_strerror(result) << ")." << std::endl;
+				snd_pcm_recover(pcm_handle,result,0);
 			}
 		}
 //		std::cout << "snd_pcm_avail: " << snd_pcm_avail(pcm_handle) << std::endl;
@@ -108,13 +121,18 @@ class AlsaPCMPlaybackContext : public IPCMPlaybackContext{
 	}
 	
 	uint32_t getDelayFrameCount(){
+		//by hardware report (unreliable)
 		snd_pcm_sframes_t delayFrames;
 		int result;
+		snd_pcm_hwsync(pcm_handle);
 		if((result = snd_pcm_delay(pcm_handle, &delayFrames)) < 0){
 			delayFrames = 0;
 			std::cerr << "Can't get pcm delay (" << snd_strerror(result) << ") (probably nothing playing yet?)." << std::endl;
 		}
-		return delayFrames;
+		//by time (unreliable due to integration)
+		double frames = (filledUntilTime-getSecs())*framesPerSecond;
+		uint32_t iFrames = frames<=0.0?0:(uint32_t)(frames+0.5);
+		return delayFrames<iFrames?delayFrames:iFrames;
 	}
 	
 };
