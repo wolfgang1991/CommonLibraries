@@ -68,14 +68,6 @@ bool isAnInteger(const std::string& c){
 	return true;
 }
 
-std::string round(double val, int acc){
-	std::stringstream res;
-	res.precision(acc);
-	res.setf(std::ios::fixed, std::ios::floatfield);
-	res << val;
-	return res.str();
-}
-
 std::string getHumanReadableSpace(uint64_t space){
 	bool lessGB = space<100*1000*1000;
 	bool lessMB = space<100*1000;

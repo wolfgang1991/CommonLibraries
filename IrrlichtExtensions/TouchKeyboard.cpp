@@ -7,6 +7,7 @@
 #include <IrrlichtDevice.h>
 #include <IGUIElement.h>
 #include <IGUIEnvironment.h>
+#include <IGUIEditBox.h>
 
 using namespace std;
 using namespace irr;
@@ -67,11 +68,14 @@ void TouchKeyboard::render(){
 	lineColor.setAlpha(lineColor.getAlpha()<200?lineColor.getAlpha():200);
 	IGUIElement* ele = env->getFocus();
 	if(ele){
-		if(ele->getID() != MULTILINE_STRING_EDIT){
-			int fh = best->getDimension(L"O").Height;
-			rect<s32> r(0, keyboardY-fh-4, w, keyboardY);
-			driver->draw2DRectangle(lineColor, r);
-			best->draw(ele->getText(), r, SColor(255, 0, 0, 0), true, true, &r);
+		if(ele->getType()==EGUIET_EDIT_BOX){
+			IGUIEditBox* edit = (IGUIEditBox*)ele;
+			if(edit->getID()!=MULTILINE_STRING_EDIT && !edit->isPasswordBox()){
+				int fh = best->getDimension(L"O").Height;
+				rect<s32> r(0, keyboardY-fh-4, w, keyboardY);
+				driver->draw2DRectangle(lineColor, r);
+				best->draw(ele->getText(), r, SColor(255, 0, 0, 0), true, true, &r);
+			}
 		}
 	}
 	if(paddingX>=1.0){

@@ -60,13 +60,10 @@ CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr:
 	}
 	env->setFocus(pos?(IGUIElement*)pos:(IGUIElement*)win);
 	bringToFrontRecursive(win);
+	drop();//drop since the valid reference is hold by the parent (root element)
 }
 
 CMBox::~CMBox(){
-	stext->remove();
-	if(pos){pos->remove();}
-	if(neg){neg->remove();}
-	win->remove();
 }
 
 void CMBox::OnNegative(){
@@ -78,7 +75,6 @@ void CMBox::OnNegative(){
 	Parent->OnEvent(toPost);
 	setVisible(false);
 	remove();
-	drop();
 }
 	
 void CMBox::OnPositive(){
@@ -90,7 +86,6 @@ void CMBox::OnPositive(){
 	Parent->OnEvent(toPost);
 	setVisible(false);
 	remove();
-	drop();
 }
 
 bool CMBox::OnEvent(const irr::SEvent& event){
@@ -116,7 +111,6 @@ bool CMBox::OnEvent(const irr::SEvent& event){
 				}else{
 					setVisible(false);
 					remove();
-					drop();
 				}
 				return true;
 			}

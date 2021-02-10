@@ -29,15 +29,18 @@ std::basic_string<T> getFolderPath(const std::basic_string<T>& filePath){
 //! Appends a path delimeter to the path if it is missing and returns the new path
 template <typename T>
 std::basic_string<T> appendMissingPathDelimeter(const std::basic_string<T>& filePath){
-	#if _WIN32
+	#ifndef _WIN32
 	T pathDelimeter = (T)'/';
 	#else
 	T pathDelimeter = (T)'\\';
 	#endif
 	if(filePath.empty()){
-		return std::basic_string<T>(filePath)+=pathDelimeter;
-	}else if(filePath[filePath.size()-1]!=pathDelimeter){
-		return std::basic_string<T>(filePath)+=pathDelimeter;
+		return filePath + pathDelimeter;
+	}else{
+		T c = filePath[filePath.size()-1];
+		if(c!=pathDelimeter && c!=(T)'/'){
+			return filePath + pathDelimeter;
+		}
 	}
 	return filePath;
 }

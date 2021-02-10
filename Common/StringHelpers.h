@@ -110,7 +110,18 @@ void parseSeparatedString(TContainer& out, const typename TContainer::value_type
 }
 
 //! returns a string representation of val rounded to acc decimal places
-std::string round(double val, int acc);
+template<typename TChar>
+std::basic_string<TChar> roundToString(double val, int acc){
+	std::basic_stringstream<TChar> res;
+	res.precision(acc);
+	res.setf(std::ios::fixed, std::ios::floatfield);
+	res << val;
+	return res.str();
+}
+
+inline std::string round(double val, int acc){
+	return roundToString<char>(val, acc);
+}
 
 bool isAnInteger(const std::string& c);
 

@@ -97,6 +97,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	env->getRootGUIElement()->addChild(this);
 	driver = device->getVideoDriver();
 	lang = phrases==NULL?&defaultPhrases:phrases;
+	organizer->setLanguage(lang);
 	u32 ww = driver->getScreenSize().Width;
 	u32 wh = driver->getScreenSize().Height;
 	u32 pw = w*ww;
@@ -183,6 +184,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	this->parent = this;
 	driver = device->getVideoDriver();
 	lang = phrases==NULL?&defaultPhrases:phrases;
+	organizer->setLanguage(lang);
 	u32 ww = driver->getScreenSize().Width;
 	u32 wh = driver->getScreenSize().Height;
 	double sqrtArea = sqrt(ww*wh);
@@ -573,5 +575,5 @@ class EasyWindowItemSelectCallback : public IItemSelectCallback{
 
 ItemSelectElement* createItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* drawer, const std::string& defaultPath, irr::s32 aggregationID, irr::s32 listElementAggregationID, irr::s32 invisibleAggregationID, irr::s32 mkdirButtonID, bool isSaveDialog, const ItemSelectCallbackFunction& OnItemSelect, IItemSelectIconSource* source, irr::f32 w, irr::f32 h, const ILanguagePhrases* phrases, bool modal, const std::regex& regex){
 	EasyWindowItemSelectCallback* cbk = new EasyWindowItemSelectCallback(device, OnItemSelect);
-	return new ItemSelectElement(device, drawer, defaultPath, &(cbk->organizer), cbk, aggregationID, listElementAggregationID, invisibleAggregationID, mkdirButtonID, isSaveDialog, source, {}, .75f, .75f, phrases, modal, regex);
+	return new ItemSelectElement(device, drawer, defaultPath, &(cbk->organizer), cbk, aggregationID, listElementAggregationID, invisibleAggregationID, mkdirButtonID, isSaveDialog, source, {}, w, h, phrases, modal, regex);
 }

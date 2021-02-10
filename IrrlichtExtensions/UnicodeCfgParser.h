@@ -7,9 +7,9 @@
 
 #include "ForwardDeclarations.h"
 
-//! Syntax: S -> ((V|V,V);)* V -> <value>
+//! Syntax: S -> V;|V;S   V -> V,V|<value>
 //! Escape Character: \ (\\ Baslash, \n New line, \, Comma, \; Semicolon, \<any char> Any Char)
-//! New lines and carriage returns are ignored.
+//! New lines, leading whitespaces and carriage returns are ignored.
 class UnicodeCfgParser{
 
 	private:
