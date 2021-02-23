@@ -51,6 +51,7 @@ class JSONRPC2Client : public IRPCClient{
 	double lastReceived;//time in s
 	ClientState state;
 	bool syncExit;
+	bool mustJoin;
 	std::list<std::string> syncToSend;
 	std::list<IRPCValue*> syncToReceive;
 	

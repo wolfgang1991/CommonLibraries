@@ -180,6 +180,7 @@ void* JSONRPC2Client::clientMain(void* p){
 	deleteAllElements(client->clientToReceive);
 	client->clientToReceive.clear();
 	lockMutex(client->mutexSync);
+	client->mustJoin = true;
 	client->state = NOT_CONNECTED;
 	client->syncToSend.clear();
 	deleteAllElements(client->syncToReceive);
@@ -189,7 +190,7 @@ void* JSONRPC2Client::clientMain(void* p){
 }
 
 JSONRPC2Client::JSONRPC2Client(){
-	areTherePendingSends = syncExit = false;
+	mustJoin = areTherePendingSends = syncExit = false;
 	initMutex(mutexSync);
 	parser = new JSONParser();
 	socket = NULL;
@@ -254,7 +255,7 @@ void JSONRPC2Client::connect(const IIPAddress& address, uint32_t pingSendPeriod,
 	this->address = address.createNewCopy();
 	this->metaProtocolHandler = metaProtocolHandler;
 	syncedState = state = IRPCClient::CONNECTING;
-	syncExit = false;
+	mustJoin = syncExit = false;
 	bool res = createThread(clientThread, JSONRPC2Client::clientMain, (void*)this, true);
 	assert(res);
 }
@@ -268,7 +269,7 @@ void JSONRPC2Client::useSocket(ISocket* socket, uint32_t pingTimeout, uint32_t p
 	this->address = NULL;
 	this->metaProtocolHandler = NULL;
 	syncedState = state = IRPCClient::CONNECTING;
-	syncExit = false;
+	mustJoin = syncExit = false;
 	bool res = createThread(clientThread, JSONRPC2Client::clientMain, (void*)this, true);
 	assert(res);
 }
@@ -411,7 +412,14 @@ void JSONRPC2Client::update(){
 	syncedState = state;
 	syncToSend.splice(syncToSend.end(), mainToSend);
 	mainToReceive.splice(mainToReceive.end(), syncToReceive);
-	unlockMutex(mutexSync);
+	if(mustJoin){
+		mustJoin = false;
+		unlockMutex(mutexSync);
+		bool res = joinThread(clientThread);
+		assert(res);
+	}else{
+		unlockMutex(mutexSync);
+	}
 	//Process received stuff
 	for(auto it = mainToReceive.begin(); it != mainToReceive.end(); ++it){
 		//std::cout << "Handling: " << convertRPCValueToJSONString(**it) << std::endl;
@@ -437,6 +445,7 @@ void JSONRPC2Client::disconnect(){
 		unlockMutex(mutexSync);
 		bool res = joinThread(clientThread);
 		assert(res);
+		mustJoin = false;
 	}
 }
 

@@ -17,6 +17,10 @@ class ConcurrentCommunicationEndpointPrivate{
 		
 		BufferWithOffset(uint32_t size):buf(new uint8_t[size]),offset(0),size(size){}
 		
+		~BufferWithOffset(){
+			delete[] buf;
+		}
+		
 		//! copy content of other buffer with overwriting old data if necessary
 		void append(BufferWithOffset* other){
 			assert(offset+other->offset<=size);
