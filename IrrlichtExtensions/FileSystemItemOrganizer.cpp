@@ -12,6 +12,7 @@
 #include <sstream>
 #include <ctime>
 #include <iostream>
+#include <cassert>
 
 #include <sys/stat.h>
 

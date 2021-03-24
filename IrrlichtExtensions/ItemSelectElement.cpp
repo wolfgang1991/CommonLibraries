@@ -24,6 +24,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <cassert>
 
 using namespace irr;
 using namespace core;
