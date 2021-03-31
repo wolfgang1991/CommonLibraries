@@ -3,11 +3,21 @@
 
 #include <IGUIEnvironment.h>
 
+#include <set>
+
 using namespace irr;
 using namespace core;
 using namespace video;
 using namespace gui;
 using namespace scene;
+
+static std::set<BeautifulGUIText*> textWithStandardColor;
+
+void setAllBeautifulTextStandardColor(irr::video::SColor color){
+	for(BeautifulGUIText* text : textWithStandardColor){
+		text->setColor(color);
+	}
+}
 
 static const irr::video::SColor white(255,255,255,255);
 
@@ -26,6 +36,24 @@ BeautifulGUIText::BeautifulGUIText(const wchar_t* text, irr::video::SColor color
 	mb.setHardwareMappingHint(EHM_STATIC);
 	recalculateMeshBuffer();
 	driver = environment->getVideoDriver();
+}
+
+BeautifulGUIText::BeautifulGUIText(const wchar_t* text, irr::f32 italicGradient, irr::core::matrix4* transformation, bool hcenter, bool vcenter, irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, irr::s32 id, irr::f32 scale, void* data, IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle):
+	IAggregatableGUIElement(environment, recommendedSpace, 1.f, recommendedSpace, 1.f, false, false, id, data, parent, rectangle),
+	text(text),
+	color(environment->getSkin()->getColor(EGDC_BUTTON_TEXT)),
+	italicGradient(italicGradient),
+	transformation(transformation?*transformation:matrix4()),
+	useTransformation(transformation!=NULL),
+	font(NULL),
+	hcenter(hcenter),
+	vcenter(vcenter),
+	scale(scale){
+	setName("BeautifulGUIText");
+	mb.setHardwareMappingHint(EHM_STATIC);
+	recalculateMeshBuffer();
+	driver = environment->getVideoDriver();
+	textWithStandardColor.insert(this);
 }
 
 void BeautifulGUIText::setColor(irr::video::SColor color){
@@ -69,6 +97,7 @@ void BeautifulGUIText::setCenter(bool hcenter, bool vcenter){
 
 BeautifulGUIText::~BeautifulGUIText(){
 	driver->removeHardwareBuffer(&mb);
+	textWithStandardColor.erase(this);
 }
 
 void BeautifulGUIText::setText(const wchar_t* text){

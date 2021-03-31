@@ -267,6 +267,9 @@ class FlexibleFont : public irr::gui::IGUIFont{
 	
 	irr::video::E_MATERIAL_TYPE getDefaultMaterialType();
 	
+	//! draws the text with the best fitting scale without permanently changing ht default scale
+	void drawWithOptimalScale(const irr::core::stringw& text, irr::video::SColor color, const irr::core::rect<irr::s32>& labelRect, const irr::core::rect<irr::s32>* clip = NULL, bool useCurrentScaleIfLarger = true);
+	
 	//--- Methods inherited from IGUIFont ---
 	
 	void draw(const irr::core::stringw& text, const irr::core::rect<irr::s32>& position, irr::video::SColor color, bool hcenter=false, bool vcenter=false, const irr::core::rect<irr::s32>* clip=0);

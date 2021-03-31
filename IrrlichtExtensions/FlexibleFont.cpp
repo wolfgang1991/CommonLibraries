@@ -857,3 +857,12 @@ irr::s32 FlexibleFont::getKerningHeight() const{
 void FlexibleFont::setInvisibleCharacters(const wchar_t* s){
 	//not applicable: invisible characters are defined by the font
 }
+
+void FlexibleFont::drawWithOptimalScale(const irr::core::stringw& text, irr::video::SColor color, const irr::core::rect<irr::s32>& labelRect, const irr::core::rect<irr::s32>* clip, bool useCurrentScaleIfLarger){
+    vector2d<f32> curScale = getDefaultScale();
+	f32 optimalScale = calculateOptimalScale(text.c_str(), dimension2d<u32>(labelRect.getWidth(), labelRect.getHeight()));
+	if(useCurrentScaleIfLarger && curScale.X>optimalScale){optimalScale = curScale.X;}
+    setDefaultScale(vector2d<f32>(optimalScale, optimalScale));
+    draw(text, labelRect, color, true, true, clip);
+    setDefaultScale(curScale);
+}
