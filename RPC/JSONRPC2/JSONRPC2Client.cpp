@@ -274,7 +274,7 @@ void JSONRPC2Client::useSocket(ISocket* socket, uint32_t pingTimeout, uint32_t p
 	assert(res);
 }
 
-static inline IRPCValue* stealObjectField(ObjectValue* o, const std::string& key){
+IRPCValue* stealObjectField(ObjectValue* o, const std::string& key){
 	auto it = o->values.find(key);
 	if(it!=o->values.end()){
 		IRPCValue* res = it->second;
@@ -284,17 +284,12 @@ static inline IRPCValue* stealObjectField(ObjectValue* o, const std::string& key
 	return NULL;
 }
 
-static inline IRPCValue* getObjectField(ObjectValue* o, const std::string& key, IRPCValue::Type type = IRPCValue::UNKNOWN){
+IRPCValue* getObjectField(ObjectValue* o, const std::string& key, IRPCValue::Type type){
 	auto it = o->values.find(key);
 	if(it!=o->values.end()){
 		return (type==IRPCValue::UNKNOWN || it->second->getType()==type)?it->second:NULL;
 	}
 	return NULL;
-}
-
-template<typename TRPCValue>
-static TRPCValue* getObjectField(ObjectValue* o, const std::string& key){
-	return (TRPCValue*)getObjectField(o, key, TRPCValue::typeId);
 }
 
 static inline bool hasJSONRPCField(ObjectValue* o){
@@ -332,9 +327,8 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 							if(!result && error){
 								IntegerValue* code = getObjectField<IntegerValue>(error, "code");
 								StringValue* msg = getObjectField<StringValue>(error, "message");
-								IRPCValue* data = stealObjectField(error, "data");
 								if(code && msg){
-									it->second.first->OnProcedureError(code->value, msg->value, data, it->second.second);
+									it->second.first->OnProcedureError(code->value, msg->value, stealObjectField(error, "data"), it->second.second);
 									reusableIds.push_back(jsonId);
 									jsonId2Caller.erase(it);
 									delete o;
@@ -386,7 +380,7 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 			}
 			#endif
 		}
-		std::cout << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity) << std::endl << std::flush;
+		std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity) << std::endl;
 		delete entity;
 	}
 }
