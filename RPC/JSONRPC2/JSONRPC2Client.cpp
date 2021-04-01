@@ -33,7 +33,7 @@ std::string makeJSONRPCRequest(const std::string& procedure, const std::vector<I
 		ss << ", \"id\": " << *jsonId;
 	}
 	ss << "}\n";//newline for better readability
-	std::cout << ss.str() << std::endl;//for debug purposes
+	//std::cout << ss.str() << std::endl;//for debug purposes
 	return ss.str();
 }
 

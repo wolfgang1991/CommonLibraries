@@ -20,7 +20,7 @@ class UniqueIdentifierGenerator{
 		T res;
 		if(returnedIds.empty()){
 			res = maxId;
-			maxId++;
+			++maxId;
 		}else{
 			res = returnedIds.front();
 			returnedIds.pop_front();

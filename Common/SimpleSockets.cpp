@@ -611,7 +611,13 @@ void IPv6Socket::setIPv4ReceptionEnabled(bool enabled){
 	restoreIPv4ReceptionEnabled = enabled;
 	int opt = (int)(!enabled);
 	if(setsockopt(socketHandle, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&opt, sizeof(opt))==-1){
-		handleErrorMessage();
+		#if SIMPLESOCKETS_WIN
+		if(WSAGetLastError()!=WSAEINVAL){
+		#else
+		if(errno!=EINVAL){
+		#endif
+			handleErrorMessage();
+		}
 	}
 }
 

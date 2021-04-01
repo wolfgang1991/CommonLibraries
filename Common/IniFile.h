@@ -33,6 +33,8 @@ class IniFile{
 	//! get value (creates empty string for value if not available)
 	std::string& get(const std::string& section, const std::string& key);
 	
+	const std::string& get(const std::string& section, const std::string& key) const;
+	
 	const std::string& get(const std::string& section, const std::string& key, const std::string& defaultValue) const;
 
 	//! set value

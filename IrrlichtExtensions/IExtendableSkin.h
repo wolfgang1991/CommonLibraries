@@ -39,6 +39,7 @@ class IExtendableSkin : public irr::gui::IGUISkin{
 	
 	virtual ~IExtendableSkin();
 	
+	//! adds a new extension and deletes the old one if one is there
 	virtual void registerExtension(ISkinExtension* extension, uint32_t styleId = 0);
 	
 	//! returns NULL if the given style id or extension name is not available

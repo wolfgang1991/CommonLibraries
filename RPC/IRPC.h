@@ -282,7 +282,7 @@ class IRPC{
 
 	public:
 
-	//! true if connected and procedure call successfully sent or added to an internal send queue, caller can be NULL if no response is expected
+	//! true if procedure call successfully sent or added to an internal send queue, caller can be NULL if no response is expected
 	//! the id is optional for identifying the result in OnProcedureResult it is NOT the id from JSON RPC (there should be a id translation for (caller,caller_id) <-> json_rpc_id in case of json rpc
 	//! deleteValues: true if this method shall delete the values if no longer needed, if false they must be deleted manually
 	virtual bool callRemoteProcedure(const std::string& procedure, const std::vector<IRPCValue*>& values, IRemoteProcedureCaller* caller = NULL, uint32_t id = 0, bool deleteValues = true) = 0;
@@ -295,6 +295,9 @@ class IRPC{
 	
 	//! Needs to be called before a IRemoteProcedureCaller is deleted. Otherwise it might be used after deleting it.
 	virtual void removeProcedureCaller(IRemoteProcedureCaller* caller) = 0;
+	
+	//! Synchronization / result processing / call processing etc...
+	virtual void update() = 0;
 	
 	virtual ~IRPC(){}
 
@@ -341,5 +344,66 @@ class IRPCClient : public IRPC{
 	virtual void flush() = 0;
 	
 };
+
+// Helper macros for user defined types:
+// Example:
+/*
+class Foo{
+
+	public:
+	
+	std::string name;
+	std::vector<int64_t> position;
+	
+	CREATE_BEGIN(Foo)
+		FILL_FIELD(name)
+		FILL_FIELD(position)
+	CREATE_END
+	
+	CREATE_NATIVE_BEGIN(Foo)
+		FILL_NATIVE_FIELD(name)
+		static const std::vector<int64_t> defaultPosition{-1,-1,-1};
+		FILL_NATIVE_FIELD_IF_AVAILABLE(position, defaultPosition)
+	CREATE_NATIVE_END
+	
+};
+*/
+
+#define CREATE_BEGIN(NATIVE_TYPE) \
+	template<typename TNativeValue> \
+	static ObjectValue* create(const NATIVE_TYPE& nativeValue){ \
+		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value); \
+		ObjectValue* rpcValue = new ObjectValue();
+	
+#define CREATE_END \
+		return rpcValue; \
+	}
+
+#define CREATE_NATIVE_BEGIN(NATIVE_TYPE) \
+	template<typename TNativeValue> \
+	static NATIVE_TYPE createNative(IRPCValue* rpcValue){ \
+		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value); \
+		NATIVE_TYPE nativeValue;
+		
+#define CREATE_NATIVE_END \
+		return nativeValue; \
+	}
+
+#define FILL_FIELD(FIELD_NAME) \
+	rpcValue->values[#FIELD_NAME] = createRPCValue(nativeValue.FIELD_NAME);
+
+#define FILL_NATIVE_FIELD(FIELD_NAME) \
+	nativeValue.FIELD_NAME = createNativeValue<decltype(nativeValue.FIELD_NAME)>(((ObjectValue*)rpcValue)->values[#FIELD_NAME]);
+	
+#define FILL_NATIVE_FIELD_IF_AVAILABLE(FIELD_NAME, DEFAULT_VALUE) \
+	{ \
+		ObjectValue* o = (ObjectValue*)rpcValue; \
+		auto it = o->values.find(#FIELD_NAME); \
+		if(it!=o->values.end()){ \
+			nativeValue.FIELD_NAME = createNativeValue<decltype(nativeValue.FIELD_NAME)>(it->second); \
+		}else{ \
+			nativeValue.FIELD_NAME = DEFAULT_VALUE; \
+		} \
+	}
 
 #endif

@@ -27,7 +27,19 @@ IExtendableSkin::~IExtendableSkin(){
 
 void IExtendableSkin::registerExtension(ISkinExtension* extension, uint32_t styleId){
 	if(extension==NULL){return;}
-	extensions[extension->getName()][styleId] = extension;
+	auto it = extensions.find(extension->getName());
+	bool added = false;
+	if(it!=extensions.end()){
+		auto it2 = it->second.find(styleId);
+		if(it2!=it->second.end()){
+			added = true;
+			delete it2->second;
+			it2->second = extension;
+		}
+	}
+	if(!added){
+		extensions[extension->getName()][styleId] = extension;
+	}
 }
 	
 ISkinExtension* IExtendableSkin::getExtension(const std::string& extensionName, uint32_t styleId){

@@ -3,6 +3,7 @@
 
 namespace irr{
 	class IrrlichtDevice;
+	struct SEvent;
 	namespace gui{
 		class ICursorControl;
 		class IGUIEnvironment;

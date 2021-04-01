@@ -1,5 +1,5 @@
 #List of object files without path
-_LINKOBJ = JSONRPC2Client.o JSONRPC2Server.o JSONParser.o
+_LINKOBJ = JSONRPC2Client.o JSONRPC2Server.o JSONParser.o RequestBasedJSONRPC2Client.o RequestBasedJSONRPC2ServerHelpers.o
 
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj

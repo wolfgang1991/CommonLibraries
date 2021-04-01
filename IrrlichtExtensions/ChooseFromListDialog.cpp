@@ -17,7 +17,54 @@ using namespace video;
 using namespace gui;
 using namespace core;
 
-irr::gui::IGUIWindow* createChooseFromListDialog(irr::IrrlichtDevice* device, std::vector<irr::gui::IGUIButton*>& buttonsOut, const std::vector<int32_t>& buttonIds, const std::vector<std::wstring>& buttonLabels, const std::wstring& headline, int32_t aggregationId, int32_t aggregatableId, bool modal){
+OutsideCancelWindow::OutsideCancelWindow(irr::gui::IGUIEnvironment* environment, irr::gui::IGUIWindow* win, irr::s32 id):
+	IGUIWindow(environment, environment->getRootGUIElement(), id, rect<s32>(0,0,environment->getVideoDriver()->getScreenSize().Width,environment->getVideoDriver()->getScreenSize().Height)){
+	this->win = win;
+	addChild(win);
+}
+
+irr::gui::IGUIButton* OutsideCancelWindow::getCloseButton() const{return win->getCloseButton();}
+
+irr::gui::IGUIButton* OutsideCancelWindow::getMinimizeButton() const{return win->getMinimizeButton();}
+
+irr::gui::IGUIButton* OutsideCancelWindow::getMaximizeButton() const{return win->getMaximizeButton();}
+
+bool OutsideCancelWindow::isDraggable() const{return win->isDraggable();}
+
+void OutsideCancelWindow::setDraggable(bool draggable){return win->setDraggable(draggable);}
+
+void OutsideCancelWindow::setDrawBackground(bool draw){return win->setDrawBackground(draw);}
+
+bool OutsideCancelWindow::getDrawBackground() const{return win->getDrawBackground();}
+
+void OutsideCancelWindow::setDrawTitlebar(bool draw){return win->setDrawTitlebar(draw);}
+
+bool OutsideCancelWindow::getDrawTitlebar() const{return win->getDrawTitlebar();}
+
+irr::core::rect<s32> OutsideCancelWindow::getClientRect() const{return win->getClientRect();}
+
+bool OutsideCancelWindow::OnEvent(const SEvent& event){
+	if(event.EventType==EET_MOUSE_INPUT_EVENT){
+		const SEvent::SMouseInput& m = event.MouseInput;
+		if(m.Event==EMIE_LMOUSE_LEFT_UP){
+			vector2d<s32> mPos(m.X, m.Y);
+			if(!win->getAbsolutePosition().isPointInside(mPos)){
+				SEvent toPost;
+				toPost.EventType = EET_GUI_EVENT;
+				toPost.GUIEvent.Caller = this;
+				toPost.GUIEvent.Element = NULL;
+				toPost.GUIEvent.EventType = EGET_MESSAGEBOX_NO;
+				Parent->OnEvent(toPost);
+				remove();
+				drop();
+				return true;
+			}
+		}
+	}
+	return IGUIWindow::OnEvent(event);
+}
+
+irr::gui::IGUIWindow* createChooseFromListDialog(irr::IrrlichtDevice* device, std::vector<irr::gui::IGUIButton*>& buttonsOut, const std::vector<int32_t>& buttonIds, const std::vector<std::wstring>& buttonLabels, const std::wstring& headline, int32_t aggregationId, int32_t aggregatableId, bool modal, bool cancelByClickOutside){
 	IVideoDriver* driver = device->getVideoDriver();
 	IGUIEnvironment* env = device->getGUIEnvironment();
 	dimension2d<u32> dim = driver->getScreenSize();
@@ -47,6 +94,9 @@ irr::gui::IGUIWindow* createChooseFromListDialog(irr::IrrlichtDevice* device, st
 		buttonsOut[i] = env->addButton(rect<s32>(0,0,0,0), NULL, buttonIds[i], buttonLabels[i].c_str());
 		buttonList->addSubElement(new AggregatableGUIElementAdapter(env, lineYPart, 4.f/1.f, false, buttonsOut[i], false, aggregatableId));
 		buttonList->addSubElement(new EmptyGUIElement(env, .2f*lineYPart, 1.f/1.f, false, false, aggregatableId));
+	}
+	if(cancelByClickOutside){
+		win = new OutsideCancelWindow(env, win);
 	}
 	return win;
 }

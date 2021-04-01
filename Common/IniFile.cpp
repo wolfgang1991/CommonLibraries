@@ -96,6 +96,11 @@ const std::string& IniFile::get(const std::string& section, const std::string& k
 	return defaultValue;
 }
 
+const std::string& IniFile::get(const std::string& section, const std::string& key) const{
+	static const std::string empty("");
+	return get(section, key, empty);
+}
+
 void IniFile::set(const std::string& section, const std::string& key, const std::string& value){
 	data[section][key] = value;
 }
