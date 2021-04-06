@@ -56,6 +56,8 @@ class RequestBasedJSONRPC2Client : public IRPC{
 	
 };
 
+#ifndef NO_CURL
+
 //! A request sender implementation for CURL
 class CURLRequestSender : public IRequestSender{
 
@@ -80,5 +82,7 @@ class CURLRequestSender : public IRequestSender{
 	ResponseType sendRequest(const std::string& toSend, std::string& result);
 	
 };
+
+#endif
 
 #endif

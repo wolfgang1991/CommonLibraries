@@ -40,6 +40,28 @@ std::string makeJSONRPCRequest(const std::string& procedure, const std::vector<I
 static const char* jsonPing = "{\"jsonrpc\": \"2.0\", \"method\": \"rc:ping\", \"params\": [], \"id\": 0}\n";
 static const uint32_t jsonPingSize = strlen(jsonPing);
 
+static bool isPing(IRPCValue* value){
+	if(value->getType()==IRPCValue::OBJECT){
+		ObjectValue* o = (ObjectValue*)value;
+		auto it = o->values.find("method");
+		if(it!=o->values.end()){
+			IRPCValue* methodName = it->second;
+			if(methodName->getType()==IRPCValue::STRING){
+				if(((StringValue*)methodName)->value=="rc:ping"){
+					auto itID = o->values.find("id");
+					if(itID!=o->values.end()){
+						IRPCValue* id = itID->second;
+						if(id->getType()==IRPCValue::INTEGER){
+							return ((IntegerValue*)id)->value==0;
+						}
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
 void* JSONRPC2Client::clientMain(void* p){
 	JSONRPC2Client* client = (JSONRPC2Client*)p;
 	const double pingTimeout = ((double)client->pingTimeout)/1000.0;
@@ -134,7 +156,14 @@ void* JSONRPC2Client::clientMain(void* p){
 						if(curlyBracketCount==0 && squareBracketCount==0){
 							IJSONParser::State s = client->parser->parse(lastChar, '\0');
 							if(s==IJSONParser::SUCCESS){
-								client->clientToReceive.push_back(client->parser->stealResult());
+								IRPCValue* toReceive = client->parser->stealResult();
+								if(isPing(toReceive)){//answer ping asynchonous, in case a function may block too long
+									//std::cout << "send ping reply..." << std::endl;
+									client->clientToSend.push_back("{\"jsonrpc\": \"2.0\", \"result\": null, \"id\": 0}");//id 0 is reserved for ping
+									delete toReceive;
+								}else{
+									client->clientToReceive.push_back(toReceive);
+								}
 							}else{
 								std::cerr << "Error while parsing JSON." << std::endl;
 							}

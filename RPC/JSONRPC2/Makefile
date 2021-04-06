@@ -7,6 +7,10 @@ CPPFLAGS = -Wall -I.. -I../jsonrpcpp -I../../Common -I. -D_DEBUG=$(DEBUG)
 STATIC_LIB = libJSONRPC2.a
 USEROPTIM = 
 
+ifeq ($(NO_CURL),1)
+CPPFLAGS += -DNO_CURL=$(NO_CURL)
+endif
+
 all: all_lib
 
 include ../../MakefileLibCommon

@@ -506,7 +506,7 @@ class JSONObjectParser : public JSONParserWithResult{
 				auto s = valueParser->parse(c, lookahead);
 				if(s==IJSONParser::SUCCESS){
 					state = 7;
-					std::map<std::string, IRPCValue*>& values = static_cast<ObjectValue*>(JSONParserWithResult::result)->values;
+					std::unordered_map<std::string, IRPCValue*>& values = static_cast<ObjectValue*>(JSONParserWithResult::result)->values;
 					std::string& key = static_cast<StringValue*>(keyParser.getResult())->value;
 					if(values.find(key)==values.end()){
 						values[key] = valueParser->stealResult();

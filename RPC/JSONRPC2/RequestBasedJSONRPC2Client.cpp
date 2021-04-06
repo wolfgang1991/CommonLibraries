@@ -6,7 +6,9 @@
 #include <timing.h>
 #include <StringHelpers.h>
 
+#ifndef NO_CURL
 #include <curl/curl.h>
+#endif
 
 #include <limits>
 #include <cassert>
@@ -228,6 +230,8 @@ void RequestBasedJSONRPC2Client::update(){
 	p->updateMainThread();
 }
 
+#ifndef NO_CURL
+
 static void curl_assert(int returnCode){
 	assert(returnCode==0);
 }
@@ -286,3 +290,5 @@ IRequestSender::ResponseType CURLRequestSender::sendRequest(const std::string& t
 	response.str("");
 	return r==0?(isGoodResponse?(IRequestSender::SUCCESS):(IRequestSender::ERROR_BAD_RESPONSE)):(IRequestSender::ERROR_NO_CONNECTION);
 }
+
+#endif

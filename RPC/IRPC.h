@@ -107,7 +107,7 @@ class ObjectValue : public IRPCValue{
 	public:
 	
 	//! key -> value
-	std::map<std::string, IRPCValue*> values;
+	std::unordered_map<std::string, IRPCValue*> values;
 	
 	static constexpr IRPCValue::Type typeId = IRPCValue::OBJECT;
 	
