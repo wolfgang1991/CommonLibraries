@@ -87,7 +87,7 @@ class InputSystem : public irr::IEventReceiver{
 	public:
 	
 	//! keyboards: Keyboards definition (see structs in TouchKeyboard.h), changeTexturePath path for the icon for changing input methods
-	InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs = {});
+	InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs = {}, bool preferPlatformDependentInput = false);
 
 	~InputSystem();
 
@@ -101,6 +101,10 @@ class InputSystem : public irr::IEventReceiver{
 	void loadInputSettingsFromIni(IniFile* ini);
 	
 	void setChangeButtonLocation(const irr::core::rect<irr::s32>& rectangle);
+	
+	void setPlatformDependentInputPreferred(bool prefer);
+	
+	bool isPlatformDependentInputPreferred() const;
 
 };
 

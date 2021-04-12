@@ -5,7 +5,7 @@
 
 using namespace irr;
 
-KeyInput::KeyInput(ICommonAppContext* context){
+KeyInput::KeyInput(ICommonAppContext* context, bool preferred):preferred(preferred){
 	c = context;
 }
 
@@ -25,3 +25,14 @@ void KeyInput::OnDeSelect(){
 	c->setSoftInputVisibility(false);
 }
 
+bool KeyInput::isPreferredInput(irr::s32 editboxID){
+	return preferred;
+}
+
+void KeyInput::setPreferred(bool prefer){
+	preferred = prefer;
+}
+
+bool KeyInput::isPreferred() const{
+	return preferred;
+}
