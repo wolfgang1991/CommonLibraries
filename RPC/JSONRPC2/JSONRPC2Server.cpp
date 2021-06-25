@@ -2,6 +2,7 @@
 #include "JSONRPC2Client.h"
 
 #include <SimpleSockets.h>
+#include <ZSocket.h>
 
 #include <iostream>
 
@@ -35,7 +36,7 @@ bool JSONRPC2Server::isGood(){
 }
 	
 JSONRPC2Client* JSONRPC2Server::accept(uint32_t timeout, IPv6Address* peerAddress){
-	IPv6TCPSocket* clientSocket = serverSocket->accept(timeout, peerAddress);
+	ISocket* clientSocket = serverSocket->accept(timeout, peerAddress);
 	if(clientSocket){
 		if(handler){
 			bool res = handler->tryNegotiate(clientSocket);
@@ -43,6 +44,9 @@ JSONRPC2Client* JSONRPC2Server::accept(uint32_t timeout, IPv6Address* peerAddres
 				std::cerr << "Negotiation unsuccessful" << std::endl;
 				delete clientSocket;
 				return NULL;
+			}
+			if(handler->useCompression()){
+				clientSocket = new ZSocket(clientSocket);
 			}
 		}
 		JSONRPC2Client* client = new JSONRPC2Client();

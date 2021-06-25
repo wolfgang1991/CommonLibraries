@@ -10,7 +10,7 @@
 #include <list>
 #include <unordered_map>
 
-class GUI;
+class IGUIDefinition;
 class FlexibleFont;
 class Drawer2D;
 class UnicodeCfgParser;
@@ -44,7 +44,7 @@ class GUIHelp : public irr::IEventReceiver{
 	std::unordered_map<std::string, Bubble*> id2bubble;
 	ConcurrentRectangleGradientDescent crgd;
 	
-	GUI* gui;
+	IGUIDefinition* gui;
 	FlexibleFont* font;
 	Drawer2D* drawer;
 	irr::video::IVideoDriver* driver;
@@ -62,7 +62,7 @@ class GUIHelp : public irr::IEventReceiver{
 	public:
 	
 	//! cornersize in texture coordinates (part of width/height) (e.g. 0.15f), realCornerSize in pixels on the screen
-	GUIHelp(GUI* gui, FlexibleFont* font, Drawer2D* drawer, irr::video::ITexture* bubble, irr::f32 cornerSize, irr::f32 realCornerSize, irr::s32 lineWidth, irr::video::SColor fontColor =  irr::video::SColor(255,0,0,0));
+	GUIHelp(IGUIDefinition* gui, FlexibleFont* font, Drawer2D* drawer, irr::video::ITexture* bubble, irr::f32 cornerSize, irr::f32 realCornerSize, irr::s32 lineWidth, irr::video::SColor fontColor =  irr::video::SColor(255,0,0,0));
 	
 	~GUIHelp();
 	

@@ -15,7 +15,7 @@ bool IniParser::doStep(char c){
 		curKey = ""; curValue = "";
 		if(c == ';' || c == '#'){state = 1; return false;}//comments
 		if(c == '['){curSection = ""; state = 2; return false;}//new section
-		if(c == ' ' || c == '\t' || c == '\n'){return false;}//ignore whitespaces
+		if(c == ' ' || c == '\t' || c == '\n' || c == '\r'){return false;}//ignore whitespaces
 		curKey.append(1, c); state = 3; return false;//else*
 	}else if(state == 1){//state for comment
 		if(c == '\n'){state = 0; return false;}//new line
@@ -34,12 +34,12 @@ bool IniParser::doStep(char c){
 			state = 4; return false;
 		}else{curKey.append(1, c); return false;}//else*
 	}else if(state == 4){//state after =
-		if(c == ' ' || c == '\t'){return false;}//ignore whitespace
+		if(c == ' ' || c == '\t' || c == '\r'){return false;}//ignore whitespace
 		if(c == '\n'){state = 0; return true;}//new line
 		curValue.append(1, c); state = 5; return false;//else*
 	}else if(state == 5){
 		if(c == '\n'){state = 0; return true;}//new line
-		curValue.append(1, c); return false;//else*
+		if(c != '\r'){curValue.append(1, c);} return false;//else*
 	}
 	return false;	
 }

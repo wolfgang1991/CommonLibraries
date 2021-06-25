@@ -37,10 +37,10 @@ class AlwaysSuccessXMetaHandler : public IMetaProtocolHandler{
 	public:
 	
 	bool tryNegotiate(ISocket* socket){
-		static std::string succ("000 \n");
-		socket->send(succ.c_str(), succ.size());
 		return true;
 	}
+	
+	bool useCompression() const{return true;}
 
 };
 

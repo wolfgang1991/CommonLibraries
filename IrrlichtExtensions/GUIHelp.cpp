@@ -27,7 +27,7 @@ static rect<double> initSpace(IrrlichtDevice* device){
 	return rect<double>(0,0,dim.Width,dim.Height);
 }
 
-GUIHelp::GUIHelp(GUI* gui, FlexibleFont* font, Drawer2D* drawer, irr::video::ITexture* bubble, irr::f32 cornerSize, irr::f32 realCornerSize, irr::s32 lineWidth, irr::video::SColor fontColor):
+GUIHelp::GUIHelp(IGUIDefinition* gui, FlexibleFont* font, Drawer2D* drawer, irr::video::ITexture* bubble, irr::f32 cornerSize, irr::f32 realCornerSize, irr::s32 lineWidth, irr::video::SColor fontColor):
 	crgd(initSpace(drawer->getDevice())),
 	gui(gui),
 	font(font),
@@ -79,7 +79,8 @@ void GUIHelp::initHelp(const std::wstring& help){
 
 void GUIHelp::initHelpFromFile(irr::io::IFileSystem* fsys, const char* path){
 	UnicodeCfgParser parser(6);
-	parser.parseFromUTF8File(fsys, path);
+	bool success = parser.parseFromUTF8File(fsys, path);
+	if(!success){std::cerr << "Error: Unable to open and parse: " << path << std::endl;}
 	initHelpFromCfgResult(parser);
 }
 

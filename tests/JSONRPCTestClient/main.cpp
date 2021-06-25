@@ -70,10 +70,24 @@ class TestReceiver : public IRemoteProcedureCallReceiver{
 
 };
 
+class AlwaysSuccessXMetaHandler : public IMetaProtocolHandler{
+
+	public:
+	
+	bool tryNegotiate(ISocket* socket){
+		return true;
+	}
+	
+	bool useCompression() const{return true;}
+
+};
+
 int main(int argc, char *argv[]){
 
+	AlwaysSuccessXMetaHandler handler;
+
 	JSONRPC2Client jc;
-	jc.connect(IPv6Address("::1", RPC_PORT), 1000, 2000, 1000);
+	jc.connect(IPv6Address("::1", RPC_PORT), 1000, 2000, 1000, &handler);
 	
 	std::cout << "Waiting for connection..." << std::endl;
 	while(jc.getState()==IRPCClient::CONNECTING){

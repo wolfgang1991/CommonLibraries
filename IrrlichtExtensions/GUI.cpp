@@ -261,6 +261,14 @@ void GUI::setVisible(bool visible){
 	}
 }
 
+bool GUI::isVisible() const{
+	auto it = elements.begin();
+	if(it!=elements.end()){
+		return it->second->ele->isVisible();
+	}
+	return false;
+}
+
 const std::map<std::string, irr::core::rect<irr::s32> >& GUI::getAllSpecialRectangles(){
 	return rects;
 }
