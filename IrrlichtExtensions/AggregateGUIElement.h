@@ -99,7 +99,7 @@ class AggregateGUIElement : public IAggregatableGUIElement, public IScrollable{
 	//! result \in [0-1]
 	irr::f32 getScrollPosition() const;
 	
-	void setActive(bool active, bool emitEventOnChange = true);
+	void setActive(bool active);
 	
 	//! only applicable if only one sub element selectable, returns the index of the sub element and fills outGUIElement if outGUIElement!=NULL
 	//! -1 if no selection found (in case of multi select: the first selection is returned which makes usually no sense)

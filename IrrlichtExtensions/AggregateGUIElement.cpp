@@ -290,7 +290,7 @@ irr::f32 AggregateGUIElement::getScrollPosition() const{
 	return ((f32)scrollPos)/lowerBound;
 }
 
-void AggregateGUIElement::setActive(bool active, bool emitEventOnChange){
+void AggregateGUIElement::setActive(bool active){
 	IAggregatableGUIElement::setActive(active);
 	if(!activatedSubElements.empty()){
 		for(uint32_t i=0; i<subElements.size(); i++){

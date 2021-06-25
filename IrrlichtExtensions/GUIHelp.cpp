@@ -6,6 +6,7 @@
 #include <FlexibleFont.h>
 #include <mathUtils.h>
 #include <UnicodeCfgParser.h>
+#include <utf8.h>
 
 #include <IrrlichtDevice.h>
 #include <irrArray.h>
@@ -53,7 +54,7 @@ void GUIHelp::initHelpFromCfgResult(const UnicodeCfgParser& parser){
 	dimension2d<u32> dim = drawer->getDevice()->getVideoDriver()->getScreenSize();
 	for(auto it = result.begin(); it != result.end(); ++it){
 		const std::vector<std::wstring>& line = *it;
-		std::string id = convertWStringToString(line[0]);
+		std::string id = convertWStringToUtf8String(line[0]);
 		IGUIElement* ele = gui->getElement(id);
 		double orientation = convertWStringTo<double>(line[1]);
 		double width = convertWStringTo<double>(line[2])*dim.Width;

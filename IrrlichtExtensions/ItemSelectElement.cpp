@@ -211,7 +211,6 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 }
 
 ItemSelectElement::~ItemSelectElement(){
-	std::cout << "ItemSelectElement d'tor" << std::endl;
 	delete cbk; cbk = NULL;
 }
 
