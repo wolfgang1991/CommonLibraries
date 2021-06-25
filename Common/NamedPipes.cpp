@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#ifdef SIMPLESOCKETS_WIN
+#if SIMPLESOCKETS_WIN
 
 ANamedPipe::ANamedPipe(){
 	hPipe = INVALID_HANDLE_VALUE;

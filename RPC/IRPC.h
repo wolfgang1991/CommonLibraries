@@ -296,6 +296,9 @@ class IRPC{
 	//! Needs to be called before a IRemoteProcedureCaller is deleted. Otherwise it might be used after deleting it.
 	virtual void removeProcedureCaller(IRemoteProcedureCaller* caller) = 0;
 	
+	//! Synchronization / result processing / call processing etc...
+	virtual void update() = 0;
+	
 	virtual ~IRPC(){}
 
 };
@@ -369,7 +372,7 @@ class Foo{
 #define CREATE_BEGIN(NATIVE_TYPE) \
 	template<typename TNativeValue> \
 	static ObjectValue* create(const NATIVE_TYPE& nativeValue){ \
-		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value); \
+		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value, ""); \
 		ObjectValue* rpcValue = new ObjectValue();
 	
 #define CREATE_END \
@@ -379,7 +382,7 @@ class Foo{
 #define CREATE_NATIVE_BEGIN(NATIVE_TYPE) \
 	template<typename TNativeValue> \
 	static NATIVE_TYPE createNative(IRPCValue* rpcValue){ \
-		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value); \
+		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value, ""); \
 		NATIVE_TYPE nativeValue;
 		
 #define CREATE_NATIVE_END \

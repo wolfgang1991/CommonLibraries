@@ -3,7 +3,7 @@
 
 #include "SimpleSockets.h"
 
-#ifdef SIMPLESOCKETS_WIN
+#if SIMPLESOCKETS_WIN
 
 //! Common implementations for NamedPipeServer and NamedPipeClient
 class ANamedPipe : public ISocket{

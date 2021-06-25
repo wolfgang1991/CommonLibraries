@@ -180,6 +180,7 @@ void* JSONRPC2Client::clientMain(void* p){
 	deleteAllElements(client->clientToReceive);
 	client->clientToReceive.clear();
 	lockMutex(client->mutexSync);
+	client->mustJoin = true;
 	client->state = NOT_CONNECTED;
 	client->syncToSend.clear();
 	deleteAllElements(client->syncToReceive);
@@ -189,7 +190,7 @@ void* JSONRPC2Client::clientMain(void* p){
 }
 
 JSONRPC2Client::JSONRPC2Client(){
-	areTherePendingSends = syncExit = false;
+	mustJoin = areTherePendingSends = syncExit = false;
 	initMutex(mutexSync);
 	parser = new JSONParser();
 	socket = NULL;
@@ -254,7 +255,7 @@ void JSONRPC2Client::connect(const IIPAddress& address, uint32_t pingSendPeriod,
 	this->address = address.createNewCopy();
 	this->metaProtocolHandler = metaProtocolHandler;
 	syncedState = state = IRPCClient::CONNECTING;
-	syncExit = false;
+	mustJoin = syncExit = false;
 	bool res = createThread(clientThread, JSONRPC2Client::clientMain, (void*)this, true);
 	assert(res);
 }
@@ -268,12 +269,12 @@ void JSONRPC2Client::useSocket(ISocket* socket, uint32_t pingTimeout, uint32_t p
 	this->address = NULL;
 	this->metaProtocolHandler = NULL;
 	syncedState = state = IRPCClient::CONNECTING;
-	syncExit = false;
+	mustJoin = syncExit = false;
 	bool res = createThread(clientThread, JSONRPC2Client::clientMain, (void*)this, true);
 	assert(res);
 }
 
-static inline IRPCValue* stealObjectField(ObjectValue* o, const std::string& key){
+IRPCValue* stealObjectField(ObjectValue* o, const std::string& key){
 	auto it = o->values.find(key);
 	if(it!=o->values.end()){
 		IRPCValue* res = it->second;
@@ -283,17 +284,12 @@ static inline IRPCValue* stealObjectField(ObjectValue* o, const std::string& key
 	return NULL;
 }
 
-static inline IRPCValue* getObjectField(ObjectValue* o, const std::string& key, IRPCValue::Type type = IRPCValue::UNKNOWN){
+IRPCValue* getObjectField(ObjectValue* o, const std::string& key, IRPCValue::Type type){
 	auto it = o->values.find(key);
 	if(it!=o->values.end()){
 		return (type==IRPCValue::UNKNOWN || it->second->getType()==type)?it->second:NULL;
 	}
 	return NULL;
-}
-
-template<typename TRPCValue>
-static TRPCValue* getObjectField(ObjectValue* o, const std::string& key){
-	return (TRPCValue*)getObjectField(o, key, TRPCValue::typeId);
 }
 
 static inline bool hasJSONRPCField(ObjectValue* o){
@@ -331,9 +327,8 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 							if(!result && error){
 								IntegerValue* code = getObjectField<IntegerValue>(error, "code");
 								StringValue* msg = getObjectField<StringValue>(error, "message");
-								IRPCValue* data = stealObjectField(error, "data");
 								if(code && msg){
-									it->second.first->OnProcedureError(code->value, msg->value, data, it->second.second);
+									it->second.first->OnProcedureError(code->value, msg->value, stealObjectField(error, "data"), it->second.second);
 									reusableIds.push_back(jsonId);
 									jsonId2Caller.erase(it);
 									delete o;
@@ -385,7 +380,7 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 			}
 			#endif
 		}
-		std::cout << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity) << std::endl << std::flush;
+		std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity) << std::endl;
 		delete entity;
 	}
 }
@@ -411,7 +406,14 @@ void JSONRPC2Client::update(){
 	syncedState = state;
 	syncToSend.splice(syncToSend.end(), mainToSend);
 	mainToReceive.splice(mainToReceive.end(), syncToReceive);
-	unlockMutex(mutexSync);
+	if(mustJoin){
+		mustJoin = false;
+		unlockMutex(mutexSync);
+		bool res = joinThread(clientThread);
+		assert(res);
+	}else{
+		unlockMutex(mutexSync);
+	}
 	//Process received stuff
 	for(auto it = mainToReceive.begin(); it != mainToReceive.end(); ++it){
 		//std::cout << "Handling: " << convertRPCValueToJSONString(**it) << std::endl;
@@ -437,6 +439,7 @@ void JSONRPC2Client::disconnect(){
 		unlockMutex(mutexSync);
 		bool res = joinThread(clientThread);
 		assert(res);
+		mustJoin = false;
 	}
 }
 

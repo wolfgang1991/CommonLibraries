@@ -26,7 +26,19 @@ void deleteAllElements(TContainer& ctr){
 	for(auto it = ctr.begin(); it != ctr.end(); ++it){
 		delete *it;
 	}
-} 
+}
+
+//! returns a field if available or NULL if not available and removes the field from the object
+IRPCValue* stealObjectField(ObjectValue* o, const std::string& key);
+
+//! returns a field with the given type and name (key) if available otherwise NULL
+IRPCValue* getObjectField(ObjectValue* o, const std::string& key, IRPCValue::Type type = IRPCValue::UNKNOWN);
+
+//! returns a field with the given type and name (key) if available otherwise NULL
+template<typename TRPCValue>
+TRPCValue* getObjectField(ObjectValue* o, const std::string& key){
+	return (TRPCValue*)getObjectField(o, key, TRPCValue::typeId);
+}
 
 //! Implementation for JSON-RPC (only Integers allowed and handled for the ids in JSON-RPC)
 class JSONRPC2Client : public IRPCClient{
@@ -51,6 +63,7 @@ class JSONRPC2Client : public IRPCClient{
 	double lastReceived;//time in s
 	ClientState state;
 	bool syncExit;
+	bool mustJoin;
 	std::list<std::string> syncToSend;
 	std::list<IRPCValue*> syncToReceive;
 	
