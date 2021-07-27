@@ -12,8 +12,8 @@
 
 using namespace std;
 
-static const char characters[] = { '\n', '\\', '#', ';', ' ', '\t', '[', ']', '='};
-static const char escapes[] = {'n', '\\', '#', ';', ' ', 't', '0', '1', '2'};
+static const char characters[] = { '\n', '\\', '#', ';', ' ', '\t', '[', ']', '=', '\r'};
+static const char escapes[] = {'n', '\\', '#', ';', ' ', 't', '0', '1', '2', 'r'};
 static const int escapeSize = sizeof(escapes)/sizeof(escapes[0]);
 
 static inline int findChar(const char* chars, int size, char toFind){
@@ -126,26 +126,25 @@ std::string IniFile::toString() const{
 	IniIterator* it = createNewIterator();
 	while(it->isSectionAvail()){
 		string cs = it->getCurrentSection();
-		if(cs.size()>0){ss<<"["<<escapeIniStrings(cs)<<"]"<<endl;}
+		if(cs.size()>0){ss<<"["<<escapeIniStrings(cs)<<"]\n";}
 		while(it->isValueAvail()){
-			ss << escapeIniStrings(it->getCurrentKey()) << " = " << escapeIniStrings(it->getCurrentValue()) << endl;
+			ss << escapeIniStrings(it->getCurrentKey()) << " = " << escapeIniStrings(it->getCurrentValue()) << "\n";
 			it->gotoNextValue();
 		}
 		it->gotoNextSection();
-		ss << endl;
+		ss << "\n";
 	}
 	delete it;
 	return ss.str();
 }
 
 bool IniFile::save(const std::string& file) const{
-	ofstream fp;
-	fp.open(file.c_str());
-	if(fp.fail()){return false;}
-	fp << toString();
-	fp.close();
-	if(fp.fail()){return false;}
-	return true;
+	ofstream fp(file.c_str(), std::ofstream::binary | std::ofstream::trunc);
+	if(fp.good()){
+		fp << toString();
+		return true;
+	}
+	return false;
 }
 
 bool IniFile::isSectionAvailable(const std::string& section) const{
@@ -162,8 +161,7 @@ bool IniFile::isAvailable(const std::string& section, const std::string& key) co
 
 IniFile::IniFile(const std::string& file){
 	IniParser* p = new IniParser;
-	ifstream infile;
-	infile.open (file.c_str(), ifstream::in);
+	ifstream infile(file.c_str(), ifstream::binary);
 	if (infile.is_open()){
 		char ch; infile.get(ch);
 		while (infile.good()) {

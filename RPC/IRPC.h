@@ -312,6 +312,9 @@ class IMetaProtocolHandler{
 	//! true if target protocol has been negotiated successfully
 	//! this function can be called by another thread
 	virtual bool tryNegotiate(ISocket* socket) = 0;
+	
+	//! returns true if a compression feature of the underlying protocol shall be used (e.g. ZSocket), this flag may be determined during protocol negotiation
+	virtual bool useCompression() const{return false;}
 
 };
 
@@ -372,7 +375,7 @@ class Foo{
 #define CREATE_BEGIN(NATIVE_TYPE) \
 	template<typename TNativeValue> \
 	static ObjectValue* create(const NATIVE_TYPE& nativeValue){ \
-		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value); \
+		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value, ""); \
 		ObjectValue* rpcValue = new ObjectValue();
 	
 #define CREATE_END \
@@ -382,7 +385,7 @@ class Foo{
 #define CREATE_NATIVE_BEGIN(NATIVE_TYPE) \
 	template<typename TNativeValue> \
 	static NATIVE_TYPE createNative(IRPCValue* rpcValue){ \
-		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value); \
+		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value, ""); \
 		NATIVE_TYPE nativeValue;
 		
 #define CREATE_NATIVE_END \

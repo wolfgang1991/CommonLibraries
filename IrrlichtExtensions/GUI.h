@@ -75,8 +75,23 @@ class ExtendedCheckBox : public ExtendedGUIElement{
 
 };
 
+//! Interface for maps of unique ids to gui elements or rectangles
+class IGUIDefinition{
+	
+	public:
+	
+	virtual ~IGUIDefinition(){}
+	
+	//! return NULL if no available
+	virtual irr::gui::IGUIElement* getElement(const std::string& uid) = 0;
+	
+	//! returns empty rectangle (0,0,0,0) if not available
+	virtual irr::core::rect<irr::s32> getSpecialRectangle(const std::string& uid) = 0;
+	
+};
+
 //! Für Gui in Ini Dateien
-class GUI{
+class GUI : public IGUIDefinition{
 
 	public:
 
@@ -97,6 +112,8 @@ class GUI{
 	const std::map<std::string, irr::core::rect<irr::s32> >& getAllSpecialRectangles();
 	
 	void setVisible(bool visible);
+	
+	bool isVisible() const;
 
 	private:
 

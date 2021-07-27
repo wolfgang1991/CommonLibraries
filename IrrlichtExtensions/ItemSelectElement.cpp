@@ -96,6 +96,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	this->drawer = drawer;
 	env = device->getGUIEnvironment();
 	env->getRootGUIElement()->addChild(this);
+	drop();//drop since the valid reference is hold by the parent
 	driver = device->getVideoDriver();
 	lang = phrases==NULL?&defaultPhrases:phrases;
 	organizer->setLanguage(lang);
@@ -182,6 +183,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	env = device->getGUIEnvironment();
 	if(parent==NULL){parent = env->getRootGUIElement();}
 	parent->addChild(this);
+	drop();//drop since the valid reference is hold by the parent
 	this->parent = this;
 	driver = device->getVideoDriver();
 	lang = phrases==NULL?&defaultPhrases:phrases;
@@ -205,6 +207,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	fileListRect = rect<s32>(0, navBarLowerY, rectangle.getWidth(), rectangle.getHeight());
 	createFileList();
 	originalPath = organizer->pwd();
+	cbk = NULL;
 }
 
 ItemSelectElement::~ItemSelectElement(){
@@ -413,7 +416,6 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 				organizer->cd(originalPath);//restore working directory to avoid side effects
 				itemcbk->OnItemSelect(IItemSelectCallback::CANCEL, NULL, "", this, organizer);
 				remove();
-				drop();
 				return true;
 			}else if(g.Caller==positive){
 				if(isSaveDialog){//Save
@@ -428,7 +430,6 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 						organizer->cd(originalPath);//restore working directory to avoid side effects
 						itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, absPath, this, organizer);
 						remove();
-						drop();
 						return true;
 					}
 				}else if(selectedIndex>=0){//Open
@@ -436,7 +437,6 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 					organizer->cd(originalPath);//restore working directory to avoid side effects
 					itemcbk->OnItemSelect(IItemSelectCallback::OPEN, items[selectedIndex], absPath, this, organizer);
 					remove();
-					drop();
 					return true;
 				}else{
 					new CMBox(device, lang->getPhrase(L"ItemSelectElement::NO_SELECTION", &defaultPhrases).c_str());
@@ -500,7 +500,6 @@ bool ItemSelectElement::OnEvent(const irr::SEvent& event){
 				organizer->cd(originalPath);//restore working directory to avoid side effects
 				itemcbk->OnItemSelect(IItemSelectCallback::SAVE, NULL, absPath, this, organizer);
 				remove();
-				drop();
 				return true;
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_NO){

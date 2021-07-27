@@ -14,6 +14,7 @@
 
 #include <string>
 #include <map>
+#include <cassert>
 
 using namespace std;
 using namespace irr;
@@ -77,7 +78,7 @@ void InvalidDoubleDetector::reset(){
 }
 
 
-InputSystem::InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs):c(context){
+InputSystem::InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs, bool preferPlatformDependentInput):c(context){
 	device = c->getIrrlichtDevice();
 	env = device->getGUIEnvironment();
 	driver = device->getVideoDriver();
@@ -86,7 +87,8 @@ InputSystem::InputSystem(ICommonAppContext* context, const std::vector<KeyboardD
 	button = new TouchKey(c, 0, 0, irr::KEY_TAB, irr::core::rect<s32>(0,0,1.5f*c->getRecommendedButtonWidth(), 1.5f*c->getRecommendedButtonHeight()), driver->getTexture(c->getPath(changeTexturePath).c_str()));
 	inputVisible = false;
 	activeInput = keyboards.empty()?0:1;//first touch keyboard
-	input.push_back(new KeyInput(c));
+	input.push_back(new KeyInput(c, preferPlatformDependentInput));
+	assert(input.size()==1);//KeyInput must be the first!
 	for(uint32_t i=0; i<keyboards.size(); i++){
 		input.push_back(new TouchKeyboard(c, inputColor, keyboards[i]));
 	}
@@ -96,6 +98,17 @@ InputSystem::InputSystem(ICommonAppContext* context, const std::vector<KeyboardD
 	editState = 0;
 	setColor(SColor(255,255,255,255));
 	c->getEventReceiver()->addSubEventReceiver(this);
+}
+
+void InputSystem::setPlatformDependentInputPreferred(bool prefer){
+	((KeyInput*)input[0])->setPreferred(prefer);
+	if(prefer){
+		activeInput = 0;
+	}
+}
+
+bool InputSystem::isPlatformDependentInputPreferred() const{
+	return ((KeyInput*)input[0])->isPreferred();
 }
 
 bool InputSystem::OnEvent(const irr::SEvent& event){

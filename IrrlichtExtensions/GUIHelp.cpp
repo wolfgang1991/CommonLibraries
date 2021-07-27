@@ -6,6 +6,7 @@
 #include <FlexibleFont.h>
 #include <mathUtils.h>
 #include <UnicodeCfgParser.h>
+#include <utf8.h>
 
 #include <IrrlichtDevice.h>
 #include <irrArray.h>
@@ -27,7 +28,7 @@ static rect<double> initSpace(IrrlichtDevice* device){
 	return rect<double>(0,0,dim.Width,dim.Height);
 }
 
-GUIHelp::GUIHelp(GUI* gui, FlexibleFont* font, Drawer2D* drawer, irr::video::ITexture* bubble, irr::f32 cornerSize, irr::f32 realCornerSize, irr::s32 lineWidth, irr::video::SColor fontColor):
+GUIHelp::GUIHelp(IGUIDefinition* gui, FlexibleFont* font, Drawer2D* drawer, irr::video::ITexture* bubble, irr::f32 cornerSize, irr::f32 realCornerSize, irr::s32 lineWidth, irr::video::SColor fontColor):
 	crgd(initSpace(drawer->getDevice())),
 	gui(gui),
 	font(font),
@@ -53,7 +54,7 @@ void GUIHelp::initHelpFromCfgResult(const UnicodeCfgParser& parser){
 	dimension2d<u32> dim = drawer->getDevice()->getVideoDriver()->getScreenSize();
 	for(auto it = result.begin(); it != result.end(); ++it){
 		const std::vector<std::wstring>& line = *it;
-		std::string id = convertWStringToString(line[0]);
+		std::string id = convertWStringToUtf8String(line[0]);
 		IGUIElement* ele = gui->getElement(id);
 		double orientation = convertWStringTo<double>(line[1]);
 		double width = convertWStringTo<double>(line[2])*dim.Width;
@@ -79,7 +80,8 @@ void GUIHelp::initHelp(const std::wstring& help){
 
 void GUIHelp::initHelpFromFile(irr::io::IFileSystem* fsys, const char* path){
 	UnicodeCfgParser parser(6);
-	parser.parseFromUTF8File(fsys, path);
+	bool success = parser.parseFromUTF8File(fsys, path);
+	if(!success){std::cerr << "Error: Unable to open and parse: " << path << std::endl;}
 	initHelpFromCfgResult(parser);
 }
 

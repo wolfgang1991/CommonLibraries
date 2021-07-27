@@ -1,5 +1,3 @@
-libcurl is used for RPC client via HTTP. To disable this run make with NO_CURL=1 .
-
 Examples are available in tests folder.
 
 For using the http version with apache you need to use mod_proxy.

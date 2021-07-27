@@ -7,11 +7,13 @@
 #include <string>
 #include <list>
 #include <set>
+#include <functional>
 
 class Drawer2D;
 class ICommonAppContext;
 class IScrollable;
 class ScrollBar;
+class XMLTag;
 
 //! Interface for a receiver of AML actions (see link action attribute)
 class IAMLActionCallback{
@@ -87,6 +89,12 @@ class AMLGUIElement : public AggregateGUIElement{
 	void changeZoom(irr::f32 newZoom);
 	
 	bool contentSet;
+	
+	std::unordered_map<std::string, std::string> environment;//variables => content
+	std::unordered_map<std::string, irr::gui::IGUIElement*> id2element;//id => element
+	std::unordered_map<std::string, std::function<bool(AMLGUIElement* ele, XMLTag* t)>> functions;//name => function
+	
+	void clear();
 
 	public:
 	
@@ -142,6 +150,16 @@ class AMLGUIElement : public AggregateGUIElement{
 	
 	//! returns true if it has some content (AML code set by any applicable method)
 	bool hasContent() const;
+	
+	const std::string& getVariable(const std::string& name) const;
+	
+	void setVariable(const std::string& name, const std::string& value);
+	
+	irr::gui::IGUIElement* getElementById(const std::string& id) const;
+	
+	//! the function determines if the element shall truly be used in case it is called by enable-if. In case it's called by <execute function="name" />, the return value is ignored
+	//! using t, parameters can be specified via attributes
+	void addFunction(const std::string& name, const std::function<bool(AMLGUIElement* ele, XMLTag* t)>& function);
 	
 };
 

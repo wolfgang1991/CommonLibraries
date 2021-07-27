@@ -107,8 +107,7 @@ bool AMLGUIElement::setCodeFromFile(const std::string& path, bool printParsingEr
 		res = setCode(buf, printParsingErrors);
 		delete[] buf;
 	}else{
-		removeSubElement(contentIndex);
-		button2Params.clear();
+		clear();
 		std::wstringstream ss; ss << L"File could not be opened: " << convertUtf8ToWString(path);
 		content = new BeautifulGUIText(ss.str().c_str(), SColor(255,0,0,0), 0.f, NULL, true, true, Environment, 1.f-buttonSpace);
 		addSubElement(content);
@@ -219,11 +218,27 @@ class AMLParseCallback : public IParsingCallback{
 	
 	std::string path;
 	
+	uint32_t disableCnt;//counts the children tags if a parent is disabled to properly determine the end of the disabled part
+	
+	void addElementIdIfAvail(IGUIElement* elementToAdd, XMLTag* t){
+		auto it = t->attributes.find("id");
+		if(it!=t->attributes.end()){
+			std::string& id = it->second;
+			auto it2 = ele->id2element.find(id);
+			if(it2==ele->id2element.end()){
+				ele->id2element[id] = elementToAdd;
+			}else{
+				std::cerr << "Error: Duplicate id: " << id << std::endl;
+			}
+		}
+	}
+	
 	AMLParseCallback(AMLGUIElement* ele, const AggregateStackFrame& firstFrame):ele(ele){
 		stack.push_back(firstFrame);
 		success = true;
 		isLanguageMatching = true;
 		matchingLangFoundInTranslation = false;
+		disableCnt = 0;
 	}
 	
 	static irr::f32 getF32Value(const std::string& v, irr::f32 defaultValue){
@@ -266,10 +281,25 @@ class AMLParseCallback : public IParsingCallback{
 	}
 
 	void OnOpenTag(XMLParser* p){
+		if(disableCnt>0){disableCnt++;return;}
 		if(!success){return;}
 		XMLTag* t = p->getCurrentDOM();
 		AggregateStackFrame& prev = stack.back();
 		if(isLanguageMatching){
+			//check enable-if
+			auto enableIt = t->attributes.find("enable-if");
+			if(enableIt!=t->attributes.end()){
+				auto it = ele->functions.find(enableIt->second);
+				if(it!=ele->functions.end()){
+					if(!it->second(ele, t)){
+						disableCnt = 1;
+						return;
+					}
+				}else{
+					std::cerr << "Error: Function " << (enableIt->second) << " not found." << std::endl;
+				}
+			}
+			//process tag
 			bool isLink = eq(t->name, "link");
 			if(eq(t->name,"aggregate") || isLink){
 				const std::string& space = t->attributes["space"];
@@ -291,6 +321,7 @@ class AMLParseCallback : public IParsingCallback{
 					}else{
 						agg = new AggregateGUIElement(ele->Environment, fSpace, getF32Value(aspectRatio, 1.f), 1.f, 1.f, maintainAspectRatio, isHorizontal, isScrollable, {}, {}, false, ele->invisibleAggregationId);
 					}
+					addElementIdIfAvail(agg, t);
 					prev.ele->addSubElement(agg);
 					stack.push_back(AggregateStackFrame{agg, isHorizontal, prev.isHorizontal?(fSpace*prev.spaceX):prev.spaceX, prev.isHorizontal?prev.spaceY:(fSpace*prev.spaceY), 0.f, 0.f, useChildSpace});
 					const std::string& scrollId = t->attributes["scrollId"];
@@ -304,6 +335,7 @@ class AMLParseCallback : public IParsingCallback{
 					BeautifulGUIImage* img = new BeautifulGUIImage(ele->drawer, tex, ele->Environment, getF32Value(t->attributes["space"], 1.f), true, -1, getColorValue(t->attributes["color"], SColor(255,255,255,255)));
 					prev.updateMaxChildSpace(img->getThisSpace(prev.getSpace()), img->getOtherSpaceForAspectRatio(prev.isHorizontal, prev.getSpace(), 0.f));
 					prev.ele->addSubElement(img);
+					addElementIdIfAvail(img, t);
 				}else{
 					success = false;
 					errorMessage = L"Image could not be loaded, please check the src attribute.";
@@ -314,12 +346,14 @@ class AMLParseCallback : public IParsingCallback{
 				EmptyGUIElement* e = new EmptyGUIElement(ele->Environment, getF32Value(t->attributes["space"], 1.f), getF32Value(aspectRatio, 1.f), maintainAspectRatio, false, -1);
 				prev.updateMaxChildSpace(e->getThisSpace(prev.getSpace()), e->getOtherSpaceForAspectRatio(prev.isHorizontal, prev.getSpace(), 0.f));
 				prev.ele->addSubElement(e);
+				addElementIdIfAvail(e, t);
 			}else if(eq(t->name,"scrollbar")){
 				ScrollBar* sc = new ScrollBar(ele->Environment, getF32Value(t->attributes["space"], .1f), eq(t->attributes["align"], "horizontal"), ele->scrollbarId);
 				prev.updateMaxChildSpace(sc->getThisSpace(prev.getSpace()), sc->getOtherSpaceForAspectRatio(prev.isHorizontal, prev.getSpace(), 0.f));
 				prev.ele->addSubElement(sc);
 				const std::string& scrollId = t->attributes["scrollId"];
 				if(!scrollId.empty()){ele->id2ScrollLink[scrollId].scrollbar = sc;}
+				addElementIdIfAvail(sc, t);
 			}else if(eq(t->name,"lang")){
 				isLanguageMatching = eq(t->attributes["label"], ele->language);
 				matchingLangFoundInTranslation = matchingLangFoundInTranslation || isLanguageMatching;
@@ -327,7 +361,18 @@ class AMLParseCallback : public IParsingCallback{
 				matchingLangFoundInTranslation = false;
 			}else if(eq(t->name,"defaultLang")){
 				isLanguageMatching = !matchingLangFoundInTranslation;
-			}else if(!eq(t->name,"text")){
+			}else if(t->name=="set"){
+				for(auto& it : t->attributes){
+					ele->environment[it.first] = it.second;
+				}
+			}else if(t->name=="execute"){
+				auto it = ele->functions.find(t->attributes["function"]);
+				if(it!=ele->functions.end()){
+					it->second(ele, t);
+				}else{
+					std::cerr << "Error: Function " << (t->attributes["function"]) << " not found." << std::endl;
+				}
+			}else if(!eq(t->name,"text") && t->name!="span"){
 				success = false;
 				errorMessage = std::wstring(L"Unknown opening tag: ").append(convertUtf8ToWString(t->name));
 			}
@@ -335,6 +380,7 @@ class AMLParseCallback : public IParsingCallback{
 	}
 
 	void OnCloseTag(XMLParser* p){
+		if(disableCnt>0){disableCnt--;return;}
 		if(!success){return;}
 		XMLTag* t = p->getCurrentDOM();
 		if(isLanguageMatching){
@@ -381,9 +427,10 @@ class AMLParseCallback : public IParsingCallback{
 				prev.updateMaxChildSpace(recommendedSpace*prev.getSpace(), prev.isHorizontal?dim.Height:(wordWrapLimit>0.f?wordWrapLimit:dim.Width));//TODO fix problem with long one line texts: horizontal space is a little bit too small, why???
 				prev.ele->addSubElement(bt);
 				guiFont->setDefaultScale(oldScale);
+				addElementIdIfAvail(bt, t);
 			}else if(eq(t->name,"translation")){
 				matchingLangFoundInTranslation = false;
-			}else if(!eq(t->name, "img") && !eq(t->name, "empty") && !eq(t->name, "scrollbar") && !eq(t->name, "lang") && !eq(t->name, "defaultLang")){
+			}else if(!eq(t->name, "img") && !eq(t->name, "empty") && !eq(t->name, "scrollbar") && !eq(t->name, "lang") && !eq(t->name, "defaultLang") && t->name!="set" && t->name!="execute" && t->name!="span"){
 				success = false;
 				errorMessage = std::wstring(L"Unknown/invalid closing tag: ").append(convertUtf8ToWString(t->name));
 			}
@@ -404,9 +451,7 @@ class AMLParseCallback : public IParsingCallback{
 };
 
 bool AMLGUIElement::parseAndCreateGUI(){
-	removeSubElement(contentIndex);
-	button2Params.clear();
-	id2ScrollLink.clear();
+	clear();
 	AggregateGUIElement* agg = new AggregateGUIElement(Environment, 1.f-buttonSpace, 1.f, 1.f, 1.f, false, false, false, {}, {}, false, invisibleAggregationId);
 	content = agg;
 	addSubElement(content);
@@ -420,11 +465,9 @@ bool AMLGUIElement::parseAndCreateGUI(){
 		if(utf8Code[i]=='\n'){lineCount++;}
 		parser.parse(utf8Code[i]);
 		if(!cbk.success){
-			removeSubElement(contentIndex);
-			button2Params.clear();
-			id2ScrollLink.clear();
+			clear();
 			std::wstringstream ss; ss << cbk.errorMessage << L"\nIn line: " << lineCount;
-			std::cout << "Error: " << convertWStringToUtf8String(ss.str()) << std::endl;
+			std::cerr << "Error: " << convertWStringToUtf8String(ss.str()) << std::endl;
 			std::wstring text = makeWordWrappedText(ss.str(), r.getWidth(), Environment->getSkin()->getFont());
 			content = new BeautifulGUIText(text.c_str(), SColor(255,0,0,0), 0.f, NULL, true, true, Environment, 1.f-buttonSpace);
 			addSubElement(content);
@@ -459,4 +502,36 @@ void AMLGUIElement::gotoFile(const std::string& path){
 	current = path;
 	fwdStack.clear();
 	setCodeFromFile(current);
+}
+
+const std::string& AMLGUIElement::getVariable(const std::string& name) const{
+	auto it = environment.find(name);
+	if(it!=environment.end()){
+		return it->second;
+	}
+	static const std::string empty;
+	return empty;
+}
+
+void AMLGUIElement::setVariable(const std::string& name, const std::string& value){
+	environment[name] = value;
+}
+
+irr::gui::IGUIElement* AMLGUIElement::getElementById(const std::string& id) const{
+	auto it = id2element.find(id);
+	if(it!=id2element.end()){
+		return it->second;
+	}
+	return NULL;
+}
+
+void AMLGUIElement::addFunction(const std::string& name, const std::function<bool(AMLGUIElement* ele, XMLTag* t)>& function){
+	functions[name] = function;
+}
+
+void AMLGUIElement::clear(){
+	id2element.clear();
+	button2Params.clear();
+	id2ScrollLink.clear();
+	removeSubElement(contentIndex);
 }

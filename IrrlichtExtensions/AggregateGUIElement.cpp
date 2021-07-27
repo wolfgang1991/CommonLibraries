@@ -150,7 +150,6 @@ void AggregateGUIElement::updateScrollSpeed(){
 	if(dt>minScrollDeccelerationUpdateDeltaTime){
 		if(scrollState==2){//decellerating
 			double currentScrollSpeed = scrollSpeed*Max(0.0, pow(1.0-scrollDecelleration*(time-releaseTime), scrollExponent));
-			//std::cout << "currentScrollSpeed: " << currentScrollSpeed << std::endl;
 			s32 lowerBound = -Max(maxScrollPos, maxScrollPosActive);
 			scrollPos = Clamp(rd<double,s32>(scrollPos+currentScrollSpeed*dt), lowerBound, 0);
 			if(scrollbar!=NULL){scrollbar->setPos(lowerBound!=0?((double)scrollPos)/((double)lowerBound):0.0, false);}
@@ -179,7 +178,6 @@ bool AggregateGUIElement::OnEvent(const irr::SEvent& event){
 			lastTime = getSecs();
 			isMouseDown = true;
 		}else if(m.Event==EMIE_LMOUSE_LEFT_UP){
-			//std::cout << "activationLock: " << activationLock << std::endl;
 			bool res = IAggregatableGUIElement::OnEvent(event);//process parents before unlocking
 			if(scrollState>0){setActivationLock(false);}
 			scrollState = 2;
@@ -190,13 +188,11 @@ bool AggregateGUIElement::OnEvent(const irr::SEvent& event){
 			if(scrollState==1){
 				s32 delta = isHorizontal?(m.X-storedMousePos.X):(m.Y-storedMousePos.Y);
 				s32 totalSpace = isHorizontal?AbsoluteRect.getWidth():AbsoluteRect.getHeight();
-				//std::cout << "delta: " << delta << " totalSpace: " << totalSpace << std::endl;
 				s32 lowerBound = -Max(maxScrollPos, maxScrollPosActive);
-				//std::cout << "lowerBound: " << lowerBound << std::endl;
 				scrollPos = Clamp(storedScrollPos+delta, lowerBound, 0);
 				if(scrollbar!=NULL){scrollbar->setPos(lowerBound!=0?((double)scrollPos)/((double)lowerBound):0.0, false);}
 				if(abs(delta)>ACTIVATE_CLICK_THRESHOLD*totalSpace){setActivationLock(true);}//set activation lock if scrolling to avoid activation of children
-				absPosDirty = true;//updateAbsolutePosition();
+				absPosDirty = true;
 			}
 		}else if(m.Event==EMIE_MOUSE_WHEEL && isScrollable){
 			setScrollPosition(Clamp(getScrollPosition()-m.Wheel*getScrollStepSize(), 0.f, 1.f), true);

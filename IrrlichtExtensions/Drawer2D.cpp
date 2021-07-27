@@ -18,6 +18,7 @@
 #include <list>
 #include <vector>
 #include <fstream>
+#include <cassert>
 
 #define EPS 0.1
 

@@ -37,7 +37,7 @@ void UnicodeCfgParser::parse(const std::wstring& str){
 				(*line)[tokenIndex] = token.str();
 			}else{
 				std::cerr << "Parser Error: Too many tokens in line: ";
-				for(uint32_t j=0; j<line->size(); j++){std::cerr << (j>0?",":"") << convertWStringToString((*line)[j]);}
+				for(uint32_t j=0; j<line->size(); j++){std::cerr << (j>0?",":"") << convertWStringToUtf8String((*line)[j]);}
 				std::cerr << std::endl;
 			}
 			token.str(L"");

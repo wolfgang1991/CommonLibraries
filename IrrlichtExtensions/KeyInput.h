@@ -10,9 +10,15 @@ class ICommonAppContext;
 //! OS dependent input stuff
 class KeyInput : public IInput{
 
-	public:
+	private:
 
-	KeyInput(ICommonAppContext* context);
+	ICommonAppContext* c;
+	bool preferred;
+
+	public:
+	
+	//! isPreferred: true if this OS dependent input is preferred over platform independent implementations
+	KeyInput(ICommonAppContext* context, bool preferred = false);
 
 	void render();
 
@@ -23,10 +29,12 @@ class KeyInput : public IInput{
 	void OnDeSelect();
 
 	void setColor(irr::video::SColor Color){};
-
-	private:
-
-	ICommonAppContext* c;
+	
+	bool isPreferredInput(irr::s32 editboxID);
+	
+	void setPreferred(bool prefer);
+	
+	bool isPreferred() const;
 
 };
 

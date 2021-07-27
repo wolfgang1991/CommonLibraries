@@ -2,6 +2,7 @@
 
 #include <timing.h>
 #include <StringHelpers.h>
+#include <ZSocket.h>
 #include <JSONParser.h>
 
 #include <cmath>
@@ -73,6 +74,9 @@ void* JSONRPC2Client::clientMain(void* p){
 	bool runThread = client->socket!=NULL;
 	if(client->metaProtocolHandler!=NULL && runThread){
 		runThread = client->metaProtocolHandler->tryNegotiate(client->socket);
+		if(runThread && client->metaProtocolHandler->useCompression()){
+			client->socket = new ZSocket(client->socket);
+		}
 	}
 	lockMutex(client->mutexSync);
 	client->state = runThread?CONNECTED:CONNECTION_ERROR;
