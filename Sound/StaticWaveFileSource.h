@@ -31,6 +31,7 @@ class StaticWaveFileSource : public ISoundSource{
 	
 	//thread only:
 	uint32_t offset;
+	uint32_t dataOffset;
 	
 	bool deleteMemoryOnDestruct;
 	

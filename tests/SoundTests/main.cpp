@@ -26,11 +26,15 @@ int main(int argc, char *argv[]){
 	
 	StaticWaveFileSource* impact = soundmgr.create<StaticWaveFileSource>("impact.wav");
 	
+	StaticWaveFileSource* beep = soundmgr.create<StaticWaveFileSource>("3-Beep.wav");
+	
 	soundmgr.play(theme);
 	soundmgr.play(sine);
 	soundmgr.play(impact);
+	soundmgr.play(beep);
 	
 	impact->setLoop(true);
+	beep->setLoop(true);
 	
 	//TODO Test pause
 	//TODO test play after finish (no loop)
