@@ -32,7 +32,7 @@ void BeautifulGUIButton::draw(){
 }
 
 bool BeautifulGUIButton::OnEvent(const irr::SEvent& event){
-	if(event.EventType==EET_MOUSE_INPUT_EVENT){
+	if(isEnabled() && event.EventType==EET_MOUSE_INPUT_EVENT){
 		const SEvent::SMouseInput& m = event.MouseInput;
 		vector2d<s32> mPos(m.X,m.Y);
 		if(pressed && m.Event==EMIE_LMOUSE_LEFT_UP){
