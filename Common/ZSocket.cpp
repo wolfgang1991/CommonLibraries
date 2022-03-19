@@ -1,4 +1,4 @@
-#ifndef NO_ZLIB_SUPPORT
+#ifndef NO_ZLIB
 #include "ZSocket.h"
 
 #include <zlib.h>
