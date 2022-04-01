@@ -10,6 +10,7 @@
 
 #include <string>
 #include <functional>
+#include <vector>
 
 #include "ForwardDeclarations.h"
 
@@ -37,6 +38,12 @@ bool loadFileWithAssetSupport(irr::io::IFileSystem* fsys, const std::string& fil
 
 //! creates a function for loadFileWithAssetSupport (useful to reduce boilerplate code)
 std::function<bool(char*&, uint32_t&)> createLoadFileFunction(irr::io::IFileSystem* fsys, const std::string& file);
+
+//! true if successful
+bool loadFileWithAssetSupportIntoVector(irr::io::IFileSystem* fsys, const std::string& file, std::vector<char>& v);
+
+//! creates a function for loadFileWithAssetSupportIntoVector (useful to reduce boilerplate code)
+std::function<bool(std::vector<char>&)> createLoadFileIntoVectorFunction(irr::io::IFileSystem* fsys, const std::string& file);
 
 bool isOverlayedBySingleGUIElement(irr::gui::IGUIElement* ele, const irr::core::rect<irr::s32>& rectangle);
 

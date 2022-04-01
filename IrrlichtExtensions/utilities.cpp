@@ -83,6 +83,24 @@ std::function<bool(char*&, uint32_t&)> createLoadFileFunction(irr::io::IFileSyst
 	};
 }
 
+bool loadFileWithAssetSupportIntoVector(irr::io::IFileSystem* fsys, const std::string& file, std::vector<char>& v){
+	IReadFile* rf = fsys->createAndOpenFile(file.c_str());
+	if(rf){
+		uint32_t size = rf->getSize();
+		v.resize(size);
+		rf->read(&(v[0]), size);
+		rf->drop();
+		return true;
+	}
+	return false;
+}
+
+std::function<bool(std::vector<char>&)> createLoadFileIntoVectorFunction(irr::io::IFileSystem* fsys, const std::string& file){
+	return [fsys, file](std::vector<char>& v){
+		return loadFileWithAssetSupportIntoVector(fsys, file, v);
+	};
+}
+
 bool isOverlayedBySingleGUIElement(irr::gui::IGUIElement* ele, const irr::core::rect<s32>& rectangle){
 	if(!ele->isTrulyVisible()){return false;}
 	return ele->getAbsolutePosition().isRectCollided(rectangle);

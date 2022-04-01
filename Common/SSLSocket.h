@@ -5,11 +5,11 @@
 
 #include "SimpleSockets.h"
 
-#include <functional>
+#include <vector>
 #include <cstdint>
 #include <string>
 
-class CertStore;
+/*class CertStore;*/
 class SSLSocketPrivate;
 
 class SSLSocket : public ISocket{
@@ -27,7 +27,7 @@ class SSLSocket : public ISocket{
 	
 	//! mustDeleteSlaveSocket: true if slaveSocket shall be deleted upon destruction
 	//! slaveSocket: should be a reliable stream oriented socket (e.g. TCP)
-	SSLSocket(ISocket* slaveSocket, Mode mode, CertStore* store, bool mustDeleteSlaveSocket = true);
+	SSLSocket(ISocket* slaveSocket, Mode mode, bool mustDeleteSlaveSocket = true);//, CertStore* store
 	
 	virtual ~SSLSocket();
 	
@@ -37,9 +37,9 @@ class SSLSocket : public ISocket{
 	
 	bool send(const char* buf, uint32_t bufSize);
 	
-	void setCertStore(CertStore* store);
-	
-	CertStore* getCertStore() const;
+/*	void setCertStore(CertStore* store);*/
+/*	*/
+/*	CertStore* getCertStore() const;*/
 	
 	//! called by the SSL Server, true if ssl connection has been established
 	bool accept();
@@ -47,33 +47,52 @@ class SSLSocket : public ISocket{
 	//! called by the SSL Client to establish a SSL connection / negotation, returns true if successful
 	bool connect();
 	
-};
-
-//! Holds certificates for a SSLSocket e.g. CA Certs. DO NOT delete if still used by a socket
-class CertStore{
-	friend class SSLSocket;
-
-	private:
+	//! true if successful
+	bool addPrivateKey(const char* buffer, uint32_t bufferSize);
 	
-	void* store;
-	
-	public:
-	
-	CertStore();
-	
-	virtual ~CertStore();
-	
-	//! loadFunction: function to load the cert (e.g. file content) into a new buffer with a uint32_t output length
+	//! Content of data is the same as in case of a key file created by openssl command line tool
+	//! Hint: You can use loadFileWithAssetSupportIntoVector from IrrlichtExtensions/utilities.h
 	//! returns true if successful
-	bool loadX509PEMCert(const std::function<bool(char*&, uint32_t&)>& loadFunction);
+	bool usePrivateKey(const std::vector<char>& data);
 	
-	//! loads it from a file
-	bool loadX509PEMCert(const std::string& path);
+	//! Content of data is the same as in case of a cert file created by openssl command line tool
+	//! Hint: You can use loadFileWithAssetSupportIntoVector from IrrlichtExtensions/utilities.h
+	//! returns true if successful
+	bool useCertificate(const std::vector<char>& data);
 	
-	//! loads it from an existing buffer
-	bool loadX509PEMCert(char* buf, uint32_t bufSize);
+	//! @sa usePrivateKey
+	bool usePrivateKeyFromFile(const std::string& path);
+	
+	//! @sa useCertificate
+	bool useCertificateFromFile(const std::string& path);
 	
 };
+
+/*//! Holds certificates for a SSLSocket e.g. CA Certs. DO NOT delete if still used by a socket*/
+/*class CertStore{*/
+/*	friend class SSLSocket;*/
+
+/*	private:*/
+/*	*/
+/*	void* store;*/
+/*	*/
+/*	public:*/
+/*	*/
+/*	CertStore();*/
+/*	*/
+/*	virtual ~CertStore();*/
+/*	*/
+/*	//! loadFunction: function to load the cert (e.g. file content) into a new buffer with a uint32_t output length*/
+/*	//! returns true if successful*/
+/*	bool loadX509PEMCert(const std::function<bool(char*&, uint32_t&)>& loadFunction);*/
+/*	*/
+/*	//! loads it from a file*/
+/*	bool loadX509PEMCert(const std::string& path);*/
+/*	*/
+/*	//! loads it from an existing buffer*/
+/*	bool loadX509PEMCert(char* buf, uint32_t bufSize);*/
+/*	*/
+/*};*/
 
 #endif
 

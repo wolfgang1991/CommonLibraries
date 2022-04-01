@@ -23,15 +23,15 @@ int main(int argc, char *argv[]){
 	
 	std::list<Client> clients;
 	
-	CertStore store;
-	bool res = store.loadX509PEMCert("./privatekey.pem");
-	assert(res);
+//	CertStore store;
+//	bool res = store.loadX509PEMCert("./selfsigned-private.key");
+//	assert(res);//TODO
 
 	while(true){
 		IPv4TCPSocket* newClient = server.accept();
 		if(newClient!=NULL){
 			std::cout << "New Client" << std::endl;
-			clients.push_back(Client{newClient, new SSLSocket(newClient, SSLSocket::SERVER, &store)});
+			clients.push_back(Client{newClient, new SSLSocket(newClient, SSLSocket::SERVER)});//, &store
 			SSLSocket* s = clients.back().ssl;
 			bool res = s->accept();
 			assert(res);
