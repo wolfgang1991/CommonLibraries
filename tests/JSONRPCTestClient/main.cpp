@@ -74,7 +74,7 @@ class AlwaysSuccessXMetaHandler : public IMetaProtocolHandler{
 
 	public:
 	
-	bool tryNegotiate(ISocket* socket){
+	bool tryNegotiate(ICommunicationEndpoint* socket){
 		return true;
 	}
 	
