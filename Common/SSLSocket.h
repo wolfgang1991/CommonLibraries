@@ -48,6 +48,24 @@ class SSLContext{
 	
 };
 
+//! Represantation fo X509 Certificates (see SSLSocket below)
+class X509Cert{
+	friend class SSLSocket;
+	
+	void* data;
+	
+	void init(const std::vector<char>& data);
+	
+	public:
+	
+	X509Cert(const std::vector<char>& data);
+	
+	X509Cert(const std::string& path);
+	
+	~X509Cert();
+	
+};
+
 class SSLSocket : public ICommunicationEndpoint{
 	friend class SSLSocketPrivate;
 	
@@ -57,7 +75,7 @@ class SSLSocket : public ICommunicationEndpoint{
 	
 	//! mustDeleteSlaveSocket: true if slaveSocket shall be deleted upon destruction
 	//! slaveSocket: should be a reliable stream oriented socket (e.g. TCP) or any other reliable stream oriented communication endpoint
-	SSLSocket(SSLContext* c, ICommunicationEndpoint* slaveSocket, bool mustDeleteSlaveSocket = true);//, CertStore* store
+	SSLSocket(SSLContext* c, ICommunicationEndpoint* slaveSocket, bool mustDeleteSlaveSocket = true);
 	
 	virtual ~SSLSocket();
 	
@@ -70,6 +88,16 @@ class SSLSocket : public ICommunicationEndpoint{
 	
 	//! called by the SSL Client to establish a SSL connection / negotation, returns true if successful
 	bool connect();
+	
+	//! true if the peer has presented a certificate
+	bool hasPeerCertificate();
+	
+	//TODO hostname verification + add CACerts (otherwise verifyPeerCertificate makes no sense)
+	//! usually called by the client, to verrify the presented certificate, true if certificate is presented by peer and valid by checking with CA chain
+	bool verifyPeerCertificate();
+	
+	//! true if it exists and certs are equal (for manual verification of the public key without CAs)
+	bool isPeerCertificateEqual(const X509Cert& cert);
 	
 };
 

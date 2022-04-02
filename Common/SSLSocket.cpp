@@ -276,4 +276,54 @@ bool SSLSocket::connect(){
 	return res>0;
 }
 
+bool SSLSocket::verifyPeerCertificate(){
+	if(hasPeerCertificate()){
+		return SSL_get_verify_result(p->ssl)==X509_V_OK;
+	}
+	return false;
+}
+
+bool SSLSocket::hasPeerCertificate(){
+	X509* cert = SSL_get_peer_certificate(p->ssl);
+	if(cert){
+		X509_free(cert);
+	}
+	return cert!=NULL;
+}
+
+void X509Cert::init(const std::vector<char>& data){
+	BIO* cbio = BIO_new_mem_buf((void*)&(data[0]), data.size());
+	this->data = PEM_read_bio_X509(cbio, NULL, 0, NULL);
+}
+
+X509Cert::X509Cert(const std::vector<char>& data){
+	init(data);
+}
+
+X509Cert::X509Cert(const std::string& path){
+	std::vector<char> v;
+	if(loadFile(v, path)){
+		init(v);
+	}else{
+		data = NULL;
+	}
+}
+
+X509Cert::~X509Cert(){
+	if(data){
+		X509_free((X509*)data);
+	}
+}
+
+bool SSLSocket::isPeerCertificateEqual(const X509Cert& cert){
+	if(cert.data==NULL){return false;}
+	X509* peerCert = SSL_get_peer_certificate(p->ssl);
+	bool success = peerCert!=NULL;
+	if(success){
+		success = X509_cmp(peerCert, (X509*)cert.data)==0;
+		X509_free(peerCert);
+	}
+	return success;
+}
+
 #endif
