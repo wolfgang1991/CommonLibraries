@@ -3,12 +3,12 @@
 
 #ifndef NO_ZLIB
 
-#include "SimpleSockets.h"
+#include "ICommunicationEndpoint.h"
 
 class ZSocketPrivate;
 
 //! Socket Layer for transparent compression with zlib using a "slave" socket
-class ZSocket : public ISocket{
+class ZSocket : public ICommunicationEndpoint{
 	friend class ZSocketPrivate;
 
 	private:
@@ -18,14 +18,11 @@ class ZSocket : public ISocket{
 	public:
 	
 	//! mustDeleteSlaveSocket: true if slaveSocket shall be deleted upon destruction, sendBufSize/recvBufSize: buffer size for compressed data, should be large to get as much data as possible with less overhead
-	ZSocket(ISocket* slaveSocket, uint32_t sendBufSize = 1024*1024, uint32_t recvBufSize = 1024*1024, uint32_t compressionLevel = 9, bool mustDeleteSlaveSocket = true);
+	ZSocket(ICommunicationEndpoint* slaveSocket, uint32_t sendBufSize = 1024*1024, uint32_t recvBufSize = 1024*1024, uint32_t compressionLevel = 9, bool mustDeleteSlaveSocket = true);
 	
 	~ZSocket();
 	
-	//! returns the available compressed bytes for reading
-	uint32_t getAvailableBytes() const;
-	
-	uint32_t recv(char* buf, uint32_t bufSize, bool readBlocking = false);
+	int32_t recv(char* buf, uint32_t bufSize);
 	
 	bool send(const char* buf, uint32_t bufSize);
 	

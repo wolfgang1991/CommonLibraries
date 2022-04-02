@@ -293,7 +293,7 @@ void JSONRPC2Client::connect(const IIPAddress& address, uint32_t pingSendPeriod,
 	assert(res);
 }
 
-void JSONRPC2Client::useSocket(ISocket* socket, uint32_t pingTimeout, uint32_t pingSendPeriod){
+void JSONRPC2Client::useSocket(ICommunicationEndpoint* socket, uint32_t pingTimeout, uint32_t pingSendPeriod){
 	disconnect();
 	this->socket = socket;
 	this->pingTimeout = pingTimeout;

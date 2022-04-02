@@ -7,6 +7,7 @@ class JSONRPC2Client;
 class IPv6TCPSocket;
 
 //! Listens for connections, negotiates the protocol if applicable and returns the server-side JSONRPC2Client representation for a newly connected client
+//! To create servers over arbitrary protocols use the client implementation for a server side representation of a client together with the useSocket function instead (see this implementation as example).
 class JSONRPC2Server{
 
 	private:

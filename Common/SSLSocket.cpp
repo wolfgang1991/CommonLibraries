@@ -1,7 +1,8 @@
-//TODO https://cpp.hotexamples.com/de/site/file?hash=0x8f38744526ac8b15e9cc9efc074275226a30c98531eb75d9da55ea2d7eece355&fullName=libgit2-master/openssl_stream.c&project=YueLinHo/libgit2
 #ifndef NO_OPENSSL
 
 #include "SSLSocket.h"
+
+#include <timing.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -13,67 +14,90 @@
 #include <cstring>
 #include <iostream>
 
-//CertStore::CertStore(){
-//	store = X509_STORE_new();
-//}
-//	
-//CertStore::~CertStore(){
-//	X509_STORE_free((X509_STORE*)store);
-//}
+class SSLContextPrivate{
+	
+	public:
+	
+	SSL_CTX* ctx;
+	
+	std::list<RSA*> privateKeys;
+	std::list<X509*> certificates;
+	
+	SSLContextPrivate(SSLContext::Mode mode){
+		ctx = SSL_CTX_new(mode==SSLContext::SERVER?TLS_server_method():TLS_client_method());
+	}
+	
+	~SSLContextPrivate(){
+		SSL_CTX_free(ctx);
+		for(RSA* rsa : privateKeys){
+			RSA_free(rsa);
+		}
+		for(X509* cert : certificates){
+			X509_free(cert);
+		}
+	}
+	
+};
 
-//bool CertStore::loadX509PEMCert(const std::function<bool(char*&, uint32_t&)>& loadFunction){
-//	char* buf = NULL; uint32_t len;
-//	bool success = loadFunction(buf, len);
-//	if(success){
-//		success = loadX509PEMCert(buf, len);
-//	}
-//	delete[] buf;
-//	return success;
-//}
+SSLContext::SSLContext(Mode mode){
+	p = new SSLContextPrivate(mode);
+}
+	
+SSLContext::~SSLContext(){
+	delete p;
+}
 
-//bool CertStore::loadX509PEMCert(const std::string& path){
-//	return loadX509PEMCert([path](char*& bufOut, uint32_t& lenOut){
-//		std::ifstream is(path.c_str(), std::ifstream::binary);
-//		bool good = is.good();
-//		if(good){
-//			is.seekg(0, is.end);
-//			lenOut = is.tellg();
-//			is.seekg(0, is.beg);
-//			bufOut = new char[lenOut];
-//			is.read(bufOut, lenOut);
-//		}
-//		return good;
-//	});
-//}
+bool SSLContext::usePrivateKey(const std::vector<char>& data){
+	BIO* kbio = BIO_new_mem_buf((void*)&(data[0]), data.size());
+	RSA* rsa = PEM_read_bio_RSAPrivateKey(kbio, NULL, 0, NULL);
+	bool success = rsa!=NULL;
+	if(success){
+		SSL_CTX_use_RSAPrivateKey(p->ctx, rsa);
+		p->privateKeys.push_back(rsa);
+	}
+	BIO_free(kbio);
+	return success;
+}
+	
+bool SSLContext::useCertificate(const std::vector<char>& data){
+	BIO* cbio = BIO_new_mem_buf((void*)&(data[0]), data.size());
+	X509* cert = PEM_read_bio_X509(cbio, NULL, 0, NULL);
+	bool success = cert!=NULL;
+	if(success){
+		SSL_CTX_use_certificate(p->ctx, cert);
+		p->certificates.push_back(cert);
+	}
+	BIO_free(cbio);
+	return success;
+}
 
-//bool CertStore::loadX509PEMCert(char* buf, uint32_t bufSize){
-//	BIO* cbio = BIO_new_mem_buf((void*)buf, (int)bufSize);
-//	X509_STORE * cts = (X509_STORE*)store;
-//	if(!cts || !cbio){return false;}
-//	STACK_OF(X509_INFO)* inf = PEM_X509_INFO_read_bio(cbio, NULL, NULL, NULL);
-//	if(!inf){
-//		BIO_free(cbio);//cleanup
-//		return false;
-//	}
-//	//iterate over all entries from the pem file, add them to the x509_store one by one
-//	int count = 0;
-//	std::cout << "sk_X509_INFO_num(inf): " << sk_X509_INFO_num(inf) << std::endl;
-//	for(int i=0; i<sk_X509_INFO_num(inf); i++) {
-//		X509_INFO* itmp = sk_X509_INFO_value(inf, i);
-//		if(itmp->x509){
-//		      X509_STORE_add_cert(cts, itmp->x509);
-//		      count++;
-//		}
-//		if(itmp->crl){
-//		      X509_STORE_add_crl(cts, itmp->crl);
-//		      count++;
-//		}
-//	}
-//	sk_X509_INFO_pop_free(inf, X509_INFO_free); //cleanup
-//	BIO_free(cbio);//cleanup
-//	std::cout << "Added " << count << " certs." << std::endl;
-//	return true;
-//}
+static bool loadFile(std::vector<char>& out, const std::string& path){
+	std::ifstream f(path.c_str(), std::ifstream::binary);
+	if(f.good()){
+		f.seekg(0, std::ifstream::end);
+		out.resize(f.tellg());
+		f.seekg(0, std::ifstream::beg);
+		f.read(&out[0], out.size());
+		return true;
+	}
+	return false;
+}
+
+bool SSLContext::usePrivateKeyFromFile(const std::string& path){
+	std::vector<char> v;
+	if(loadFile(v, path)){
+		return usePrivateKey(v);
+	}
+	return false;
+}
+	
+bool SSLContext::useCertificateFromFile(const std::string& path){
+	std::vector<char> v;
+	if(loadFile(v, path)){
+		return useCertificate(v);
+	}
+	return false;
+}
 
 static BIO_METHOD* bio_method = NULL;
 static int init_bio_method();
@@ -82,31 +106,23 @@ class SSLSocketPrivate{
 	
 	public:
 	
-	ISocket* slaveSocket;
-	bool mustDeleteSlaveSocket;
-	bool readBlocking;
+	SSLContext* c;
 	
-	SSL_CTX* ctx;
-//	CertStore* store;
+	ICommunicationEndpoint* slaveSocket;
+	bool mustDeleteSlaveSocket;
+	
+	bool pseudoBlocking;//during accept and connect
 	
 	SSL* ssl;
 	
-	std::list<RSA*> privateKeys;
-	std::list<X509*> certificates;
-	
-	SSLSocketPrivate(ISocket* slaveSocket, SSLSocket::Mode mode, bool mustDeleteSlaveSocket):slaveSocket(slaveSocket),mustDeleteSlaveSocket(mustDeleteSlaveSocket),readBlocking(false){
-		ctx = SSL_CTX_new(mode==SSLSocket::SERVER?TLS_server_method():TLS_client_method());
-		assert(ctx!=NULL);
-		//store = NULL;
-		ssl = NULL;
-	}
-	
-	void initSSLFromCTX(){
-		ssl = SSL_new(ctx);
-		if(bio_method==NULL){init_bio_method();}
-		BIO* bio = BIO_new(bio_method);
-		BIO_set_data(bio, this);
-		SSL_set_bio(ssl, bio, bio);//bio is reference counted
+	SSLSocketPrivate(SSLContext* c, ICommunicationEndpoint* slaveSocket, bool mustDeleteSlaveSocket):c(c),slaveSocket(slaveSocket),mustDeleteSlaveSocket(mustDeleteSlaveSocket),pseudoBlocking(false){
+		ssl = SSL_new(c->p->ctx);
+		if(ssl){
+			if(bio_method==NULL){init_bio_method();}
+			BIO* bio = BIO_new(bio_method);
+			BIO_set_data(bio, this);
+			SSL_set_bio(ssl, bio, bio);//bio is reference counted
+		}
 	}
 	
 	~SSLSocketPrivate(){
@@ -114,13 +130,6 @@ class SSLSocketPrivate{
 			int res = SSL_shutdown(ssl);
 			if(res<=0){ERR_print_errors_fp(stderr);}
 			SSL_free(ssl);
-		}
-		SSL_CTX_free(ctx);
-		for(RSA* rsa : privateKeys){
-			RSA_free(rsa);
-		}
-		for(X509* cert : certificates){
-			X509_free(cert);
 		}
 		if(mustDeleteSlaveSocket){delete slaveSocket;}
 	}
@@ -142,7 +151,9 @@ static int bio_destroy(BIO *b){
 static int bio_read(BIO *b, char* buf, int len){
 	if(b==NULL){return 0;}
 	SSLSocketPrivate* p = (SSLSocketPrivate*)BIO_get_data(b);
-	return (int)(p->slaveSocket->recv(buf, len, p->readBlocking));
+	int res = p->slaveSocket->recv(buf, len);
+	while(p->pseudoBlocking && res==0){delay(1); res = p->slaveSocket->recv(buf, len);}//pseudo blocking to assure accept and connect
+	return res;
 }
 
 static int bio_write(BIO* b, const char* buf, int len){
@@ -177,32 +188,27 @@ static int init_bio_method(){
 	return 0;
 }
 
-SSLSocket::SSLSocket(ISocket* slaveSocket, Mode mode, bool mustDeleteSlaveSocket){//, CertStore* store
-	p = new SSLSocketPrivate(slaveSocket, mode, mustDeleteSlaveSocket);
-	//setCertStore(store);
-	p->initSSLFromCTX();
+SSLSocket::SSLSocket(SSLContext* c, ICommunicationEndpoint* slaveSocket, bool mustDeleteSlaveSocket){
+	p = new SSLSocketPrivate(c, slaveSocket, mustDeleteSlaveSocket);
 }
 	
 SSLSocket::~SSLSocket(){
 	delete p;
 }
 
-uint32_t SSLSocket::getAvailableBytes() const{
-	return p->slaveSocket->getAvailableBytes();
-}
-
-uint32_t SSLSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
-	p->readBlocking = readBlocking;
+int32_t SSLSocket::recv(char* buf, uint32_t bufSize){
+	if(!p->ssl){return -1;}
 	int res = SSL_read(p->ssl, buf, bufSize);
 	if(res>=0){
 		return res;
 	}else{
 		ERR_print_errors_fp(stderr);
-		return 0;
+		return -1;
 	}
 }
 
 bool SSLSocket::send(const char* buf, uint32_t bufSize){
+	if(!p->ssl){return false;}
 	if(bufSize>0){
 		int res = SSL_write(p->ssl, buf, bufSize);
 		if(res<=0){ERR_print_errors_fp(stderr);}
@@ -212,77 +218,62 @@ bool SSLSocket::send(const char* buf, uint32_t bufSize){
 	return true;
 }
 
-//void SSLSocket::setCertStore(CertStore* store){
-//	SSL_CTX_set1_cert_store(p->ctx, (X509_STORE*)(store->store));
-//	p->store = store;
-//}
-//	
-//CertStore* SSLSocket::getCertStore() const{
-//	return p->store;
-//}
+static bool printRecentError(){
+	long errorCode = ERR_get_error();
+	bool noError = errorCode==0;
+	if(!noError){
+		std::cerr << "ErrorCode: " << errorCode << "\n" << ERR_error_string(errorCode, NULL) << std::endl;
+	}
+	return noError;
+}
+
+static void printLastSSLError(SSL* ssl, int retvalue, const char* prefix = NULL){
+	printRecentError();
+	if(prefix){std::cerr << prefix << ": ";}
+	int error = SSL_get_error(ssl, retvalue);
+	if(error==SSL_ERROR_NONE){
+		std::cerr << "SSL_ERROR_NONE" << std::endl;
+	}else if(error==SSL_ERROR_ZERO_RETURN){
+		std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl;
+	}else if(error==SSL_ERROR_WANT_READ){
+		std::cerr << "SSL_ERROR_WANT_READ" << std::endl;
+	}else if(error==SSL_ERROR_WANT_WRITE){
+		std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl;
+	}else if(error==SSL_ERROR_WANT_CONNECT){
+		std::cerr << "SSL_ERROR_WANT_CONNECT" << std::endl;
+	}else if(error==SSL_ERROR_WANT_ACCEPT){
+		std::cerr << "SSL_ERROR_WANT_ACCEPT" << std::endl;
+	}else if(error==SSL_ERROR_WANT_X509_LOOKUP){
+		std::cerr << "SSL_ERROR_WANT_X509_LOOKUP" << std::endl;
+	}else if(error==SSL_ERROR_WANT_ASYNC){
+		std::cerr << "SSL_ERROR_WANT_ASYNC" << std::endl;
+	}else if(error==SSL_ERROR_WANT_ASYNC_JOB){
+		std::cerr << "SSL_ERROR_WANT_ASYNC_JOB" << std::endl;
+	}else if(error==SSL_ERROR_WANT_CLIENT_HELLO_CB){
+		std::cerr << "SSL_ERROR_WANT_CLIENT_HELLO_CB" << std::endl;
+	}else if(error==SSL_ERROR_SYSCALL){
+		std::cerr << "SSL_ERROR_SYSCALL" << std::endl;
+	}else if(error==SSL_ERROR_SSL){
+		std::cerr << "SSL_ERROR_SSL" << std::endl;
+	}else{
+		std::cerr << "Unknown error: " << error << std::endl;
+	}
+}
 
 bool SSLSocket::accept(){
+	p->pseudoBlocking = true;
 	int res = SSL_accept(p->ssl);
-	if(res<=0){std::cerr << "accept result: " << res << std::endl; ERR_print_errors_fp(stderr); std::cerr << std::flush;}//TODO geht nicht immer ??
+	p->pseudoBlocking = false;
+	if(res<=0){printLastSSLError(p->ssl, res, "SSLSocket::accept");}
 	return res>0;
 }
 
 bool SSLSocket::connect(){
+	p->pseudoBlocking = true;
 	int res = SSL_connect(p->ssl);
-	if(res<=0){ERR_print_errors_fp(stderr);}
+	p->pseudoBlocking = false;
+	if(res<=0){printLastSSLError(p->ssl, res, "SSLSocket::connect");}
 	return res>0;
-}
-
-bool SSLSocket::usePrivateKey(const std::vector<char>& data){
-	BIO* kbio = BIO_new_mem_buf((void*)&(data[0]), data.size());
-	RSA* rsa = PEM_read_bio_RSAPrivateKey(kbio, NULL, 0, NULL);
-	bool success = rsa!=NULL;
-	if(success){
-		SSL_CTX_use_RSAPrivateKey(p->ctx, rsa);
-		p->privateKeys.push_back(rsa);
-	}
-	BIO_free(kbio);
-	return success;
-}
-	
-bool SSLSocket::useCertificate(const std::vector<char>& data){
-	BIO* cbio = BIO_new_mem_buf((void*)&(data[0]), data.size());
-	X509* cert = PEM_read_bio_X509(cbio, NULL, 0, NULL);
-	bool success = cert!=NULL;
-	if(success){
-		SSL_CTX_use_certificate(p->ctx, cert);
-		p->certificates.push_back(cert);
-	}
-	BIO_free(cbio);
-	return success;
-}
-
-static bool loadFile(std::vector<char>& out, const std::string& path){
-	std::ifstream f(path.c_str(), std::ifstream::binary);
-	if(f.good()){
-		f.seekg(0, std::ifstream::end);
-		out.resize(f.tellg());
-		f.seekg(0, std::ifstream::beg);
-		f.read(&out[0], out.size());
-		return true;
-	}
-	return false;
-}
-
-bool SSLSocket::usePrivateKeyFromFile(const std::string& path){
-	std::vector<char> v;
-	if(loadFile(v, path)){
-		return usePrivateKey(v);
-	}
-	return false;
-}
-	
-bool SSLSocket::useCertificateFromFile(const std::string& path){
-	std::vector<char> v;
-	if(loadFile(v, path)){
-		return useCertificate(v);
-	}
-	return false;
 }
 
 #endif

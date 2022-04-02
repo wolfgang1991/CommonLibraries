@@ -10,7 +10,7 @@ struct Client{
 	SSLSocket* ssl;
 };
 
-const std::string hello = "HELLO FROM SSL\n";
+const std::string hello = "HELLO FROM SSL SERVER\n";
 
 const uint32_t buflen = 512;
 char buf[buflen];
@@ -21,17 +21,19 @@ int main(int argc, char *argv[]){
 	server.bind(9999);
 	server.listen(10);
 	
-	std::list<Client> clients;
+	SSLContext c(SSLContext::SERVER);
+	bool success = c.usePrivateKeyFromFile("./selfsigned-private.key");
+	assert(success);
+	success = c.useCertificateFromFile("./selfsigned-public.crt");
+	assert(success);
 	
-//	CertStore store;
-//	bool res = store.loadX509PEMCert("./selfsigned-private.key");
-//	assert(res);//TODO
+	std::list<Client> clients;
 
 	while(true){
 		IPv4TCPSocket* newClient = server.accept();
 		if(newClient!=NULL){
 			std::cout << "New Client" << std::endl;
-			clients.push_back(Client{newClient, new SSLSocket(newClient, SSLSocket::SERVER)});//, &store
+			clients.push_back(Client{newClient, new SSLSocket(&c, newClient)});//, &store
 			SSLSocket* s = clients.back().ssl;
 			bool res = s->accept();
 			assert(res);
@@ -39,7 +41,7 @@ int main(int argc, char *argv[]){
 		}
 		for(Client& c : clients){
 			SSLSocket* s = c.ssl;
-			uint32_t count = s->recv(buf, buflen);
+			int32_t count = s->recv(buf, buflen);
 			if(count>0){
 				s->send(buf, count);
 				std::cout << std::string(buf, count) << std::flush;

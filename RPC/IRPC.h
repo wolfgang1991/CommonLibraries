@@ -311,7 +311,7 @@ class IMetaProtocolHandler{
 	
 	//! true if target protocol has been negotiated successfully
 	//! this function can be called by another thread
-	virtual bool tryNegotiate(ISocket* socket) = 0;
+	virtual bool tryNegotiate(ICommunicationEndpoint* socket) = 0;
 	
 	//! returns true if a compression feature of the underlying protocol shall be used (e.g. ZSocket), this flag may be determined during protocol negotiation
 	virtual bool useCompression() const{return false;}

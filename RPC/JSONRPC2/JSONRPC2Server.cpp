@@ -25,7 +25,7 @@ bool JSONRPC2Server::isGood(){
 }
 	
 JSONRPC2Client* JSONRPC2Server::accept(uint32_t timeout, IPv6Address* peerAddress){
-	ISocket* clientSocket = serverSocket->accept(timeout, peerAddress);
+	ICommunicationEndpoint* clientSocket = serverSocket->accept(timeout, peerAddress);
 	if(clientSocket){
 		if(handler){
 			bool res = handler->tryNegotiate(clientSocket);

@@ -10,7 +10,7 @@ class ZSocketPrivate{
 	public:
 	
 	bool mustDeleteSlaveSocket;
-	ISocket* slaveSocket;
+	ICommunicationEndpoint* slaveSocket;
 	
 	char* sendBuf;
 	uint32_t sendBufSize;
@@ -35,7 +35,7 @@ class ZSocketPrivate{
 		lastInflateFinished = true;
 	}
 	
-	ZSocketPrivate(ISocket* slaveSocket, uint32_t sendBufSize, uint32_t recvBufSize, uint32_t compressionLevel, bool mustDeleteSlaveSocket):mustDeleteSlaveSocket(mustDeleteSlaveSocket),slaveSocket(slaveSocket),sendBufSize(sendBufSize),recvBufSize(recvBufSize){
+	ZSocketPrivate(ICommunicationEndpoint* slaveSocket, uint32_t sendBufSize, uint32_t recvBufSize, uint32_t compressionLevel, bool mustDeleteSlaveSocket):mustDeleteSlaveSocket(mustDeleteSlaveSocket),slaveSocket(slaveSocket),sendBufSize(sendBufSize),recvBufSize(recvBufSize){
 		sendBuf = new char[sendBufSize];
 		recvBuf = new char[recvBufSize];
 		//allocate deflate state
@@ -91,22 +91,22 @@ class ZSocketPrivate{
     	}
 	}
 	
-	uint32_t recv(char* outBuf, uint32_t outBufSize, bool readBlocking){
+	int32_t recv(char* outBuf, uint32_t outBufSize){
 		if(!lastInflateFinished){
 			return execInflate(outBuf, outBufSize);
 		}
-		uint32_t received = slaveSocket->recv(recvBuf, recvBufSize, readBlocking);
+		int32_t received = slaveSocket->recv(recvBuf, recvBufSize);
 		if(received>0){
 			inflateStrm.avail_in = received;
 			inflateStrm.next_in = (Bytef*)recvBuf;
 			return execInflate(outBuf, outBufSize);
 		}
-		return 0;
+		return received;//<=0
 	}
 	
 };
 
-ZSocket::ZSocket(ISocket* slaveSocket, uint32_t sendBufSize, uint32_t recvBufSize, uint32_t compressionLevel, bool mustDeleteSlaveSocket){
+ZSocket::ZSocket(ICommunicationEndpoint* slaveSocket, uint32_t sendBufSize, uint32_t recvBufSize, uint32_t compressionLevel, bool mustDeleteSlaveSocket){
 	p = new ZSocketPrivate(slaveSocket, sendBufSize, recvBufSize, compressionLevel, mustDeleteSlaveSocket);
 }
 	
@@ -114,12 +114,8 @@ ZSocket::~ZSocket(){
 	delete p;
 }
 
-uint32_t ZSocket::getAvailableBytes() const{
-	return p->slaveSocket->getAvailableBytes();
-}
-
-uint32_t ZSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
-	return p->recv(buf, bufSize, readBlocking);
+int32_t ZSocket::recv(char* buf, uint32_t bufSize){
+	return p->recv(buf, bufSize);
 }
 
 bool ZSocket::send(const char* buf, uint32_t bufSize){
