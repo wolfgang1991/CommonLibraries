@@ -7,8 +7,11 @@
 #include <map>
 #include <list>
 #include <unordered_map>
+#include <set>
+#include <unordered_set>
 #include <type_traits>
 #include <cassert>
+#include <functional>
 
 //! Interface for RPC Values
 class IRPCValue{
@@ -140,6 +143,8 @@ using is_bool = std::is_same<T, bool>;
 template <typename T>
 struct is_integer{static constexpr bool value = std::is_same<T, int8_t>::value || std::is_same<T, int16_t>::value || std::is_same<T, int32_t>::value || std::is_same<T, int64_t>::value || std::is_same<T, uint8_t>::value || std::is_same<T, uint16_t>::value || std::is_same<T, uint32_t>::value || std::is_same<T, uint64_t>::value;};
 
+static_assert(!is_integer<bool>::value, "");
+
 template <typename T>
 struct is_float{static constexpr bool value = std::is_same<T, float>::value || std::is_same<T, double>::value;};
 
@@ -158,6 +163,12 @@ struct is_array<std::vector<T>> : public std::true_type {};
 
 template<typename T> 
 struct is_array<std::list<T>> : public std::true_type {};
+
+template<typename T> 
+struct is_array<std::set<T>> : public std::true_type {};
+
+template<typename T> 
+struct is_array<std::unordered_set<T>> : public std::true_type {};
 
 //! Currently map and unordered_map supported, in case more types shall be supported additional traits have to be added here
 template<typename T>
@@ -275,6 +286,25 @@ class IRemoteProcedureCallReceiver{
 	//! values and result need to be deleted by the caller of this method
 	virtual IRPCValue* callProcedure(const std::string& procedure, const std::vector<IRPCValue*>& values) = 0;
 
+};
+
+//! Adapter to use simple lambdas as call receivers
+class LambdaCallReceiver : public IRemoteProcedureCallReceiver{
+	
+	public:
+	
+	using CallProcedureFunction = std::function<IRPCValue*(const std::string&,const std::vector<IRPCValue*>&)>;
+	
+	CallProcedureFunction f;
+	
+	LambdaCallReceiver():f([](const std::string&,const std::vector<IRPCValue*>&){return (IRPCValue*)(NULL);}){}
+	
+	LambdaCallReceiver(const CallProcedureFunction& f):f(f){}
+	
+	IRPCValue* callProcedure(const std::string& procedure, const std::vector<IRPCValue*>& values) override{
+		return f(procedure, values);
+	}
+	
 };
 
 //! Interface for remote procedure calls
