@@ -1,5 +1,5 @@
 #List of object files without path
-_LINKOBJ = RPCProxyServer.o
+_LINKOBJ = RPCProxyServer.o RPCProxyPeer.o
 
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj

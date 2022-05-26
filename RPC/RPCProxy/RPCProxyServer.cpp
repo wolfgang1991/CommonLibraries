@@ -15,6 +15,9 @@ class RPCProxyServerPrivate : public IRemoteProcedureCaller{
 		Peer(IRPCClient* client):client(client){}
 		
 		~Peer(){
+			for(auto it = proxyFunctions.begin(); it!=proxyFunctions.end(); ++it){
+				client->unregisterCallReceiver(it->first);
+			}
 			delete client;
 		}
 	};
@@ -59,6 +62,8 @@ class RPCProxyServerPrivate : public IRemoteProcedureCaller{
 		auto it = calls.find(id);
 		if(it!=calls.end()){
 			it->second->client->callRemoteProcedure("rc:return", std::vector<IRPCValue*>{createRPCValue(id), results});
+			calls.erase(id);
+			callIDGenerator.returnId(id);
 		}else{
 			delete results;
 		}
@@ -127,7 +132,9 @@ void RPCProxyServer::addPeer(IRPCClient* rpc){
 				RPCProxyServerPrivate::Peer* target = peer==it->second.first?(it->second.second):(it->second.first);
 				int32_t callID = p->callIDGenerator.getUniqueId();
 				p->calls[callID] = target;
-				target->client->callRemoteProcedure("rc::call", std::vector<IRPCValue*>{values[1], values[2]}, p, callID, false);//don't delete (false) because values are members of the input values vector
+				IRPCValue* connID = createRPCValue(it->first);
+				target->client->callRemoteProcedure("rc:call", std::vector<IRPCValue*>{connID, values[1], values[2]}, p, callID, false);//don't delete (false) because values are members of the input values vector
+				delete connID;
 				return createRPCValue(callID);
 			}
 		}

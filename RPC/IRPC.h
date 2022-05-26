@@ -360,9 +360,6 @@ class IRPCClient : public IRPC{
 	//! Connects (async) and sends the RPC and API level, pingTimeout and connectTimeout in ms
 	virtual void connect(const IIPAddress& address, uint32_t pingSendPeriod, uint32_t pingTimeout, uint32_t connectTimeout, IMetaProtocolHandler* metaProtocolHandler = NULL) = 0;
 	
-	//! Synchronization / result processing / call processing etc...
-	virtual void update() = 0;
-	
 	//! NOT_CONNECTED if ping timeout
 	virtual ClientState getState() const = 0;
 	
