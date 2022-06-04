@@ -9,6 +9,9 @@ class RPCProxyPeerPrivate;
 class RPCPeerConnection;
 class RPCPeerConnectionPrivate;
 
+//! A peer can offer services and connect to other peers services. Each service peer connection is handled separately via RPCPeerConnection.
+//! A peer registers it's service at the proxy server and other peers can connect to this service via the proxy server.
+//! Note it is not possible to connect a peer to it's own services.
 class RPCProxyPeer{
 	friend class RPCPeerConnection;
 
@@ -41,6 +44,7 @@ class RPCProxyPeer{
 	
 };
 
+//! Represents a rpc connection between two peers via a service.
 class RPCPeerConnection : public IRPCClient{
 	friend class RPCProxyPeer;
 	friend class RPCProxyPeerPrivate;
@@ -84,17 +88,14 @@ class RPCPeerConnection : public IRPCClient{
 	
 	void removeProcedureCaller(IRemoteProcedureCaller* caller);
 	
+	//! not necessary to call / gets updated by RPCProxyPeer
 	void update();
 	
 	void connect(const IIPAddress& address, uint32_t pingSendPeriod, uint32_t pingTimeout, uint32_t connectTimeout, IMetaProtocolHandler* metaProtocolHandler = NULL);
 
 	ClientState getState() const;
 
-	bool isConnected() const;
-
 	void disconnect();
-
-	double getLastReceiveTime();
 
 	void flush();
 		

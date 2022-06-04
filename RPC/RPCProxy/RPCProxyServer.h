@@ -5,6 +5,8 @@
 
 class RPCProxyServerPrivate;
 
+//! Handles peer connections and service registrations.
+//! A peer registers it's service at the proxy server and other peers can connect to this service via the proxy server.
 class RPCProxyServer{
 	friend class IRemoteProcedureCaller;
 	

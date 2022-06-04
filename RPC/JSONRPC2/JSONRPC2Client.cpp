@@ -459,11 +459,6 @@ IRPCClient::ClientState JSONRPC2Client::getState() const{
 	return syncedState;
 }
 
-bool JSONRPC2Client::isConnected() const{
-	IRPCClient::ClientState state = getState();
-	return state==CONNECTING || state==CONNECTED;
-}
-
 void JSONRPC2Client::disconnect(){
 	update();//required to get the current connection state
 	if(isConnected()){

@@ -363,12 +363,12 @@ class IRPCClient : public IRPC{
 	//! NOT_CONNECTED if ping timeout
 	virtual ClientState getState() const = 0;
 	
-	virtual bool isConnected() const = 0;
+	virtual bool isConnected() const{
+		IRPCClient::ClientState state = getState();
+		return state==CONNECTING || state==CONNECTED;
+	}
 	
 	virtual void disconnect() = 0;
-	
-	//! gets the time of the last reception in seconds (compatible to getSecs() output)
-	virtual double getLastReceiveTime() = 0;
 	
 	//! blocks until all pending stuff as been sent
 	virtual void flush() = 0;

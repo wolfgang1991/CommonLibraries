@@ -104,8 +104,6 @@ class JSONRPC2Client : public IRPCClient{
 	
 	IRPCClient::ClientState getState() const;
 	
-	bool isConnected() const;
-	
 	void disconnect();
 	
 	void removeProcedureCaller(IRemoteProcedureCaller* caller);

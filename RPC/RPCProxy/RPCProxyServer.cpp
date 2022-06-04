@@ -84,7 +84,7 @@ RPCProxyServer::~RPCProxyServer(){
 }
 	
 void RPCProxyServer::addPeer(IRPCClient* rpc){
-	p->peers.push_back(RPCProxyServerPrivate::Peer(rpc));
+	p->peers.emplace_back(rpc);//rpc gets deleted in push_back, therefore emplace
 	RPCProxyServerPrivate::Peer* peer = &(p->peers.back());
 	
 	peer->proxyFunctions["rc:registerPeerService"] = LambdaCallReceiver([this, peer](const std::string& procedure, const std::vector<IRPCValue*>& values){//register a peer service for connection by other peer (string -> bool)
