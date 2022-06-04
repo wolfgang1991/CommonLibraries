@@ -21,8 +21,8 @@ class RPCProxyPeer{
 	
 	public:
 	
-	//! proxyRPC: underlying rpc connection to proxy
-	RPCProxyPeer(IRPC* proxyRPC);
+	//! proxyRPC: underlying rpc connection to proxy, not owned by RPCProxyPeer
+	RPCProxyPeer(IMinimalRPCClient* proxyRPC);
 	
 	virtual ~RPCProxyPeer();
 	
@@ -45,7 +45,7 @@ class RPCProxyPeer{
 };
 
 //! Represents a rpc connection between two peers via a service.
-class RPCPeerConnection : public IRPCClient{
+class RPCPeerConnection : public IMinimalRPCClient{
 	friend class RPCProxyPeer;
 	friend class RPCProxyPeerPrivate;
 	
@@ -72,6 +72,8 @@ class RPCPeerConnection : public IRPCClient{
 	//! set the id and state when a pending conenction is now truly connected
 	void OnTrulyConnected(int32_t connID);
 	
+	void OnConnectionError();
+	
 	public:
 	
 	virtual ~RPCPeerConnection();
@@ -90,14 +92,10 @@ class RPCPeerConnection : public IRPCClient{
 	
 	//! not necessary to call / gets updated by RPCProxyPeer
 	void update();
-	
-	void connect(const IIPAddress& address, uint32_t pingSendPeriod, uint32_t pingTimeout, uint32_t connectTimeout, IMetaProtocolHandler* metaProtocolHandler = NULL);
 
 	ClientState getState() const;
 
 	void disconnect();
-
-	void flush();
 		
 };
 

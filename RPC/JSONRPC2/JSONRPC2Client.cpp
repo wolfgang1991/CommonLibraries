@@ -455,7 +455,7 @@ void JSONRPC2Client::update(){
 	mainToReceive.clear();
 }
 
-IRPCClient::ClientState JSONRPC2Client::getState() const{
+IMinimalRPCClient::ClientState JSONRPC2Client::getState() const{
 	return syncedState;
 }
 

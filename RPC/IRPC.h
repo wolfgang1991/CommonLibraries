@@ -348,27 +348,36 @@ class IMetaProtocolHandler{
 
 };
 
-//! Interface class for RPC Clients
-class IRPCClient : public IRPC{
-
+//! Interface for minimal RPC clients (IRPC with connection state information)
+class IMinimalRPCClient : public IRPC{
+	
 	public:
 	
 	enum ClientState{NOT_CONNECTED, CONNECTING, CONNECTED, CONNECTION_ERROR, STATE_COUNT};
 	
-	virtual ~IRPCClient(){}
-	
-	//! Connects (async) and sends the RPC and API level, pingTimeout and connectTimeout in ms
-	virtual void connect(const IIPAddress& address, uint32_t pingSendPeriod, uint32_t pingTimeout, uint32_t connectTimeout, IMetaProtocolHandler* metaProtocolHandler = NULL) = 0;
+	virtual ~IMinimalRPCClient(){}
 	
 	//! NOT_CONNECTED if ping timeout
 	virtual ClientState getState() const = 0;
 	
 	virtual bool isConnected() const{
-		IRPCClient::ClientState state = getState();
+		ClientState state = getState();
 		return state==CONNECTING || state==CONNECTED;
 	}
 	
 	virtual void disconnect() = 0;
+	
+};
+
+//! Interface class for RPC Clients
+class IRPCClient : public IMinimalRPCClient{
+
+	public:
+	
+	virtual ~IRPCClient(){}
+	
+	//! Connects (async) and sends the RPC and API level, pingTimeout and connectTimeout in ms
+	virtual void connect(const IIPAddress& address, uint32_t pingSendPeriod, uint32_t pingTimeout, uint32_t connectTimeout, IMetaProtocolHandler* metaProtocolHandler = NULL) = 0;
 	
 	//! blocks until all pending stuff as been sent
 	virtual void flush() = 0;

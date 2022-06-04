@@ -35,6 +35,11 @@ class TestCaller : public IRemoteProcedureCaller{
 	 	}
 	 	delete results;
 	 }
+	 
+	 void OnProcedureError(int32_t errorCode, const std::string& errorMessage, IRPCValue* errorData, uint32_t id){
+	 	std::cout << "ERROR RECEIVED: errorCode: " << errorCode << " errorMessage: " << errorMessage << std::endl;
+		delete errorData;
+	}
 	
 };
 
@@ -92,16 +97,20 @@ int main(int argc, char *argv[]){
 		//Find services and connect to new ones (also connects to itself)
 		double t = getSecs();
 		if(t-lastRequestTime>5.0){
+			if(!jc.isConnected()){break;}//exit if no underlying connection
 			lastRequestTime = t;
-			peer.requestServiceNames([&connectedRemoteServices, &connectionsToRemote, &peer, &service](const std::vector<std::string>& v){
+			peer.requestServiceNames([&connectedRemoteServices, &connectionsToRemote, &peer, &service, &caller](const std::vector<std::string>& v){
 				std::cout << "Found services: " << std::endl;
 				for(const std::string& s : v){
 					std::cout << s << std::endl;
 					if(s!=service){//don't connect to own service => problems
 						auto it = connectedRemoteServices.find(s);
 						if(it==connectedRemoteServices.end()){
+							std::cout << "Connect to service: " << s << std::endl;
 							connectedRemoteServices.insert(s);
-							connectionsToRemote.push_back(peer.connectToPeer(s));
+							RPCPeerConnection* c = peer.connectToPeer(s);
+							connectionsToRemote.push_back(c);
+							calcSum(c, 0, 1, &caller);//Test too early call, should trigger OnProcedureError
 						}
 					}
 				}
@@ -119,7 +128,7 @@ int main(int argc, char *argv[]){
 				it = connectionsToRemote.erase(it);
 				delete c;
 			}else{
-				if(useServices){
+				if(c->getState()==IRPCClient::CONNECTED && useServices){//only call if connection established, not when pending
 					std::cout << "call calcSum(" << a << "," << b << ") on service: " << c->getServiceName() << std::endl;
 					calcSum(c, a, b, &caller);
 					a++;

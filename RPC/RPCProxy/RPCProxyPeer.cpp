@@ -20,14 +20,14 @@ class RPCProxyPeerPrivate : public IRemoteProcedureCaller{
 	
 	public:
 	
-	IRPC* proxyRPC;
+	IMinimalRPCClient* proxyRPC;
 	
 	std::unordered_map<std::string, LambdaCallReceiver> proxyFunctions;
 	
-	std::map<int32_t, RPCPeerConnection*> pendingConnections;
+	std::map<int32_t, RPCPeerConnection*> pendingConnections;//intermediate id -> pending connection (final id known as soon as rc:connectToPeerService returns)
 	UniqueIdentifierGenerator<int32_t> uidGen;
 	
-	std::map<int32_t, RPCPeerConnection*> connections;//id -> connection
+	std::map<int32_t, RPCPeerConnection*> connections;//id -> connection (contains outgoing and incoming connections, newConnections are included, pendingConnections are not included, since they have no final id)
 	std::list<RPCPeerConnection*> newConnections;
 	
 	std::unordered_set<std::string> ownServices;
@@ -69,9 +69,18 @@ class RPCProxyPeerPrivate : public IRemoteProcedureCaller{
 	};
 	
 	~RPCProxyPeerPrivate(){
-		delete proxyRPC;
+		std::set<RPCPeerConnection*> toDelete;
 		for(auto it = connections.begin(); it != connections.end(); ++it){
-			delete it->second;
+			toDelete.insert(it->second);
+		}
+		for(auto it = pendingConnections.begin(); it!=pendingConnections.end(); ++it){
+			toDelete.insert(it->second);
+		}
+		connections.clear();//speedup, see RPCPeerConnection destructor
+		pendingConnections.clear();
+		newConnections.clear();
+		for(RPCPeerConnection* c : toDelete){
+			delete c;
 		}
 		for(Call* c : calls){
 			delete c;
@@ -85,14 +94,19 @@ class RPCProxyPeerPrivate : public IRemoteProcedureCaller{
 				f(remoteServices);
 			}
 			peerServiceReceivers.clear();
-		}else{
+		}else{//return of rc:connectToPeerService
 			auto it = pendingConnections.find(id);
 			if(it!=pendingConnections.end()){
 				int32_t trueConnID = createNativeValue<int32_t>(results);
-				connections[trueConnID] = it->second;
-				it->second->OnTrulyConnected(trueConnID);
-				pendingConnections.erase(it);
-				uidGen.returnId(id);
+				RPCPeerConnection* conn = it->second;
+				if(trueConnID>=0){//success
+					connections[trueConnID] = conn;
+					conn->OnTrulyConnected(trueConnID);
+					pendingConnections.erase(it);
+					uidGen.returnId(id);
+				}else{
+					conn->OnConnectionError();//remain in pendingConnections until deleted by user (see destructor)
+				}
 			}
 		}
 		delete results;
@@ -104,6 +118,10 @@ class RPCProxyPeerPrivate : public IRemoteProcedureCaller{
 	}
 	
 };
+
+void RPCPeerConnection::OnConnectionError(){
+	p->state = IRPCClient::CONNECTION_ERROR;
+}
 
 int32_t RPCPeerConnection::getConnectionID() const{
 	return id;
@@ -126,6 +144,24 @@ RPCPeerConnection::RPCPeerConnection(RPCProxyPeer* peer, const std::string& serv
 }
 
 RPCPeerConnection::~RPCPeerConnection(){
+	for(auto it = peer->p->newConnections.begin(); it!=peer->p->newConnections.end(); ++it){
+		if(*it==this){
+			peer->p->newConnections.erase(it);
+			break;
+		}
+	}
+	for(auto it = peer->p->pendingConnections.begin(); it!=peer->p->pendingConnections.end(); ++it){
+		if(it->second==this){
+			peer->p->pendingConnections.erase(it);
+			break;
+		}
+	}
+	for(auto it = peer->p->connections.begin(); it!=peer->p->connections.end(); ++it){
+		if(it->second==this){
+			peer->p->connections.erase(it);
+			break;
+		}
+	}
 	delete p;
 }
 
@@ -135,12 +171,12 @@ void RPCPeerConnection::disconnectSilent(){
 }
 
 IRPCValue* RPCPeerConnection::callLocally(const std::string& procedure, const std::vector<IRPCValue*>& values){
-	std::cout << "callLocally " << ((uint64_t)this) << " procedure: " << procedure << std::endl;
+	//std::cout << "callLocally " << ((uint64_t)this) << " procedure: " << procedure << std::endl;
 	auto it = p->receivers.find(procedure);
 	if(it!=p->receivers.end()){
 		return it->second->callProcedure(procedure, values);
 	}
-	std::cout << "p->receivers.size(): " << (p->receivers.size()) << std::endl;
+	//std::cout << "p->receivers.size(): " << (p->receivers.size()) << std::endl;
 	for(auto it = p->receivers.begin(); it != p->receivers.end(); ++it){std::cout << "receiver: " << (it->first) << std::endl;}
 	return NULL;
 }
@@ -158,8 +194,11 @@ bool RPCPeerConnection::callRemoteProcedure(const std::string& procedure, const 
 		RPCProxyPeerPrivate::Call* c = new RPCProxyPeerPrivate::Call(peer->p, caller, id);
 		peer->p->calls.insert(c);
 		res = peer->p->proxyRPC->callRemoteProcedure("rc:call", std::vector<IRPCValue*>{createRPCValue(this->id), createRPCValue(procedure), params}, c, 0, deleteValues);//call id here 0
-	}else if(deleteValues){
-		for(IRPCValue* v : values){delete v;}
+	}else{
+		caller->OnProcedureError(-32001, "Error: RPC peer not (yet) connected.", NULL, id);
+		if(deleteValues){
+			for(IRPCValue* v : values){delete v;}
+		}
 	}
 	return res;
 }
@@ -189,10 +228,6 @@ void RPCPeerConnection::update(){
 	//already updated by callbacks from RPCProxyPeer
 }
 
-void RPCPeerConnection::connect(const IIPAddress& address, uint32_t pingSendPeriod, uint32_t pingTimeout, uint32_t connectTimeout, IMetaProtocolHandler* metaProtocolHandler){
-	//not applicable
-}
-
 IRPCClient::ClientState RPCPeerConnection::getState() const{
 	return p->state;
 }
@@ -202,10 +237,6 @@ void RPCPeerConnection::disconnect(){
 		peer->p->proxyRPC->callRemoteProcedure("rc:disconnectPeer", std::vector<IRPCValue*>{createRPCValue(this->id)});
 		disconnectSilent();
 	}
-}
-
-void RPCPeerConnection::flush(){
-	//not applicable
 }
 
 IRPCValue* moveToNewRPCValue(IRPCValue* value){
@@ -234,7 +265,7 @@ IRPCValue* moveToNewRPCValue(IRPCValue* value){
 	}
 }
 
-RPCProxyPeer::RPCProxyPeer(IRPC* proxyRPC){
+RPCProxyPeer::RPCProxyPeer(IMinimalRPCClient* proxyRPC){
 	p = new RPCProxyPeerPrivate();
 	p->proxyRPC = proxyRPC;
 	
@@ -331,4 +362,12 @@ const std::vector<std::string>& RPCProxyPeer::getServiceNames(){
 
 void RPCProxyPeer::update(){
 	p->proxyRPC->update();
+	if(!p->proxyRPC->isConnected()){
+		for(auto it = p->pendingConnections.begin(); it!=p->pendingConnections.end(); ++it){
+			it->second->OnConnectionError();
+		}
+		for(auto it = p->connections.begin(); it!=p->connections.end(); ++it){
+			it->second->OnConnectionError();
+		}
+	}
 }

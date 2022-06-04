@@ -102,7 +102,7 @@ class JSONRPC2Client : public IRPCClient{
 	
 	void update();
 	
-	IRPCClient::ClientState getState() const;
+	ClientState getState() const;
 	
 	void disconnect();
 	

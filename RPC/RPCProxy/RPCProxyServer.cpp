@@ -2,6 +2,8 @@
 
 #include <UniqueIdentifierGenerator.h>
 
+#include <iostream>
+
 class RPCProxyServerPrivate : public IRemoteProcedureCaller{
 	
 	public:
@@ -156,7 +158,10 @@ void RPCProxyServer::update(){
 		}else{
 			for(const std::string& s : it->services){
 				auto it = p->service2Peer.find(s);
-				if(it!=p->service2Peer.end()){p->service2Peer.erase(it);}
+				if(it!=p->service2Peer.end()){
+					p->service2Peer.erase(it);
+					p->services.erase(s);
+				}
 			}
 			for(int32_t id : it->connections){
 				p->removeConnection(id);
