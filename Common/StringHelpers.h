@@ -136,4 +136,18 @@ bool isGlobalPath(std::string path);
 //! returns the path prefix (including trailing slash) to access file in the same folder as the executable
 std::string getAppHomePathFromArgV0(const char* argv0);
 
+//! returns true if it is there, and fills the value (empty==no value, defaultValue if argument doesn't exist), examples: .. -arg .. , .. -arg value .. , .. -argvalue ..
+bool getCommandLineArgument(std::string& value, int argc, char* argv[], const std::string& argument, const std::string& defaultValue = "", char argPrefix = '-');
+
+template <typename TValue>
+bool getCommandLineArgument(TValue& value, int argc, char* argv[], const std::string& argument, const TValue& defaultValue = TValue(), char argPrefix = '-'){
+	std::string strValue;
+	bool res = getCommandLineArgument(strValue, argc, argv, argument, "", argPrefix);
+	value = res?convertStringTo<TValue>(strValue):defaultValue;
+	return res;
+}
+
+//! only checks for existance without value
+bool hasCommandLineArgument(int argc, char* argv[], const char* argument);
+
 #endif
