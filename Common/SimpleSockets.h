@@ -350,6 +350,10 @@ ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, 
 //! WARNING: NO TIMEOUT; portToFill: port which is filled into the results
 std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_t portToFill = 0);
 
+//! if tcp create tcp socket and connect with tcpConnectTimeout, else create udp and set target
+//! returns NULL if no known ip address or tcp connection failed
+ASocket* createSocketForHostName(bool tcp, std::string hostName, uint16_t port, uint32_t tcpConnectTimeout);
+
 template<typename TUDPSocket, typename TContainer>
 bool sendUDPToAddresses(TUDPSocket& s, const TContainer& addressList, const char* buf, uint32_t bufSize){
 	bool succ = true;

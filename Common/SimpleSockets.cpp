@@ -986,6 +986,27 @@ std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_
 	return l;	
 }
 
+ASocket* createSocketForHostName(bool tcp, std::string hostName, uint16_t port, uint32_t tcpConnectTimeout){
+	ASocket* res = NULL;
+	std::list<IIPAddress*> l = queryIPAddressesForHostName(hostName, port);
+	if(tcp){
+		res = connectSocketForAddressList(l, tcpConnectTimeout);
+	}else if(!l.empty()){
+		IIPAddress* a = l.front();
+		if(a->getIPVersion()==IIPAddress::IPV4){
+			IPv4UDPSocket* s = new IPv4UDPSocket();
+			s->setUDPTarget(*(IPv4Address*)a);
+			res = s;
+		}else{
+			IPv6UDPSocket* s = new IPv6UDPSocket();
+			s->setUDPTarget(*(IPv6Address*)a);
+			res = s;
+		}
+	}
+	for(IIPAddress* a : l){delete a;}
+	return res;
+}
+
 std::list<IPv4Address> queryIPv4BroadcastAdresses(uint16_t portToFill){
 	checkAndInitGlobally();
 	std::list<IPv4Address> l;

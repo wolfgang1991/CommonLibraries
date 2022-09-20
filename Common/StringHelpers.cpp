@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <vector>
 #include <cmath>
+#include <cstring>
 
 template<class E,
  class T = std::char_traits<E>,
@@ -167,4 +168,32 @@ std::string getAppHomePathFromArgV0(const char* argv0){
 		}
 	}
 	return apphome;
+}
+
+bool getCommandLineArgument(std::string& value, int argc, char* argv[], const std::string& argument, const std::string& defaultValue, char argPrefix){
+	for(int i=0; i<argc; i++){
+		std::string s(argv[i]);
+		if(isPrefixEqual(s, argument)){
+			if(s==argument){//-arg value or -arg -nextarg
+				if(i<argc-1 && argv[i+1][0]!=argPrefix){//-arg value
+					value = argv[i+1];
+				}else{//-arg -nextarg
+					value = "";
+				}
+				return true;
+			}else{// -argvalue
+				value = s.substr(argument.size(), std::string::npos);
+				return true;
+			}
+		}
+	}
+	value = defaultValue;
+	return false;
+}
+
+bool hasCommandLineArgument(int argc, char* argv[], const char* argument){
+	for(int i=0; i<argc; i++){
+		if(strcmp(argument, argv[i])==0){return true;}
+	}
+	return false;
 }
