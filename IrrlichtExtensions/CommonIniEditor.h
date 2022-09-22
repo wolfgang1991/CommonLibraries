@@ -7,8 +7,11 @@
 
 #include <IniFile.h>
 
+#include <IGUIElement.h>
+
 #include <string>
 #include <list>
+#include <functional>
 
 class AggregateGUIElement;
 
@@ -36,7 +39,6 @@ class IIniEditorCustomization{
 	
 };
 
-//TODO: refactor to inherit from IGUIElement and replace processEvent by OnEvent
 //! Dialog for editing Ini Files Note: rgba default value: r,g,b,a oder bei rgb: r,g,b; ONE_OF default: alternative1;2;3;...
 class CommonIniEditor{
 
@@ -72,6 +74,10 @@ class CommonIniEditor{
 	ColorSelector sel;
 	int colorState;//-1 if no color edited, valindex if edited
 
+	int state;//0: normal, 1: android-like scrollen
+	int py;//altes mousey
+	irr::s32 oldScrollPos;
+
 	bool showHelpButton;
 	std::string helpFile;
 
@@ -103,7 +109,7 @@ class CommonIniEditor{
 	virtual void edit(IniFile* Ini);
 
 	//! should be called on each event
-	virtual void processEvent(irr::SEvent event);
+	virtual void processEvent(const irr::SEvent& event);
 
 	virtual bool isVisible();
 
@@ -115,7 +121,49 @@ class CommonIniEditor{
 	
 	//! same effect as pressing the cancel button
 	virtual void cancelEdit();
+	
+	virtual irr::gui::IGUIEnvironment* getGUIEnvironment() const{return env;}
+	
+	virtual irr::video::IVideoDriver* getVideoDriver() const{return driver;}
+	
+	virtual ICommonAppContext* getContext() const{return c;}
+	
+	virtual irr::gui::IGUIWindow* getWindow() const{return win;}
+	
+	//! may be overidden by child class
+	virtual void OnCancel(){};
+	
+	//! may be overidden by child class
+	virtual void OnSuccess(){};
 
+};
+
+//! A GUI Element wrapper to embed the IniEditor into the Irrlicht GUI
+class IniEditorGUIElement : public irr::gui::IGUIElement{
+
+	CommonIniEditor* iniEditor;
+	std::function<void()> onSuccess;
+	std::function<void()> onCancel;
+	
+	irr::core::dimension2d<irr::u32> ss;
+	bool removeOnScreenResize;
+	bool mustRemove;
+	
+	public:
+	
+	//! the iniEditor will be deleted in the destructor
+	IniEditorGUIElement(CommonIniEditor* iniEditor, irr::gui::IGUIElement* parent = NULL, bool removeOnScreenResize = true);
+	
+	~IniEditorGUIElement();
+	
+	bool OnEvent(const irr::SEvent& event) override;
+	
+	void draw() override;
+	
+	void edit(IniFile* ini, const std::function<void()>& onSuccess, const std::function<void()>& onCancel = [](){});
+	
+	void setVisible(bool visible) override;
+	
 };
 
 #endif

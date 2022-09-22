@@ -19,7 +19,7 @@ NumberEditBox::NumberEditBox(irr::gui::IGUIEnvironment* env, irr::gui::IGUIEleme
 	largeStep(largeStep),
 	normalStep(normalStep),
 	value(defaultValue){
-	etext = env->addStaticText(stringw(defaultValue).c_str(), rect<s32>(2*buttonWidth, 0, rectangle.getWidth()-2*buttonWidth, rectangle.getHeight()), true, true, this, -1, true);
+	etext = env->addStaticText(stringw(defaultValue).c_str(), rect<s32>(2*buttonWidth, 0, rectangle.getWidth()-2*buttonWidth, rectangle.getHeight()), false, true, this, -1, false);
 	etext->setTextAlignment(EGUIA_CENTER, EGUIA_CENTER);
 	ldbut = env->addButton(rect<s32>(0, 0, buttonWidth, rectangle.getHeight()), this, -1, L"--", NULL);
 	dbut = env->addButton(rect<s32>(buttonWidth, 0, 2*buttonWidth, rectangle.getHeight()), this, -1, L"-", NULL);
@@ -48,6 +48,11 @@ NumberEditBox::~NumberEditBox(){
 
 irr::s32 NumberEditBox::getValue() const{
 	return value;
+}
+
+void NumberEditBox::setValue(irr::s32 value){
+	this->value = value;
+	etext->setText(convertToWString(value).c_str());
 }
 
 irr::gui::IGUIStaticText* NumberEditBox::getStaticText() const{

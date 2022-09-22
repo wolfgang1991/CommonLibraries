@@ -14,6 +14,8 @@
 #include <IrrlichtDevice.h>
 #include <IGUIFont.h>
 
+#include <iostream>
+
 using namespace irr;
 using namespace core;
 using namespace video;
@@ -73,7 +75,11 @@ bool loadFileWithAssetSupport(irr::io::IFileSystem* fsys, const std::string& fil
 		rf->read(bufferOut, bufferSizeOut);
 		rf->drop();
 		return true;
+	}else{
+		std::cerr << "Unable to load file: " << file << std::endl;
 	}
+	bufferOut = NULL;
+	bufferSizeOut = 0;
 	return false;
 }
 

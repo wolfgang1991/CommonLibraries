@@ -6,6 +6,9 @@
 extern uint32_t crc_32_tab[];
 
 #define UPDC32(octet,crc) (crc_32_tab[((crc) ^ ((unsigned char)octet)) & 0xff] ^ ((crc) >> 8))
+
+#define STARTCRC32(VARNAME) uint32_t VARNAME = 0xFFFFFFFF;
+#define ENDCRC32(VARNAME) VARNAME = ~VARNAME;
  
 uint32_t updateCRC32(unsigned char ch, uint32_t crc);
 

@@ -9,7 +9,7 @@ class Drawer2D;
 
 class BeautifulGUIImage : public IAggregatableGUIElement{
 
-	private:
+	protected:
 	
 	irr::video::ITexture* tex;
 	Drawer2D* drawer;
@@ -20,6 +20,8 @@ class BeautifulGUIImage : public IAggregatableGUIElement{
 	
 	//! pointers must not be NULL (except tex, tex may be NULL), id is not used for extension lookup
 	BeautifulGUIImage(Drawer2D* drawer, irr::video::ITexture* tex, irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, bool maintainAspectRatio, irr::s32 id, irr::video::SColor color = irr::video::SColor(255,255,255,255), void* data = NULL, IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0));
+	
+	virtual ~BeautifulGUIImage(){}
 	
 	void draw();
 	

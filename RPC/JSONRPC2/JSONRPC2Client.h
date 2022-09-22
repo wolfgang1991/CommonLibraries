@@ -15,10 +15,10 @@
 
 //#define DONT_CHECK_JSON_RPC_VERSION
 
-std::string convertRPCValueToJSONResult(const IRPCValue& value, uint32_t jsonId);
+std::string convertRPCValueToJSONResult(const IRPCValue& value, uint32_t jsonId, bool escapeNonPrintableChars);
 
 //! values may be empty, jsonId may be NULL if no result is expected
-std::string makeJSONRPCRequest(const std::string& procedure, const std::vector<IRPCValue*>& values, uint32_t* jsonId);
+std::string makeJSONRPCRequest(const std::string& procedure, const std::vector<IRPCValue*>& values, uint32_t* jsonId, bool escapeNonPrintableChars);
 
 //! deletes all Elements from a container e.g. std::vector or std::list etc..
 template<typename TContainer>
@@ -76,6 +76,8 @@ class JSONRPC2Client : public IRPCClient{
 	ICommunicationEndpoint* socket;
 	uint32_t pingSendPeriod, pingTimeout, connectTimeout;
 	
+	bool escapeNonPrintableChars;
+	
 	static void* clientMain(void* p);
 	
 	Thread clientThread;
@@ -85,7 +87,8 @@ class JSONRPC2Client : public IRPCClient{
 	
 	public:
 	
-	JSONRPC2Client();
+	//! escapeNonPrintableChars: if true it is standard compliant, however it works with this parser also if they are not escaped (==false, more efficient in case binary data is sent as strings)
+	JSONRPC2Client(bool escapeNonPrintableChars = true);
 	
 	~JSONRPC2Client();
 	
@@ -102,7 +105,7 @@ class JSONRPC2Client : public IRPCClient{
 	
 	void update();
 	
-	ClientState getState() const;
+	IRPCClient::ClientState getState() const;
 	
 	void disconnect();
 	

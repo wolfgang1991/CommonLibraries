@@ -9,11 +9,13 @@ endif
 LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_LINKOBJ))
 C_LINKOBJ = $(patsubst %,$(OBJDIR)/%,$(_C_LINKOBJ))
 
-ifeq ($(DEBUG),1)
+ifeq ($(DEBUG),1)#normal debugging
 OPTIM = $(USEROPTIM) -g -DDEBUG=1
-else ifeq ($(DEBUG),2)
-OPTIM = $(USEROPTIM) -fsanitize=address -fno-omit-frame-pointer -g3 -DDEBUG=2
-else
+else ifeq ($(DEBUG),2)#debugging with address sanitizer
+OPTIM = $(USEROPTIM) -fsanitize=address -static-libasan -fno-omit-frame-pointer -g3 -DDEBUG=2
+else ifeq ($(DEBUG),3)#no debugging, no optimizations
+OPTIM = $(USEROPTIM) -s -O0 -DNDEBUG
+else#no debugging, with optimizations
 OPTIM = $(USEROPTIM) -O3 -DNDEBUG
 endif
 
@@ -26,16 +28,16 @@ $(FINALSTATICLIB): $(LINKOBJ) $(C_LINKOBJ)
 	$(AR) rs $@ $^
 	
 # Create dependency files for automatic recompilation
-$(OBJDIR)/%.d:$(SRCDIR)/%.cpp
+$(LINKOBJ:.o=.d):$(OBJDIR)/%.d:$(SRCDIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -MM -MF $@ $<
-	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
+	sed -i -e "1s;.*;$(@D)/\0;" $@
 	echo "	$(CXX) $(CPPFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 	
-$(OBJDIR)/%.d:$(SRCDIR)/%.c
+$(C_LINKOBJ:.o=.d):$(OBJDIR)/%.d:$(SRCDIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MM -MF $@ $<
-	sed -i -e "1s;.*;$(OBJDIR)/\0;" $@
+	sed -i -e "1s;.*;$(@D)/\0;" $@
 	echo "	$(CC) $(CFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -44,7 +46,7 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 clean: clean_deps
-	$(RM) $(LINKOBJ) $(LINKOBJ:.o=.d)
+	$(RM) -r $(OBJDIR)
 	$(RM) $(FINALSTATICLIB)
 
 .PHONY: all clean

@@ -21,6 +21,7 @@ OutsideCancelWindow::OutsideCancelWindow(irr::gui::IGUIEnvironment* environment,
 	IGUIWindow(environment, environment->getRootGUIElement(), id, rect<s32>(0,0,environment->getVideoDriver()->getScreenSize().Width,environment->getVideoDriver()->getScreenSize().Height)){
 	this->win = win;
 	addChild(win);
+	drop();
 }
 
 irr::gui::IGUIButton* OutsideCancelWindow::getCloseButton() const{return win->getCloseButton();}
@@ -49,6 +50,7 @@ bool OutsideCancelWindow::OnEvent(const SEvent& event){
 		if(m.Event==EMIE_LMOUSE_LEFT_UP){
 			vector2d<s32> mPos(m.X, m.Y);
 			if(!win->getAbsolutePosition().isPointInside(mPos)){
+				grab();
 				SEvent toPost;
 				toPost.EventType = EET_GUI_EVENT;
 				toPost.GUIEvent.Caller = this;

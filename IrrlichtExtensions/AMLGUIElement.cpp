@@ -30,7 +30,7 @@ using namespace io;
 
 const AMLGUIElement::NavButtons AMLGUIElement::defaultNavButtons{L"<", -1, L">", -1, L"1", -1, L"-", -1, L"+", -1, 0.05f, -1};
 
-AMLGUIElement::AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language, const NavButtons* navButtons, IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle, irr::s32 buttonId):
+AMLGUIElement::AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language, const NavButtons* navButtons, IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle, irr::s32 buttonId, irr::video::SColor* overrideTextColor):
 	AggregateGUIElement(context->getIrrlichtDevice()->getGUIEnvironment(), recommendedSpace, aspectRatio, recommendedSpace, aspectRatio, maintainAspectRatio, false, false, {}, {}, false, id, NULL, parent, rectangle),
 	language(language),
 	searchPath(appendMissingPathDelimeter(searchPath)),
@@ -68,10 +68,16 @@ AMLGUIElement::AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpa
 	zoom = 1.f;
 	cbk = NULL;
 	contentSet = false;
+	useOverrideTextColor = overrideTextColor!=NULL;
+	if(useOverrideTextColor){this->overrideTextColor = *overrideTextColor;}
 }
 
 AMLGUIElement::~AMLGUIElement(){
 	//nothing to do (IGUIElement desctructor already deletes the children)
+}
+
+irr::video::SColor AMLGUIElement::getDefaultTextColor() const{
+	return useOverrideTextColor?overrideTextColor:(Environment->getSkin()->getColor(EGDC_BUTTON_TEXT));
 }
 
 bool AMLGUIElement::hasContent() const{
@@ -109,7 +115,7 @@ bool AMLGUIElement::setCodeFromFile(const std::string& path, bool printParsingEr
 	}else{
 		clear();
 		std::wstringstream ss; ss << L"File could not be opened: " << convertUtf8ToWString(path);
-		content = new BeautifulGUIText(ss.str().c_str(), SColor(255,0,0,0), 0.f, NULL, true, true, Environment, 1.f-buttonSpace);
+		content = new BeautifulGUIText(ss.str().c_str(), getDefaultTextColor(), 0.f, NULL, true, true, Environment, 1.f-buttonSpace);
 		addSubElement(content);
 	}
 	return res;
@@ -423,7 +429,7 @@ class AMLParseCallback : public IParsingCallback{
 				}else{
 					recommendedSpace = fSpace;
 				}
-				BeautifulGUIText* bt = new BeautifulGUIText(text.c_str(), getColorValue(t->attributes["color"], SColor(255,0,0,0)), getF32Value(t->attributes["italic"], 0.f), NULL, getBooleanValue(t->attributes["hcenter"], false), getBooleanValue(t->attributes["vcenter"], false), ele->Environment, recommendedSpace, -1, scale);
+				BeautifulGUIText* bt = new BeautifulGUIText(text.c_str(), getColorValue(t->attributes["color"], ele->getDefaultTextColor()), getF32Value(t->attributes["italic"], 0.f), NULL, getBooleanValue(t->attributes["hcenter"], false), getBooleanValue(t->attributes["vcenter"], false), ele->Environment, recommendedSpace, -1, scale);
 				prev.updateMaxChildSpace(recommendedSpace*prev.getSpace(), prev.isHorizontal?dim.Height:(wordWrapLimit>0.f?wordWrapLimit:dim.Width));//TODO fix problem with long one line texts: horizontal space is a little bit too small, why???
 				prev.ele->addSubElement(bt);
 				guiFont->setDefaultScale(oldScale);
@@ -469,7 +475,7 @@ bool AMLGUIElement::parseAndCreateGUI(){
 			std::wstringstream ss; ss << cbk.errorMessage << L"\nIn line: " << lineCount;
 			std::cerr << "Error: " << convertWStringToUtf8String(ss.str()) << std::endl;
 			std::wstring text = makeWordWrappedText(ss.str(), r.getWidth(), Environment->getSkin()->getFont());
-			content = new BeautifulGUIText(text.c_str(), SColor(255,0,0,0), 0.f, NULL, true, true, Environment, 1.f-buttonSpace);
+			content = new BeautifulGUIText(text.c_str(), getDefaultTextColor(), 0.f, NULL, true, true, Environment, 1.f-buttonSpace);
 			addSubElement(content);
 			break;
 		}

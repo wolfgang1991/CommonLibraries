@@ -31,4 +31,7 @@ class UnicodeCfgParser{
 
 };
 
+//! escapes \ \n , ;
+std::wstring escapeForUnicodeCfgParser(const std::wstring& toEscape);
+
 #endif

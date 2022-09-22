@@ -1,6 +1,7 @@
 #include <IniFile.h>
 #include <IniIterator.h>
 #include <IniParser.h>
+#include <utf8.h>
 
 #include <iostream>
 #include <cstring>
@@ -81,10 +82,6 @@ std::string unescapeIniStrings(const std::string& s){
 	}
 }
 
-std::string& IniFile::get(const std::string& section, const std::string& key){
-	return data[section][key];
-}
-
 const std::string& IniFile::get(const std::string& section, const std::string& key, const std::string& defaultValue) const{
 	auto it = data.find(section);
 	if(it!=data.end()){
@@ -99,6 +96,14 @@ const std::string& IniFile::get(const std::string& section, const std::string& k
 const std::string& IniFile::get(const std::string& section, const std::string& key) const{
 	static const std::string empty("");
 	return get(section, key, empty);
+}
+
+const std::string& IniFile::get(std::map< std::string, std::map<std::string, std::string> >::iterator it, const std::string& key, const std::string& defaultValue){
+	auto it2 = it->second.find(key);
+	if(it2!=it->second.end()){
+		return it2->second;
+	}
+	return defaultValue;
 }
 
 void IniFile::set(const std::string& section, const std::string& key, const std::string& value){
@@ -200,3 +205,50 @@ void IniFile::moveSection(const std::string& start, const std::string& end){
 	removeSection(start);
 }
 
+const std::map<std::string, std::string>& IniFile::getSection(const std::string& section) const{
+	auto it = data.find(section);
+	if(it != data.end()){
+		return it->second;
+	}else{
+		static const std::map<std::string, std::string> emptyMap;
+		return emptyMap;
+	}
+}
+
+void IniFile::setSection(const std::string& section, const std::map<std::string, std::string>& key2value){
+	data[section] = key2value;
+}
+
+void setToIniSection(std::map<std::string, std::string>& section, const std::string& key, const std::string& value){
+	section[key] = value;
+}
+
+void setToIniSection(std::map<std::string, std::string>& section, const std::string& key, const std::wstring& value){
+	section[key] = convertWStringToUtf8String(value);
+}
+
+void setToIniSection(std::map<std::string, std::string>& section, const std::string& key, bool value){
+	setToIniSection(section, key, (int)value);
+}
+
+const std::string& getFromIniSection(const std::map<std::string, std::string>& section, const std::string& key, const std::string& defaultValue){
+	auto it = section.find(key);
+	if(it == section.end()){
+		return defaultValue;
+	}else{
+		return it->second;
+	}
+}
+
+std::wstring getFromIniSection(const std::map<std::string, std::string>& section, const std::string& key, const std::wstring& defaultValue){
+	auto it = section.find(key);
+	if(it == section.end()){
+		return defaultValue;
+	}else{
+		return convertUtf8ToWString(it->second);
+	}
+}
+
+bool getFromIniSection(const std::map<std::string, std::string>& section, const std::string& key, bool defaultValue){
+	return (bool)getFromIniSection<int>(section, key, (int)defaultValue);
+}

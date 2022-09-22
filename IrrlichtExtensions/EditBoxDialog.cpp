@@ -1,6 +1,7 @@
 #include <EditBoxDialog.h>
 #include <GUI.h>
 #include <IniFile.h>
+#include <mathUtils.h>
 
 #include <IVideoDriver.h>
 #include <IGUIWindow.h>
@@ -57,14 +58,26 @@ static const char* guiCodeString =
 "VAlign = Center\n"
 "VisibilityDomain = 0\n";
 
-EditBoxDialog::EditBoxDialog(IEditBoxDialogCallback* cbk, irr::IrrlichtDevice* device, const wchar_t* title, const wchar_t* positiveLabel, const wchar_t* negativeLabel, const wchar_t* defaultText, bool isModal, bool isPasswordBox, wchar_t passwordChar):
+EditBoxDialog::EditBoxDialog(IEditBoxDialogCallback* cbk, irr::IrrlichtDevice* device, const wchar_t* title, const wchar_t* positiveLabel, const wchar_t* negativeLabel, const wchar_t* defaultText, bool isModal, bool isPasswordBox, wchar_t passwordChar, irr::core::rect<irr::s32>* spaceOverride):
 	IGUIElement(EGUIET_ELEMENT, device->getGUIEnvironment(), device->getGUIEnvironment()->getRootGUIElement(), -1, rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height)),
 	device(device),
 	cbk(cbk){
+	init(title, positiveLabel, negativeLabel, defaultText, isModal, isPasswordBox, passwordChar, spaceOverride);
+}
+
+EditBoxDialog::EditBoxDialog(const std::function<void(EditBoxDialog*, const wchar_t*, bool)>& onResult, irr::IrrlichtDevice* device, const wchar_t* title, const wchar_t* positiveLabel, const wchar_t* negativeLabel, const wchar_t* defaultText, bool isModal, bool isPasswordBox, wchar_t passwordChar, irr::core::rect<irr::s32>* spaceOverride):
+	IGUIElement(EGUIET_ELEMENT, device->getGUIEnvironment(), device->getGUIEnvironment()->getRootGUIElement(), -1, rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height)),
+	device(device),
+	cbk(NULL),
+	onResult(onResult){
+	init(title, positiveLabel, negativeLabel, defaultText, isModal, isPasswordBox, passwordChar, spaceOverride);
+}
+
+void EditBoxDialog::init(const wchar_t* title, const wchar_t* positiveLabel, const wchar_t* negativeLabel, const wchar_t* defaultText, bool isModal, bool isPasswordBox, wchar_t passwordChar, irr::core::rect<irr::s32>* spaceOverride){
 	IniFile guiIni;
 	guiIni.setFromString(guiCodeString);
 	irr::core::dimension2d<irr::u32> dim = Environment->getVideoDriver()->getScreenSize();
-	win = addWindowForRatio(Environment, &guiIni, irr::core::rect<irr::s32>(dim.Width/4,dim.Height/20,3*dim.Width/4,dim.Height/2), isModal, this);
+	win = addWindowForRatio(Environment, &guiIni, spaceOverride!=NULL?(*spaceOverride):(irr::core::rect<irr::s32>(dim.Width/4,dim.Height/20,3*dim.Width/4,dim.Height/2)), isModal, this);
 	win->getCloseButton()->setVisible(false);
 	win->setDrawTitlebar(false);
 	win->setDraggable(false);
@@ -89,6 +102,7 @@ EditBoxDialog::EditBoxDialog(IEditBoxDialogCallback* cbk, irr::IrrlichtDevice* d
 	eeedit->OnEvent(event);
 	event.KeyInput.PressedDown = false;
 	eeedit->OnEvent(event);
+	drop();
 }
 	
 EditBoxDialog::~EditBoxDialog(){
@@ -102,20 +116,35 @@ bool EditBoxDialog::OnEvent(const irr::SEvent& event){
 			const SEvent::SGUIEvent& g = event.GUIEvent;
 			if(g.EventType==EGET_BUTTON_CLICKED){
 				if(g.Caller==ebok){
-					cbk->OnResult(this, eeedit->getText(), true);
+					grab();
+					if(cbk){
+						cbk->OnResult(this, eeedit->getText(), true);
+					}else{
+						onResult(this, eeedit->getText(), true);
+					}
 					remove();
 					drop();
 					return true;
 				}else if(g.Caller==ebcancel){
-					cbk->OnResult(this, eeedit->getText(), false);
+					grab();
+					if(cbk){
+						cbk->OnResult(this, eeedit->getText(), false);
+					}else{
+						onResult(this, eeedit->getText(), false);
+					}
 					remove();
 					drop();
 					return true;
 				}
 			}else if(g.EventType==EGET_EDITBOX_ENTER){
-				if(g.Caller==eeedit){
+				if(g.Caller==eeedit && !eeedit->isMultiLineEnabled()){
+					grab();
 					bool res = irr::gui::IGUIElement::OnEvent(event);
-					cbk->OnResult(this, eeedit->getText(), true);
+					if(cbk){
+						cbk->OnResult(this, eeedit->getText(), true);
+					}else{
+						onResult(this, eeedit->getText(), true);
+					}
 					remove();
 					drop();
 					return res;
@@ -124,6 +153,29 @@ bool EditBoxDialog::OnEvent(const irr::SEvent& event){
 		}
 	}
 	return res;
+}
+
+static void applyDH(IGUIElement* ele, s32 dh){
+	rect<s32> p = ele->getRelativePosition();
+	p.LowerRightCorner.Y += dh;
+	ele->setRelativePosition(p);
+}
+
+static void applyDHAll(IGUIElement* ele, s32 dh){
+	rect<s32> p = ele->getRelativePosition();
+	p.UpperLeftCorner.Y += dh;
+	p.LowerRightCorner.Y += dh;
+	ele->setRelativePosition(p);
+}
+
+void EditBoxDialog::enableMultLineEditing(irr::f32 resizeFactor){
+	eeedit->setMultiLine(true);
+	eeedit->setWordWrap(true);
+	s32 dh = rd<f32,s32>((resizeFactor-1.0)*eeedit->getRelativePosition().getHeight());
+	applyDH(win, dh);
+	applyDH(eeedit, dh);
+	applyDHAll(ebok, dh);
+	applyDHAll(ebcancel, dh);
 }
 
 bool startEditBoxDialog(std::wstring& out, irr::video::SColor bgColor, irr::IrrlichtDevice* device, const wchar_t* title, const wchar_t* positiveLabel, const wchar_t* negativeLabel, const wchar_t* defaultText, bool isModal, bool isPasswordBox, wchar_t passwordChar, const std::function<void()>& updateFunc){

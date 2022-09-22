@@ -1,5 +1,7 @@
 #include "IAggregatableGUIElement.h"
 
+#include <timing.h>
+
 #include <IGUISkin.h>
 #include <IGUIEnvironment.h>
 
@@ -45,12 +47,34 @@ IAggregatableGUIElement::IAggregatableGUIElement(irr::gui::IGUIEnvironment* envi
 	active(false),
 	activationLock(false),
 	pressedInside(false),
-	data(data)
+	data(data),
+	onClick([](IAggregatableGUIElement* ele){}),
+	onLongTap([](IAggregatableGUIElement* ele){}),
+	longTapTime(1000.0),//1000s to "deactivate"
+	rectWhenPressed(0,0,0,0),
+	timeWhenPressed(0.0)
 {
 	setName("IAggregatableGUIElement");
 	if(parent==NULL){environment->getRootGUIElement()->addChild(this);}
 	assert(getReferenceCount()==2);
 	drop();//correct reference count since the reference is hold by the parent
+}
+
+void IAggregatableGUIElement::setLongTapCallback(const std::function<void(IAggregatableGUIElement* ele)>& callback, double longTapTime){
+	onLongTap = callback;
+	this->longTapTime = longTapTime;
+}
+
+void IAggregatableGUIElement::setOnClickCallback(const std::function<void(IAggregatableGUIElement* ele)>& callback){
+	onClick = callback;
+}
+
+void IAggregatableGUIElement::setActivableFlag(bool isActivateAble){
+	this->isActivateAble = isActivateAble;
+}
+	
+bool IAggregatableGUIElement::getActivableFlag() const{
+	return isActivateAble;
 }
 
 irr::f32 IAggregatableGUIElement::getOtherSpaceForAspectRatio(bool parentHorizontal, irr::f32 parentSpace, irr::f32 fallback){
@@ -104,10 +128,15 @@ void IAggregatableGUIElement::draw(){
 			}
 		}
 		irr::gui::IGUIElement::draw();
+		if(pressedInside && getSecs()-timeWhenPressed>longTapTime){
+			pressedInside = false;//no click event when longtap event
+			onLongTap(this);
+		}
 	}
 }
 
 bool IAggregatableGUIElement::OnEvent(const irr::SEvent& event){
+	grab();//to avoid delete in events below
 	if(event.EventType==EET_MOUSE_INPUT_EVENT){
 		const SEvent::SMouseInput& m = event.MouseInput;
 		if(m.Event==EMIE_LMOUSE_LEFT_UP && pressedInside){
@@ -115,11 +144,22 @@ bool IAggregatableGUIElement::OnEvent(const irr::SEvent& event){
 			if(isActivateAble && !activationLock){
 				setActive(!isActive());
 			}
+			vector2d<s32> mPos(m.X, m.Y);
+			if(AbsoluteRect.isPointInside(mPos) && rectWhenPressed.isPointInside(mPos)){
+				onClick(this);
+			}
+		}else if(m.Event==EMIE_MOUSE_MOVED){
+			vector2d<s32> mPos(m.X, m.Y);
+			pressedInside = pressedInside && AbsoluteRect.isPointInside(mPos) && rectWhenPressed.isPointInside(mPos);
 		}else if(m.Event==EMIE_LMOUSE_PRESSED_DOWN){// && getAbsolutePosition().isPointInside(vector2d<s32>(m.X,m.Y))){
 			pressedInside = true;
+			rectWhenPressed = AbsoluteRect;
+			timeWhenPressed = getSecs();
 		}
 	}
-	return irr::gui::IGUIElement::OnEvent(event);
+	bool res = irr::gui::IGUIElement::OnEvent(event);
+	drop();//see grab above
+	return res;
 }
 
 void IAggregatableGUIElement::setActivationLock(bool on){

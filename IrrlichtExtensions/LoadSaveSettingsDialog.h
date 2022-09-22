@@ -104,6 +104,8 @@ class LoadSaveSettingsDialog : public irr::gui::IGUIElement{
 	
 	double lastSelectionChange;
 	
+	bool mustRefill;
+	
 	void openOrSave(bool open);
 	
 	IndicationFunction calculateIndication;

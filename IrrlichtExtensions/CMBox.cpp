@@ -2,6 +2,7 @@
 #include <font.h>
 #include <utilities.h>
 #include <mathUtils.h>
+#include <utilities.h>
 
 #include <irrlicht.h>
 
@@ -24,12 +25,15 @@ void bringToFrontRecursive(irr::gui::IGUIElement* ele){
 }
 
 CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr::f32 maxH, const wchar_t* positive, const wchar_t* negative, irr::s32 posId, irr::s32 negId, bool modal, irr::gui::EGUI_ALIGNMENT horizontal, irr::gui::EGUI_ALIGNMENT vertical):
-	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)){
+	IGUIElement(irr::gui::EGUIET_ELEMENT, device->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,device->getVideoDriver()->getScreenSize().Width,device->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)),
+	onPositive([](){}), onNegative([](){}){
+	mustDelete = false;
 	env = device->getGUIEnvironment();
 	env->getRootGUIElement()->addChild(this);
 	driver = device->getVideoDriver();
-	w = driver->getScreenSize().Width;
-	h = driver->getScreenSize().Height;
+	screenSize = driver->getScreenSize();
+	w = screenSize.Width;
+	h = screenSize.Height;
 	const s32 buttonHeight = (s32)(0.0625*0.79057*sqrt(w*h));
 	IGUIFont* font = env->getSkin()->getFont();
 	s32 textW = 0, textH = 0;
@@ -60,10 +64,16 @@ CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr:
 	}
 	env->setFocus(pos?(IGUIElement*)pos:(IGUIElement*)win);
 	bringToFrontRecursive(win);
-	drop();//drop since the valid reference is hold by the parent (root element)
+	setCloseOnScreenResize(true);
+	drop();
+}
+
+void CMBox::setCloseOnScreenResize(bool closeOnScreenResize){
+	this->closeOnScreenResize = closeOnScreenResize;
 }
 
 CMBox::~CMBox(){
+	//children are automatically removed
 }
 
 void CMBox::OnNegative(){
@@ -72,9 +82,12 @@ void CMBox::OnNegative(){
 	toPost.GUIEvent.Caller = this;
 	toPost.GUIEvent.Element = neg;
 	toPost.GUIEvent.EventType = EGET_MESSAGEBOX_NO;
-	Parent->OnEvent(toPost);
 	setVisible(false);
+	grab();//in case it gets removed in OnEvent (e.g. if the Parent decides to delete)
+	Parent->OnEvent(toPost);
+	onNegative();
 	remove();
+	drop();
 }
 	
 void CMBox::OnPositive(){
@@ -83,9 +96,20 @@ void CMBox::OnPositive(){
 	toPost.GUIEvent.Caller = this;
 	toPost.GUIEvent.Element = pos;
 	toPost.GUIEvent.EventType = EGET_MESSAGEBOX_YES;
-	Parent->OnEvent(toPost);
 	setVisible(false);
+	grab();//in case it gets removed in OnEvent (e.g. if the Parent decides to delete)
+	Parent->OnEvent(toPost);
+	onPositive();
 	remove();
+	drop();
+}
+
+void CMBox::setPositiveCallback(const std::function<void()>& onPositive){
+	this->onPositive = onPositive;
+}
+
+void CMBox::setNegativeCallback(const std::function<void()>& onNegative){
+	this->onNegative = onNegative;
 }
 
 bool CMBox::OnEvent(const irr::SEvent& event){
@@ -116,10 +140,23 @@ bool CMBox::OnEvent(const irr::SEvent& event){
 			}
 		}
 	}
+	if(mustDelete){
+		if(neg){
+			OnNegative();
+		}else if(pos){
+			OnPositive();
+		}else{
+			setVisible(false);
+			remove();
+		}
+	}
 	return res;
 }
 
 void CMBox::OnPostRender(u32 timeMs){
 	IGUIElement::OnPostRender(timeMs);
 	win->setRelativePosition(limitRect(win->getRelativePosition(),env->getRootGUIElement()->getRelativePosition()));
+	if(closeOnScreenResize && driver->getScreenSize()!=screenSize){
+		mustDelete = true;
+	}
 }

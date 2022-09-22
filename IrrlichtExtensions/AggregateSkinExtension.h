@@ -19,7 +19,7 @@ class AggregateSkinExtension : public IAggregatableSkinExtension{
 
 	public:
 	
-	AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::ITexture* sunkenPaneBgAlpha = NULL, irr::video::SColor* bgColor = NULL, bool highlightIfPressed = false);
+	AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::ITexture* sunkenPaneBgAlpha = NULL, const irr::video::SColor* bgColor = NULL, bool highlightIfPressed = false);
 	
 	virtual void drawSunkenPane(irr::gui::IGUIElement* ele, const irr::core::rect<irr::s32>& rect, const irr::core::rect<irr::s32>* clip);
 

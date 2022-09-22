@@ -44,7 +44,7 @@ static const ConstantLanguagePhrases defaultPhrases({
 	{L"LoadSaveSettingsDialog::NO",L"No"},
 	{L"LoadSaveSettingsDialog::NEW_DIRECTORY",L"Please enter the name of the new directory:\nHint: Empty directories will not persist."},
 	{L"LoadSaveSettingsDialog::OK",L"Ok"},
-	{L"LoadSaveSettingsDialog::CANCEL",L"Cancel"},
+	{L"LoadSaveSettingsDialog::CANCEL",L"Close"},
 	{L"LoadSaveSettingsDialog::RENAME",L"Please choose a new name/location:"},
 	{L"LoadSaveSettingsDialog::BAD_CHAR_SEQUENCE",L"Error: Bad character sequence in name."},
 	{L"LoadSaveSettingsDialog::EMPTY_NAMES",L"Error: Empty names are not possible."},
@@ -268,6 +268,7 @@ LoadSaveSettingsDialog::LoadSaveSettingsDialog(ILoadSaveSettingsCallback* cbk, i
 	bOverwrite = bDeleteOne = NULL;
 	lastSelectionChange = 0;
 	drop();//drop since the valid reference is hold by the parent (root element)
+	mustRefill = false;
 }
 
 LoadSaveSettingsDialog::~LoadSaveSettingsDialog(){
@@ -421,14 +422,14 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 						delete it;
 						fillList();
 					}
-				}, iconsource, .75f, .75f, phrases, true, std::regex(".*.ini"));//TODO richtige icons
+				}, iconsource, .98f, .98f, phrases, true, std::regex(".*.ini"));//TODO richtige icons
 				return true;
 			}else if(g.Caller==ebexport){
 				createItemSelectElement(device, drawer, exportPath, regularAggId, noBorderAggId, invisibleAggId, -1, true, [this](IItemSelectCallback::Action action, IItemOrganizer::Item* item, const std::string& absolutePath, ItemSelectElement* ele, IItemOrganizer* organizer){
 					if(action==IItemSelectCallback::SAVE){
 						ini->save(absolutePath);
 					}
-				}, iconsource, .75f, .75f, phrases, true, std::regex(".*.ini"));
+				}, iconsource, .98f, .98f, phrases, true, std::regex(".*.ini"));
 				return true;
 			}else if(g.Caller==ebdeleteall){
 				bDeleteAll = new CMBox(device, phrases->getPhrase(L"LoadSaveSettingsDialog::DELETE_ALL", &defaultPhrases).c_str(), 0.9f, 0.9f, phrases->getPhrase(L"LoadSaveSettingsDialog::YES", &defaultPhrases).c_str(), phrases->getPhrase(L"LoadSaveSettingsDialog::NO", &defaultPhrases).c_str());
@@ -486,8 +487,8 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 				std::string text = convertWStringToUtf8String(eeName->getText());
 				text = std::string(currentPrefix).append(text[0]=='/'?"":"/").append(text);
 				cbk->OnResult(this, ini, ILoadSaveSettingsCallback::SAVE, text.c_str(), iniDirty);
-				remove();
 				bOverwrite = NULL;
+				remove();
 				return true;
 			}
 		}else if(g.EventType==EGET_MESSAGEBOX_NO){
@@ -506,7 +507,7 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 					ListEntry& e = entries[nowSelected];
 					if(e.isFolder){
 						currentPrefix = e.path;
-						fillList(L"");
+						mustRefill = true;//fillList(L"");
 						lastSelected = nowSelected = -1;
 						return true;
 					}else{
@@ -515,12 +516,13 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 					}
 				}
 				double t = getSecs();
-				if((nowSelected==-1 || lastSelected==-1) && t-lastSelectionChange<DOUBLE_CLICK_TIME){
+				double dt = t-lastSelectionChange;
+				lastSelectionChange = t;//openOrSave may remove this
+				lastSelected = nowSelected;//openOrSave may remove this
+				if((nowSelected==-1 || lastSelected==-1) && dt<DOUBLE_CLICK_TIME){
 					openOrSave(true);
 				}
-				lastSelectionChange = t;
 			}
-			lastSelected = nowSelected;
 			return true;
 		}
 	}else if(event.EventType==EET_KEY_INPUT_EVENT){
@@ -538,4 +540,8 @@ bool LoadSaveSettingsDialog::OnEvent(const SEvent& event){
 
 void LoadSaveSettingsDialog::OnPostRender(irr::u32 timeMs){
 	IGUIElement::OnPostRender(timeMs);
+	if(mustRefill){
+		mustRefill = false;
+		fillList(L"");
+	}
 }

@@ -6,20 +6,24 @@
 #include <IInput.h>
 #include <AggregateGUIElement.h>
 #include <BeautifulGUIText.h>
+#include <BeautifulGUIButton.h>
 #include <AggregatableGUIElementAdapter.h>
 #include <CMBox.h>
+#include <BeautifulCheckBox.h>
+#include <mathUtils.h>
 
 #include <IrrlichtDevice.h>
 #include <IVideoDriver.h>
 #include <IGUIButton.h>
 #include <IGUIWindow.h>
-#include <IGUICheckBox.h>
 #include <IGUIImage.h>
 #include <IGUIScrollBar.h>
 #include <IGUIFont.h>
 #include <IGUIComboBox.h>
 #include <IGUIStaticText.h>
 #include <IGUIEditBox.h>
+
+#include <iostream>
 
 using namespace std;
 using namespace irr;
@@ -75,7 +79,7 @@ void CommonIniEditor::init(const char* HelpFile){
 	int w = driver->getScreenSize().Width; int h = driver->getScreenSize().Height;
 	wrect = rect<s32>(0, 0, w, h);
 	win = env->addWindow(wrect, false, L"");//Edit
-	win->getCloseButton()->setVisible(false); win->setDrawTitlebar(false);
+	win->getCloseButton()->setVisible(false); win->setDrawTitlebar(false); win->setDraggable(false);
 	cancel = env->addButton(rect<s32>(3*w/14-c->getRecommendedButtonWidth()/2, h-10-c->getRecommendedButtonHeight(), 3*w/14+c->getRecommendedButtonWidth()/2, h-10), win, customization->getCancelButtonId(), L"Cancel");
 	showHelpButton = (HelpFile != NULL);
 	help = NULL;
@@ -96,80 +100,85 @@ void CommonIniEditor::init(const char* HelpFile){
 	}
 	lastContent = new std::wstring[fieldCount];
 	win->setVisible(false);
+	state = 0;
 }
 
 void CommonIniEditor::createGUI(){
 	IGUIFont* font = env->getSkin()->getFont();
-	SColor textColor = env->getSkin()->getColor(EGDC_BUTTON_TEXT);
-	AggregateGUIElement* content = new AggregateGUIElement(env, .95f, 1.f, .95f, 1.f, false, false, true, {}, {}, false, customization->getAggregationID());
-	ScrollBar* sb = new ScrollBar(env, .025f, false, customization->getScrollBarID());
-	agg = new AggregateGUIElement(env, 1.f, 1.f, 1.f, 1.f, false, true, false, {
-		new EmptyGUIElement(env, .025f, 1.f, false, false, customization->getAggregatableID()),
-		content,
-		sb
-	}, {}, false, customization->getAggregationID(), NULL, win, prect);
-	sb->linkToScrollable(content);
 	f32 labelSpace = 0.5f;
 	int wholeWidth = prect.getWidth()*.95f;
 	int labelWidth = wholeWidth*labelSpace;
 	f32 lineSpace = (f32)c->getRecommendedButtonHeight()/(f32)prect.getHeight();
+	f32 emptySpace = 0.5f*lineSpace;
+	f32 linesPerPage = (1.f-emptySpace)/(lineSpace+emptySpace);
+	AggregateGUIElement* content = new AggregateGUIElement(env, .95f, 1.f, .95f, 1.f, false, false, true, {}, {}, false, customization->getAggregationID());
+	bool useScrollBar = fieldCount>(linesPerPage/2);//if more than half page filled add scrollbar and large empty space below because of the keyboard
+	ScrollBar* sb = useScrollBar?new ScrollBar(env, .025f, false, customization->getScrollBarID()):NULL;
+	agg = new AggregateGUIElement(env, 1.f, 1.f, 1.f, 1.f, false, true, false, {
+		new EmptyGUIElement(env, .025f, 1.f, false, false, customization->getAggregatableID()),
+		content,
+		sb?(IAggregatableGUIElement*)sb:(IAggregatableGUIElement*)new EmptyGUIElement(env, .025f, 1.f, false, false, customization->getAggregatableID())
+	}, {}, false, customization->getAggregationID(), NULL, win, prect);
+	if(sb){sb->linkToScrollable(content);}
 	for(int i=0; i<fieldCount; i++){
-		content->addSubElement(new EmptyGUIElement(env, .5f*lineSpace, 1.f, false, false, customization->getAggregatableID()));
+		content->addSubElement(new EmptyGUIElement(env, emptySpace, 1.f, false, false, customization->getAggregatableID()));
 		IAggregatableGUIElement* finalLine = NULL;
 		if(valType[i]==INT || valType[i]==DOUBLE || valType[i]==STRING){
 			AggregateGUIElement* line = new AggregateGUIElement(env, lineSpace, 1.f, lineSpace, 1.f, false, true, false, {
-				new BeautifulGUIText(makeWordWrappedText(fieldName[i], labelWidth, font).c_str(), textColor, 0.f, NULL, false, true, env, labelSpace),
+				new BeautifulGUIText(makeWordWrappedText(fieldName[i], labelWidth, font).c_str(), 0.f, NULL, false, true, env, labelSpace),
 				addAggregatableEditBox(env, L"", 1.f-labelSpace, true, valType[i]==INT?INT_EDIT:(valType[i]==DOUBLE?DOUBLE_EDIT:STRING_EDIT))
 			}, {}, false, customization->getInvisibleAggregationID());
 			input[i] = getFirstGUIElementChild(*(line->getChildren().begin()+1));
 			finalLine = line;
 		}else if(valType[i]==NOT_EDITABLE){
-			finalLine = new BeautifulGUIText(convertUtf8ToWString(convertWStringToUtf8String(fieldName[i]).append(defaultValue[i])).c_str(), textColor, 0.f, NULL, true, true, env, lineSpace);
+			finalLine = new BeautifulGUIText(convertUtf8ToWString(convertWStringToUtf8String(fieldName[i]).append(defaultValue[i])).c_str(), 0.f, NULL, true, true, env, lineSpace);
 			input[i] = finalLine;
 		}else if(valType[i]==BOOLEAN){
-			finalLine = addAggregatableCheckBox(env, makeWordWrappedText(fieldName[i], wholeWidth, font).c_str(), false, lineSpace);
-			input[i] = getFirstGUIElementChild(finalLine);
+			finalLine = new BeautifulCheckBox(makeWordWrappedText(fieldName[i], 4*wholeWidth/5, font).c_str(), 0.f, NULL, false, true, env, lineSpace);
+			input[i] = finalLine;
 		}else if(valType[i]==ONE_OF){
 			AggregateGUIElement* line = new AggregateGUIElement(env, lineSpace, 1.f, lineSpace, 1.f, false, true, false, {
-				new BeautifulGUIText(makeWordWrappedText(fieldName[i], labelWidth, font).c_str(), textColor, 0.f, NULL, false, true, env, labelSpace),
+				new BeautifulGUIText(makeWordWrappedText(fieldName[i], labelWidth, font).c_str(), 0.f, NULL, false, true, env, labelSpace),
 				addAggregatableComboBox(env, 1.f-labelSpace)
 			}, {}, false, customization->getInvisibleAggregationID());
 			input[i] = getFirstGUIElementChild(*(line->getChildren().begin()+1));
 			finalLine = line;
 			((IGUIComboBox*)input[i])->setItemHeight(c->getRecommendedButtonHeight());
-			std::wstringstream ss;
-			for(uint32_t ci = 0; ci<defaultValue[i].size(); ci++){
+			uint32_t start = 0;
+			uint32_t ci = 0;
+			for(; ci<defaultValue[i].size(); ci++){
 				char c = defaultValue[i][ci];
 				if(c==';'){
-					((IGUIComboBox*)input[i])->addItem(ss.str().c_str());
-					ss.str(L"");
-				}else{
-					ss << c;
+					((IGUIComboBox*)input[i])->addItem(convertUtf8ToWString(defaultValue[i].substr(start,ci-start)).c_str());//ss.str().c_str());
+					start = ci+1;
 				}
 			}
-			((IGUIComboBox*)input[i])->addItem(ss.str().c_str());
+			((IGUIComboBox*)input[i])->addItem(convertUtf8ToWString(defaultValue[i].substr(start,ci-start)).c_str());
 		}else if(valType[i]==COLOR_RGB || valType[i]==COLOR_RGBA){
+			f32 buttonSpace = Min(1.f, .1f+(f32)font->getDimension(fieldName[i].c_str()).Width/wholeWidth);
 			AggregateGUIElement* line = new AggregateGUIElement(env, lineSpace, 1.f, lineSpace, 1.f, false, true, false, {
-				new EmptyGUIElement(env, .33, 1.f, false, false, customization->getAggregatableID()),
-				addAggregatableButton(env, fieldName[i].c_str(), .34f),
-				new EmptyGUIElement(env, .33, 1.f, false, false, customization->getAggregatableID())
+				new EmptyGUIElement(env, (1.f-buttonSpace)/2.f, 1.f, false, false, customization->getAggregatableID()),
+				new BeautifulGUIButton(env, buttonSpace, 1.f, false, true, false, {
+					new BeautifulGUIText(fieldName[i].c_str(), 0.f, NULL, true, true, env, 1.f)
+				}, {}, -1),
+				new EmptyGUIElement(env, (1.f-buttonSpace)/2.f, 1.f, false, false, customization->getAggregatableID())
 			}, {}, false, customization->getInvisibleAggregationID());
 			finalLine = line;
-			input[i] = getFirstGUIElementChild(*(line->getChildren().begin()+1));
+			input[i] = *(line->getChildren().begin()+1);
 		}
 		if(finalLine){content->addSubElement(finalLine);}
 	}
-	content->addSubElement(new EmptyGUIElement(env, .5f*lineSpace, 1.f, false, false, customization->getAggregatableID()));
+	content->addSubElement(new EmptyGUIElement(env, useScrollBar?1.f:emptySpace, 1.f, false, false, customization->getAggregatableID()));
 }
 
 void CommonIniEditor::removeGUI(){
-	agg->remove();
-	agg = NULL;
+	if(agg!=NULL){
+		agg->remove();
+		agg = NULL;
+	}
 }
 
 CommonIniEditor::~CommonIniEditor(){
-	cancel->remove();
-	ok->remove();
 	win->remove();
 	delete[] key;
 	delete[] fieldName;
@@ -183,6 +192,7 @@ CommonIniEditor::~CommonIniEditor(){
 void CommonIniEditor::edit(IniFile* Ini){
 	createGUI();
 	colorState = -1;
+	state = 0;
 	lastSucc = false;
 	ini = Ini;
 	win->setVisible(true);
@@ -199,7 +209,7 @@ void CommonIniEditor::edit(IniFile* Ini){
 		if(valType[i]==INT || valType[i]==DOUBLE || valType[i]==STRING){
 			input[i]->setText(lastContent[i].c_str());
 		}else if(valType[i]==BOOLEAN){
-			((IGUICheckBox*)input[i])->setChecked((bool)atoi(def.c_str()));
+			((BeautifulCheckBox*)input[i])->setChecked((bool)atoi(def.c_str()));
 		}else if(valType[i]==ONE_OF){
 			IGUIComboBox* combo = (IGUIComboBox*)input[i];
 			for(uint32_t it=0; it<combo->getItemCount(); it++){
@@ -255,8 +265,8 @@ void CommonIniEditor::render(){
 	}
 }
 
-void CommonIniEditor::processEvent(irr::SEvent event){
-	win->setRelativePosition(wrect);
+void CommonIniEditor::processEvent(const irr::SEvent& event){
+	win->setRelativePosition(wrect);//fenster soll auf derselben Position bleiben
 	//ColorSelector Events
 	if(colorState>-1){
 		sel.processEvent(event);
@@ -279,7 +289,7 @@ void CommonIniEditor::processEvent(irr::SEvent event){
 		}
 	}else{//own Events
 		if(event.EventType == EET_GUI_EVENT){
-			irr::SEvent::SGUIEvent guievent = event.GUIEvent;
+			const irr::SEvent::SGUIEvent& guievent = event.GUIEvent;
 			if(guievent.EventType == EGET_EDITBOX_CHANGED){
 				for(int i=0; i<fieldCount; i++){
 					//Type Checking:
@@ -340,7 +350,7 @@ void CommonIniEditor::processEvent(irr::SEvent event){
 						if(valType[i]==INT || valType[i]==DOUBLE || valType[i]==STRING){
 							value = convertWStringToUtf8String(std::wstring(input[i]->getText()));
 						}else if(valType[i]==BOOLEAN){
-							value = convertToString(((IGUICheckBox*)input[i])->isChecked());
+							value = convertToString(((BeautifulCheckBox*)input[i])->isChecked());
 						}else if(valType[i]==NOT_EDITABLE){
 							value = defaultValue[i];
 						}else if(valType[i]==ONE_OF){
@@ -381,6 +391,7 @@ void CommonIniEditor::processEvent(irr::SEvent event){
 					}
 					win->setVisible(false);
 					removeGUI();
+					OnSuccess();
 				}else if(guievent.Caller==cancel){
 					cancelEdit();
 				}else if(guievent.Caller==help){
@@ -394,8 +405,77 @@ void CommonIniEditor::processEvent(irr::SEvent event){
 void CommonIniEditor::cancelEdit(){
 	win->setVisible(false);
 	removeGUI();
+	OnCancel();
 }
 
 bool CommonIniEditor::isVisible(){
 	return win->isVisible();
+}
+
+IniEditorGUIElement::IniEditorGUIElement(CommonIniEditor* iniEditor, irr::gui::IGUIElement* parent, bool removeOnScreenResize):IGUIElement(EGUIET_ELEMENT, iniEditor->getGUIEnvironment(), parent, -1, rect<s32>(0,0,iniEditor->getVideoDriver()->getScreenSize().Width,iniEditor->getVideoDriver()->getScreenSize().Height)){
+	onSuccess = [](){};
+	this->removeOnScreenResize = removeOnScreenResize;
+	this->iniEditor = iniEditor;
+	mustRemove = false;
+	if(parent==NULL){
+		iniEditor->getGUIEnvironment()->getRootGUIElement()->addChild(this);
+	}
+	addChild(iniEditor->getWindow());
+	ss = Environment->getVideoDriver()->getScreenSize();
+	drop();
+}
+
+IniEditorGUIElement::~IniEditorGUIElement(){
+	if(iniEditor->isVisible()){//if not cancelled already
+		iniEditor->cancelEdit();
+	}
+	delete iniEditor;
+}
+	
+bool IniEditorGUIElement::OnEvent(const SEvent& event){
+	if(mustRemove){
+		remove();
+		return true;
+	}else{
+		bool res = IGUIElement::OnEvent(event);//it may get deleted in onSuccess
+		if(iniEditor->isVisible()){
+			iniEditor->processEvent(event);
+			if(iniEditor->lastSuccess()){
+				onSuccess();
+			}else if(!iniEditor->isVisible()){
+				onCancel();
+			}
+		}
+		return res;
+	}
+}
+
+void IniEditorGUIElement::draw(){
+	setVisible(iniEditor->isVisible());
+	if(isVisible()){
+		IGUIElement::draw();
+		iniEditor->render();
+		if(removeOnScreenResize){
+			dimension2d<u32> newSS = Environment->getVideoDriver()->getScreenSize();
+			if(ss!=newSS){
+				ss = newSS;
+				setVisible(false);
+				mustRemove = true;
+			}
+		}
+	}else{
+		mustRemove = true;
+	}
+}
+
+void IniEditorGUIElement::edit(IniFile* ini, const std::function<void()>& onSuccess, const std::function<void()>& onCancel){
+	setVisible(true);
+	this->onSuccess = onSuccess;
+	this->onCancel = onCancel;
+	iniEditor->edit(ini);
+}
+
+void IniEditorGUIElement::setVisible(bool visible){
+	iniEditor->getWindow()->setVisible(visible);
+	IGUIElement::setVisible(visible);
 }

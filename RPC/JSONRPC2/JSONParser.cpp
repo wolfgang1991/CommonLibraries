@@ -11,7 +11,7 @@
 
 using namespace UTF8Conversion;
 
-std::string escapeAndQuoteJSONString(const std::string& s){
+std::string escapeAndQuoteJSONString(const std::string& s, bool escapeNonPrintableChars){
 	std::stringstream ss;
 	ss << "\"";
 	for(uint32_t i=0; i<s.size(); i++){
@@ -20,7 +20,7 @@ std::string escapeAndQuoteJSONString(const std::string& s){
 			ss << "\\\"";
 		}else if(c=='\\'){
 			ss << "\\\\";
-		}else if(c>=0 && c<=31){
+		}else if(escapeNonPrintableChars && c>=0 && c<=31){
 			ss << "\\u00" << std::setfill('0') << std::setw(2) << std::hex << ((int)c) << std::dec;
 		}else{
 			ss << c;
@@ -30,7 +30,7 @@ std::string escapeAndQuoteJSONString(const std::string& s){
 	return ss.str();
 }
 
-std::string convertRPCValueToJSONString(const IRPCValue& value){
+std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPrintableChars){
 	IRPCValue::Type type = value.getType();
 	if(type==IRPCValue::BOOLEAN){
 		return ((const BooleanValue&)value).value?"true":"false";
@@ -44,13 +44,13 @@ std::string convertRPCValueToJSONString(const IRPCValue& value){
 	}else if(type==IRPCValue::INTEGER){
 		return convertToString<int64_t>(((const IntegerValue&)value).value);
 	}else if(type==IRPCValue::STRING){
-		return escapeAndQuoteJSONString(((const StringValue&)value).value);
+		return escapeAndQuoteJSONString(((const StringValue&)value).value, escapeNonPrintableChars);
 	}else if(type==IRPCValue::ARRAY){
 		const ArrayValue& array = (const ArrayValue&)value;
 		std::stringstream ss; ss << "[";
 		for(uint32_t i=0; i<array.values.size(); i++){
 			if(i>0){ss << ",";}
-			ss << convertRPCValueToJSONString(*(array.values[i]));
+			ss << convertRPCValueToJSONString(*(array.values[i]), escapeNonPrintableChars);
 		}
 		ss << "]";
 		return ss.str();
@@ -60,7 +60,7 @@ std::string convertRPCValueToJSONString(const IRPCValue& value){
 		auto begin = object.values.begin();
 		for(auto it = begin; it != object.values.end(); ++it){
 			if(it!=begin){ss << ",";}
-			ss << "\"" << it->first << "\":" << convertRPCValueToJSONString(*(it->second));
+			ss << "\"" << it->first << "\":" << convertRPCValueToJSONString(*(it->second), escapeNonPrintableChars);
 		}
 		ss << "}";
 		return ss.str();
@@ -628,7 +628,7 @@ IJSONParser::State JSONParser::parse(char c, char lookahead){
 
 IJSONParser::State JSONParser::parse(const std::string& s){
 	//double time = getSecs();
-	IJSONParser::State res;
+	IJSONParser::State res = IJSONParser::PARSING;
 	const char* cstr = s.c_str();
 	for(uint32_t i=0; i<s.size(); i++){
 		res = parse(cstr[i], cstr[i+1]);

@@ -15,7 +15,6 @@ class BeautifulGUIText : public IAggregatableGUIElement{
 
 	private:
 	
-	std::wstring text;
 	irr::video::SColor color;
 	irr::f32 italicGradient;
 	irr::core::matrix4 transformation;
@@ -40,7 +39,7 @@ class BeautifulGUIText : public IAggregatableGUIElement{
 	//! like other constructor but with standard textcolor EGDC_BUTTON_TEXT (needs to be updated if changed by setAllBeautifulTextStandardColor)
 	BeautifulGUIText(const wchar_t* text, irr::f32 italicGradient, irr::core::matrix4* transformation, bool hcenter, bool vcenter, irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, irr::s32 id = -1, irr::f32 scale = 1.f, void* data = NULL, IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0));
 	
-	~BeautifulGUIText();
+	virtual ~BeautifulGUIText();
 	
 	virtual void draw();
 	
@@ -53,7 +52,7 @@ class BeautifulGUIText : public IAggregatableGUIElement{
 	
 	virtual void setCenter(bool hcenter, bool vcenter);
 	
-	virtual void setText(const wchar_t* text);
+	virtual void setText(const wchar_t* text) override;
 	
 	virtual irr::scene::SMeshBuffer& getMeshBuffer();
 	

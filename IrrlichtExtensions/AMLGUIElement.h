@@ -86,6 +86,9 @@ class AMLGUIElement : public AggregateGUIElement{
 	
 	std::set<irr::video::ITexture*> textures;
 	
+	irr::video::SColor overrideTextColor;
+	bool useOverrideTextColor;
+	
 	void changeZoom(irr::f32 newZoom);
 	
 	bool contentSet;
@@ -95,6 +98,8 @@ class AMLGUIElement : public AggregateGUIElement{
 	std::unordered_map<std::string, std::function<bool(AMLGUIElement* ele, XMLTag* t)>> functions;//name => function
 	
 	void clear();
+
+	irr::video::SColor getDefaultTextColor() const;
 
 	public:
 	
@@ -118,7 +123,7 @@ class AMLGUIElement : public AggregateGUIElement{
 	//! creates an empty AMLGUIElement
 	//! Navigation Buttons wont't be created if NULL
 	//! language: only parts which match the defined language or match "" are visible
-	AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language = "", const NavButtons* navButtons = &defaultNavButtons, irr::gui::IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0), irr::s32 buttonId = -1);
+	AMLGUIElement(ICommonAppContext* context, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, irr::s32 id, irr::s32 invisibleAggregationId, irr::s32 scrollbarId, std::string searchPath, std::string language = "", const NavButtons* navButtons = &defaultNavButtons, irr::gui::IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0), irr::s32 buttonId = -1, irr::video::SColor* overrideTextColor = NULL);
 	
 	~AMLGUIElement();
 	

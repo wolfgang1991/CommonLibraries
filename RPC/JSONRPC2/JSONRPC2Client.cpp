@@ -16,18 +16,18 @@
 
 using namespace std;
 
-std::string convertRPCValueToJSONResult(const IRPCValue& value, uint32_t jsonId){
+std::string convertRPCValueToJSONResult(const IRPCValue& value, uint32_t jsonId, bool escapeNonPrintableChars){
 	std::stringstream ss;
-	ss << "{\"jsonrpc\": \"2.0\", \"result\": " << convertRPCValueToJSONString(value) << ", \"id\": " << jsonId << "}\n";
+	ss << "{\"jsonrpc\": \"2.0\", \"result\": " << convertRPCValueToJSONString(value, escapeNonPrintableChars) << ", \"id\": " << jsonId << "}\n";
 	return ss.str();
 }
 
-std::string makeJSONRPCRequest(const std::string& procedure, const std::vector<IRPCValue*>& values, uint32_t* jsonId){
+std::string makeJSONRPCRequest(const std::string& procedure, const std::vector<IRPCValue*>& values, uint32_t* jsonId, bool escapeNonPrintableChars){
 	std::stringstream ss;
-	ss << "{\"jsonrpc\": \"2.0\", \"method\": " << escapeAndQuoteJSONString(procedure) << ", \"params\": [";
+	ss << "{\"jsonrpc\": \"2.0\", \"method\": " << escapeAndQuoteJSONString(procedure, escapeNonPrintableChars) << ", \"params\": [";
 	for(uint32_t i=0; i<values.size(); i++){
 		if(i>0){ss << ",";}
-		ss << convertRPCValueToJSONString(*(values[i]));
+		ss << convertRPCValueToJSONString(*(values[i]), escapeNonPrintableChars);
 	}
 	ss << "]";
 	if(jsonId){
@@ -222,7 +222,7 @@ void* JSONRPC2Client::clientMain(void* p){
 	return NULL;
 }
 
-JSONRPC2Client::JSONRPC2Client(){
+JSONRPC2Client::JSONRPC2Client(bool escapeNonPrintableChars):escapeNonPrintableChars(escapeNonPrintableChars){
 	mustJoin = areTherePendingSends = syncExit = false;
 	initMutex(mutexSync);
 	parser = new JSONParser();
@@ -253,12 +253,12 @@ bool JSONRPC2Client::callRemoteProcedure(const std::string& procedure, const std
 				reusableIds.pop_back();
 			}
 			jsonId2Caller[jsonId] = std::make_pair(caller, id);
-			mainToSend.push_back(makeJSONRPCRequest(procedure, values, &jsonId));
+			mainToSend.push_back(makeJSONRPCRequest(procedure, values, &jsonId, escapeNonPrintableChars));
 		}else{
-			mainToSend.push_back(makeJSONRPCRequest(procedure, values, NULL));
+			mainToSend.push_back(makeJSONRPCRequest(procedure, values, NULL, escapeNonPrintableChars));
 		}
 	}else{
-		std::cout << "no connection: " << makeJSONRPCRequest(procedure, values, NULL) << std::endl;
+		std::cout << "no connection: " << makeJSONRPCRequest(procedure, values, NULL, escapeNonPrintableChars) << std::endl;
 	}
 	if(deleteValues){
 		deleteAllElements(values);
@@ -389,11 +389,11 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 						IRPCValue* result = params?it->second->callProcedure(method->value, params->values):it->second->callProcedure(method->value, {});
 						if(id){
 							if(result){
-								mainToSend.push_back(convertRPCValueToJSONResult(*result, id->value));
+								mainToSend.push_back(convertRPCValueToJSONResult(*result, id->value, escapeNonPrintableChars));
 								delete result;
 							}else{//return null
 								NULLValue nullVal;
-								mainToSend.push_back(convertRPCValueToJSONResult(nullVal, id->value));
+								mainToSend.push_back(convertRPCValueToJSONResult(nullVal, id->value, escapeNonPrintableChars));
 							}
 						}else{
 							delete result;
@@ -413,7 +413,7 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 			}
 			#endif
 		}
-		std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity) << std::endl;
+		std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity, true) << std::endl;
 		delete entity;
 	}
 }
@@ -449,7 +449,7 @@ void JSONRPC2Client::update(){
 	}
 	//Process received stuff
 	for(auto it = mainToReceive.begin(); it != mainToReceive.end(); ++it){
-		//std::cout << "Handling: " << convertRPCValueToJSONString(**it) << std::endl;
+		//std::cout << "Handling: " << convertRPCValueToJSONString(**it, true) << std::endl;
 		handleEntity(*it);
 	}
 	mainToReceive.clear();

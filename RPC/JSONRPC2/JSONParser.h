@@ -3,9 +3,11 @@
 
 #include <IRPC.h>
 
-std::string convertRPCValueToJSONString(const IRPCValue& value);
+//! escapeNonPrintableChars: if true it is standard compliant, however it works with this parser also if they are not escaped (==false, more efficient in case binary data is sent as strings)
+std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPrintableChars);
 
-std::string escapeAndQuoteJSONString(const std::string& s);
+//! escapeNonPrintableChars: if true it is standard compliant, however it works with this parser also if they are not escaped (==false, more efficient in case binary data is sent as strings)
+std::string escapeAndQuoteJSONString(const std::string& s, bool escapeNonPrintableChars);
 
 //! Interface for JSON Parsers
 //! The parsed value is represented as RPC value. Therefore the parser is especially meaningful in an RPC Context (e.g. JSON RPC 2).

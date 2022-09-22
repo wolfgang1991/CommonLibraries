@@ -25,6 +25,33 @@ namespace irr{
 	}
 }
 
+inline irr::video::SColor rgb(irr::u32 r, irr::u32 g, irr::u32 b){
+	return irr::video::SColor(255, r, g, b);
+}
+
+inline irr::video::SColor rgba(irr::u32 r, irr::u32 g, irr::u32 b, irr::u32 a){
+	return irr::video::SColor(a, r, g, b);
+}
+
+inline irr::video::SColor argb(irr::u32 a, irr::u32 r, irr::u32 g, irr::u32 b){
+	return irr::video::SColor(a, r, g, b);
+}
+
+//! usage e.g. rgb(0xA3BEFF) => r=A3, g=BE, b=FF
+inline irr::video::SColor rgb(irr::u32 value){
+	return irr::video::SColor(value | (((irr::u32)0xFF) << 24));
+}
+
+//! usage e.g. argb(0x00A3BEFF) => a=00, r=A3, g=BE, b=FF
+inline irr::video::SColor argb(irr::u32 value){
+	return irr::video::SColor(value);
+}
+
+//! usage e.g. rgba(0xA3BEFF00) => a=00, r=A3, g=BE, b=FF
+inline irr::video::SColor rgba(irr::u32 value){
+	return irr::video::SColor((value >> 8) | ((value&0xFF) << 24));
+}
+
 //! Draw 2D Images, Polygons, Arcs with 3D geometry (e.g. useful for Shading, Transformation)
 class Drawer2D{
 
@@ -41,6 +68,8 @@ class Drawer2D{
 	irr::video::SMaterial stdMat;
 	irr::core::vector2d<irr::f32> v[4];
 	irr::core::vector2d<irr::f32> tcoords[4];
+
+	irr::core::array< irr::core::vector2d<irr::f32> > triangulated;
 	
 	Camera2DParameterCalculator cCalc;
 	
@@ -66,7 +95,9 @@ class Drawer2D{
 	irr::core::line3d<irr::f32> getRayFromScreenCoordinatesImgCam(const irr::core::position2d<irr::f32> & pos);
 
 	//! Draw a textured line
-	void drawLine(irr::video::ITexture* tex, irr::core::position2d<int> start, irr::core::position2d<int> end, int height = 5, float verticalOffset = 0.5);
+	void drawLine(irr::video::ITexture* tex, irr::core::position2d<irr::s32> start, irr::core::position2d<irr::s32> end, irr::s32 height = 5, irr::f32 verticalOffset = 0.5);
+	
+	void drawLine(irr::video::ITexture* tex, irr::core::position2d<irr::f32> start, irr::core::position2d<irr::f32> end, irr::f32 height = 5, irr::f32 verticalOffset = 0.5);
 
 	void setTextureCoordinates(irr::core::vector2d<irr::f32>* coords);
 	
@@ -75,7 +106,8 @@ class Drawer2D{
 
 	void draw(irr::video::ITexture* tex, irr::core::position2d<int> pos, irr::core::dimension2d<int> size = irr::core::dimension2d<int>(0, 0), float rotation = 0.0f, irr::core::vector2d<irr::f32> origin = irr::core::vector2d<irr::f32>(0, 0));
 	
-	void draw(irr::video::ITexture* tex, irr::core::position2d<irr::f32> pos, irr::core::dimension2d<irr::f32> size = irr::core::dimension2d<irr::f32>(0, 0), float rotation = 0.0f, irr::core::vector2d<irr::f32> origin = irr::core::vector2d<irr::f32>(0, 0));
+	//! customTCoords: 0: top left, 1: top right, 2: bottom left, 3: bottom right
+	void draw(irr::video::ITexture* tex, irr::core::position2d<irr::f32> pos, irr::core::dimension2d<irr::f32> size = irr::core::dimension2d<irr::f32>(0, 0), float rotation = 0.0f, irr::core::vector2d<irr::f32> origin = irr::core::vector2d<irr::f32>(0, 0), irr::core::vector2d<irr::f32>* customTCoords = NULL);
 	
 	void draw(irr::video::ITexture* tex, const irr::core::rect<irr::s32>& screenRect, const irr::core::rect<irr::s32>* clipRect = NULL);
 
@@ -87,8 +119,11 @@ class Drawer2D{
 
 	//! Set all vertex colors for Images, Lines and Arcs (Polys have their own color)
 	void setColor(irr::video::SColor color = irr::video::SColor(255,255,255,255));
+	
+	irr::video::SColor getColor(irr::u32 index = 0) const;
 
 	//! Set 4 different vertex colors for Images, Lines and Arcs (Polys have their own color)
+	//! 0: top left, 1: top right, 2: bottom left, 3: bottom right
 	void setColors(irr::video::SColor* colors);
 
 	//! Set up Material Type
@@ -131,6 +166,9 @@ class Drawer2D{
 	//! without any additional transformations
 	void draw2DMeshBuffer(irr::scene::SMeshBuffer* mb);
 
+	//! p: Array of pixel coordinates, color Vertexcolor, lineThickness in Pixel, texPerLinePixel: texture parts [0-1] per pixel
+	void drawFilledPolygon(irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::core::vector2d<irr::f32> bbMin, irr::core::vector2d<irr::f32> bbMax, irr::video::ITexture* tex=NULL, float texScale = 1.f);
+
 	void setTextureWrap(irr::video::E_TEXTURE_CLAMP uwrap = irr::video::ETC_REPEAT, irr::video::E_TEXTURE_CLAMP vwrap = irr::video::ETC_REPEAT);
 	
 	//! restores the active cameras transformations and the world transform
@@ -149,8 +187,15 @@ class Drawer2D{
 
 };
 
+//! O(n), removes vertices if the removal results in an area change smaller than cutoffArea
+//! isClosedPolygon: true if end and start vertex are connected
+void optimizePolygon(irr::core::array< irr::core::vector2d<irr::f32> >& polygon, irr::f32 cutoffArea, bool isClosedPolygon = true);
+
 //! prerpocesses a polygon to solve sharp angles problem and to remove duplicated vertices
 void preprocessPoly(const irr::core::array< irr::core::vector2d<irr::f32> >& inP, irr::core::array< irr::core::vector2d<irr::f32> >& outP, irr::f32 lineThickness, irr::f32 lineHandle, bool closed);
+
+//! progress in [0-1]
+void drawLoadingBar(irr::IrrlichtDevice* device, const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress);
 
 //! sets 2D Material parameters and type
 void set2DMaterialParams(irr::video::SMaterial& material, irr::video::E_TEXTURE_CLAMP wrapU = irr::video::ETC_REPEAT, irr::video::E_TEXTURE_CLAMP wrapV = irr::video::ETC_REPEAT, irr::video::E_MATERIAL_TYPE type = irr::video::EMT_TRANSPARENT_ALPHA_CHANNEL);

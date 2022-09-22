@@ -83,3 +83,9 @@ bool UnicodeCfgParser::parseFromUTF8File(irr::io::IFileSystem* fsys, const char*
 	}
 	return false;
 }
+
+std::wstring escapeForUnicodeCfgParser(const std::wstring& toEscape){
+	static const std::wstring charsToEscape(L";,\\\n");
+	static const std::wstring charReplacements(L";,\\n");
+	return escapeString(toEscape, charsToEscape, charReplacements, L'\\');
+}

@@ -287,7 +287,11 @@ void AggregateGUIElement::setScrollPosition(irr::f32 pos, bool notifyScrollbar){
 
 irr::f32 AggregateGUIElement::getScrollPosition() const{
 	f32 lowerBound = -Max(maxScrollPos, maxScrollPosActive);
-	return ((f32)scrollPos)/lowerBound;
+	if(fabsf(lowerBound)>=0.00001f){//avoid divide by zero in case not enough content for scrolling
+		return ((f32)scrollPos)/lowerBound;
+	}else{
+		return 0.f;
+	}
 }
 
 void AggregateGUIElement::setActive(bool active){

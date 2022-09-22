@@ -53,10 +53,50 @@ std::string convertWStringToString(const std::wstring& str){
 	return std::string(str.begin(), str.end());//does not recognize encoding correctly (for non ascii chars)
 }
 
-std::list<std::string> parseSeparatedString(const std::string& s, char separator){
+std::list<std::string> parseSeparatedString(const std::string& s, char separator, bool noEmptyToken){
 	std::list<std::string> res;
-	parseSeparatedString(res, s, separator);
+	parseSeparatedString(res, s, std::string(1, separator), noEmptyToken);
 	return res;
+}
+
+std::string stripSpaces(const std::string s){
+	int start = 0;
+	for(; start < (int)(s.size()); start++){
+		if(s[start] != ' '){
+			break;
+		}
+	}
+	int end = (int)(s.size())-1;
+	for(; end >= 0; end--){
+		if(s[end] != ' '){
+			break;
+		}
+	}
+	if(start<=end){
+		return s.substr(start, end-start+1);
+	}else{
+		return "";
+	}
+}
+
+bool isADouble(const std::string& c){
+	bool dotRead = false;
+	if(c.size()>=1){
+		if(c[0]=='.'){
+			dotRead = true;
+		}else if((c[0]<'0' || c[0]>'9') && c[0]!='-'){
+			return false;
+		}
+	}
+	for(unsigned int i=1; i<c.size(); i++){
+		if(c[i]=='.'){
+			if(dotRead){return false;}
+			dotRead = true;
+		}else if(c[i]<'0' || c[i]>'9'){
+			return false;
+		}
+	}
+	return true;
 }
 
 bool isAnInteger(const std::string& c){
@@ -69,10 +109,12 @@ bool isAnInteger(const std::string& c){
 	return true;
 }
 
-std::string getHumanReadableSpace(uint64_t space){
-	bool lessGB = space<100*1000*1000;
-	bool lessMB = space<100*1000;
-	return round(lessGB?(lessMB?double(space)/(1000.0):double(space)/(1000.0*1000.0)):(double(space)/(1000.0*1000.0*1000.0)),2).append(lessGB?(lessMB?"KB":"MB"):"GB");
+std::string convertStringToUpper(const std::string& s){
+	std::string ret(s.size(), char());
+	for(unsigned int i = 0; i < s.size(); ++i){
+		ret[i] = (s[i] <= 'z' && s[i] >= 'a') ? s[i]-'a'+'A' : s[i];
+	}
+	return ret;
 }
 
 //! returns -1 if not available
@@ -120,21 +162,6 @@ std::string getExt(const std::string& str){
 	return dotPos>=0?str.substr(dotPos+1,str.size()):"";
 }
 
-std::string getHumanReadableTime(uint64_t time, bool showDays){
-	uint64_t secs = time%60;
-	uint64_t mins = (time%3600)/60;
-	uint64_t hours = (time%86400)/3600;
-	uint64_t days = time/86400;
-	std::stringstream ss;
-	if(days>0 && showDays){
-		ss << days << "d ";
-	}else{
-		hours += days*24;
-	}
-	ss << std::setw(2) << std::setfill('0') << hours << ':' << std::setw(2) << std::setfill('0') << mins << ':' << std::setw(2) << std::setfill('0') << secs;
-	return ss.str();
-}
-
 bool isGlobalPath(std::string path){
 	bool isGlobal = false;
 	if(path.size()>0){
@@ -145,6 +172,32 @@ bool isGlobalPath(std::string path){
 		}
 	}
 	return isGlobal;
+}
+
+bool isPositiveInteger(const std::string& s){
+	for(unsigned int i=0; i<s.size(); i++){
+		char c = s[i];
+		if(c<'0' || c>'9'){return false;}
+	}
+	return true;
+}
+
+std::string cleanPath(const std::string& path){
+	std::stringstream ss;
+	bool slashRead = false;
+	for(uint32_t i=0; i<path.size(); i++){
+		char c = path[i];
+		if(c=='/'){
+			if(!slashRead){
+				slashRead = true;
+				ss << c;
+			}
+		}else{
+			slashRead = false;
+			ss << c;
+		}
+	}
+	return ss.str();
 }
 
 std::string getAppHomePathFromArgV0(const char* argv0){

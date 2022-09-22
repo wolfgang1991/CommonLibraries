@@ -68,20 +68,6 @@ ColorSelector::ColorSelector(ICommonAppContext* context, irr::video::ITexture* a
 }
 
 ColorSelector::~ColorSelector(){
-	tr->remove();
-	tg->remove();
-	tb->remove();
-	ta->remove();
-	er->remove();
-	eg->remove();
-	eb->remove();
-	ea->remove();
-	sr->remove();
-	sg->remove();
-	sb->remove();
-	sa->remove();
-	bok->remove();
-	bcancel->remove();
 	win->remove();
 }
 

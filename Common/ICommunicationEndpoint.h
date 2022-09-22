@@ -5,7 +5,6 @@
 
 //! interface for endpoints of communications (may be network sockets, serial port, bluetooth, ...)
 //! establishing a connection is part of the underlying protocol
-//! TODO a common concurrent connection abstraction should be implemented
 class ICommunicationEndpoint{
 	
 	public:

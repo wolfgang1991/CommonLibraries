@@ -31,6 +31,8 @@ class NumberEditBox : public irr::gui::IGUIElement{
 	
 	irr::s32 getValue() const;
 	
+	void setValue(irr::s32 value);
+	
 	irr::gui::IGUIStaticText* getStaticText() const;
 	
 	irr::gui::IGUIButton* getLargeDecrementButton() const;

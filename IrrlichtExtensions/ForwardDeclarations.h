@@ -27,6 +27,7 @@ namespace irr{
 		class IVideoDriver;
 		class IImageLoader;
 		class IImageWriter;
+		class IShaderConstantSetCallBack;
 	}
 	namespace scene{
 		class ISceneManager;

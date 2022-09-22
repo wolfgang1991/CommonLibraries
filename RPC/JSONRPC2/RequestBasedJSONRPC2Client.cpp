@@ -15,6 +15,10 @@
 #include <iostream>
 #include <sstream>
 
+#ifdef DEBUG
+#define PRINT_DEBUG_INFO
+#endif
+
 static constexpr uint32_t invalidJSONId = std::numeric_limits<uint32_t>::max();
 
 struct JSONRequest{
@@ -50,8 +54,9 @@ class RequestBasedJSONRPC2ClientPrivate{
 	//rpc thread only
 	IRequestSender* sender;
 	uint32_t maxSendCount;
+	bool escapeNonPrintableChars;
 	
-	RequestBasedJSONRPC2ClientPrivate(IRequestSender* sender, uint32_t autoRetries):sender(sender),maxSendCount(autoRetries+1){
+	RequestBasedJSONRPC2ClientPrivate(IRequestSender* sender, uint32_t autoRetries, bool escapeNonPrintableChars):sender(sender),maxSendCount(autoRetries+1),escapeNonPrintableChars(escapeNonPrintableChars){
 		initMutex(m);
 		mustExit = false;
 		bool success = createThread(t, threadWrapper, this, true);
@@ -86,11 +91,13 @@ class RequestBasedJSONRPC2ClientPrivate{
 				if(!clientToSend.empty()){
 					std::stringstream ss;
 					for(JSONRequest& v : clientToSend){
-						ss << makeJSONRPCRequest(v.procedure, v.values, v.jsonId==invalidJSONId?NULL:&v.jsonId);
+						ss << makeJSONRPCRequest(v.procedure, v.values, v.jsonId==invalidJSONId?NULL:&v.jsonId, escapeNonPrintableChars);
 						if(v.deleteValues){deleteAllElements(v.values);}
 					}
 					std::string toSend = ss.str();
+					#ifdef PRINT_DEBUG_INFO
 					std::cout << "send: " << toSend << std::endl;//TODO for debugging
+					#endif
 					IRequestSender::ResponseType t = IRequestSender::ERROR_NO_CONNECTION;
 					std::string result;
 					for(uint32_t i=0; i<maxSendCount && t==IRequestSender::ERROR_NO_CONNECTION; i++){
@@ -102,7 +109,9 @@ class RequestBasedJSONRPC2ClientPrivate{
 							IJSONParser::State state = parser.parse(result[i], result[i+1]);//i+1 safe since result[result.size()]=='\0' (guranteed in c++11)
 							if(state==IJSONParser::SUCCESS){
 								clientToReceive.push_back(parser.stealResult());
-								std::cout << "receive: " << convertRPCValueToJSONString(*clientToReceive.back()) << std::endl;//TODO for debugging
+								#ifdef PRINT_DEBUG_INFO
+								std::cout << "receive: " << convertRPCValueToJSONString(*clientToReceive.back(), true) << std::endl;//TODO for debugging
+								#endif
 								parser.reset();
 							}else if(state==IJSONParser::ERROR){
 								parser.reset();
@@ -112,7 +121,6 @@ class RequestBasedJSONRPC2ClientPrivate{
 						for(JSONRequest& v : clientToSend){
 							if(v.jsonId!=invalidJSONId){
 								clientToReceive.push_back(new ObjectValue({{"jsonrpc", new StringValue("2.0")}, {"id", new IntegerValue(v.jsonId)}, {"error", new ObjectValue({{"code", new IntegerValue(-32603)}, {"message", new StringValue(requestSenderErrorMessage[t])}})}}));
-								//std::cout << "error: push_back: " << convertRPCValueToJSONString(*clientToReceive.back()) << std::endl;
 							}
 						}
 					}
@@ -163,21 +171,21 @@ class RequestBasedJSONRPC2ClientPrivate{
 								jsonId2Caller.erase(it);
 							}else{
 								if(result){o->values["result"] = result;}//put back for proper error output and delete later on
-								std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*o) << std::endl;
+								std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*o, true) << std::endl;
 							}
 						}else{
 							if(jsonId!=0){std::cerr << "Error: No RPC caller with json id: " << jsonId << " found." << std::endl;}//0 is ping
 							delete result;
 						}
 					}else{
-						std::cerr << "Error: Missing id field: " << convertRPCValueToJSONString(*o) << std::endl;
+						std::cerr << "Error: Missing id field: " << convertRPCValueToJSONString(*o, true) << std::endl;
 						delete result;
 					}
 				}else{
-					std::cerr << "Error: Missing result or error field: " << convertRPCValueToJSONString(*o) << std::endl;
+					std::cerr << "Error: Missing result or error field: " << convertRPCValueToJSONString(*o, true) << std::endl;
 				}
 			}else{
-				std::cerr << "Error: Unexpected return type: " << convertRPCValueToJSONString(*v) << std::endl;
+				std::cerr << "Error: Unexpected return type: " << convertRPCValueToJSONString(*v, true) << std::endl;
 			}
 			delete v;
 		}
@@ -185,8 +193,8 @@ class RequestBasedJSONRPC2ClientPrivate{
 	
 };
 
-RequestBasedJSONRPC2Client::RequestBasedJSONRPC2Client(IRequestSender* sender, uint32_t autoRetries){
-	p = new RequestBasedJSONRPC2ClientPrivate(sender, autoRetries);
+RequestBasedJSONRPC2Client::RequestBasedJSONRPC2Client(IRequestSender* sender, uint32_t autoRetries, bool escapeNonPrintableChars){
+	p = new RequestBasedJSONRPC2ClientPrivate(sender, autoRetries, escapeNonPrintableChars);
 }
 	
 RequestBasedJSONRPC2Client::~RequestBasedJSONRPC2Client(){
@@ -246,13 +254,16 @@ size_t CURLRequestSender::write_callback(char* ptr, size_t size, size_t nmemb, v
 
 size_t CURLRequestSender::header_callback(char* buffer, size_t size, size_t nitems, void* userdata){
 	std::string line(buffer, nitems);
+	#ifdef PRINT_DEBUG_INFO
+	std::cout << line << std::endl;
+	#endif
 	if(isPrefixEqual(line, "Content-Type:")){
 		((CURLRequestSender*)userdata)->isGoodResponse = line.find("application/json")!=std::string::npos;
 	}
 	return nitems;
 }
 
-CURLRequestSender::CURLRequestSender(const std::string& url, bool skipPeerVerification, bool skipHostnameVerification){
+CURLRequestSender::CURLRequestSender(const std::string& url, bool skipPeerVerification, bool skipHostnameVerification, bool useCompression){
 	curl = curl_easy_init();
 	curl_assert(curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L));//for thread safety
 	curl_assert(curl_easy_setopt(curl, CURLOPT_NOPROXY, "localhost,127.0.0.1"));//ipv6 doens't work in this list
@@ -270,6 +281,9 @@ CURLRequestSender::CURLRequestSender(const std::string& url, bool skipPeerVerifi
 	curl_assert(curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 30L));//30 bytes/s
 	curl_assert(curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L));//10s connect timeout
 	curl_assert(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()));
+	if(useCompression){
+		curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
+	}
 	curl_slist* hs = NULL;
 	hs = curl_slist_append(hs, "Content-Type: application/json");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hs);

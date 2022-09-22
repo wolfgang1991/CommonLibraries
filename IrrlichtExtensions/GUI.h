@@ -10,6 +10,8 @@ namespace irr{
 	}
 }
 
+#include <rect.h>
+
 #include <list>
 #include <string>
 #include <map>

@@ -1,6 +1,7 @@
 #include "font.h"
 
 #include <IGUIFont.h>
+#include <IGUIElement.h>
 
 #include <sstream>
 
@@ -17,6 +18,7 @@ std::wstring makeWordWrappedText(const std::wstring& text, irr::u32 maxWidth, ir
 		if(c==L'\n'){//important to get O(m*n) (m max. line length (which is constant in case of reasonable maxWidth), n #chars), otherwise it would be O(n^2)
 			ss << text.substr(start, i-start+1);//with current char
 			start = i+1;
+			lastWhitespace = -1;
 		}else{
 			if(c==L' ' || c=='\t'){
 				lastWhitespace = (int)i;
@@ -31,9 +33,11 @@ std::wstring makeWordWrappedText(const std::wstring& text, irr::u32 maxWidth, ir
 				}else if(i>start+1){//force newline without whitespace
 					ss << text.substr(start, i-start-1) << (withHyphen?L"-\n":L"\n");//without current and previous char but with -
 					start = i-1;
+					lastWhitespace = -1;
 				}else{//no space left but still force newline
 					ss << text.substr(start, i-start+1);//with current char
 					start = i+1;
+					lastWhitespace = -1;
 				}
 			}
 		}
@@ -55,4 +59,9 @@ std::wstring makeWordWrappedText(const std::wstring& text, irr::u32 maxWidth, ir
 	}else{
 		return ss.str();
 	}
+}
+
+void breakGUIElementText(irr::gui::IGUIElement* ele, irr::gui::IGUIFont* font, irr::f32 horizontalPaddingPart, bool withHyphen, bool removeTrailingNewLines){
+	u32 eleWidth = ele->getRelativePosition().getWidth();
+	ele->setText(makeWordWrappedText(ele->getText(), eleWidth-2.f*horizontalPaddingPart*eleWidth, font, withHyphen, removeTrailingNewLines).c_str());
 }

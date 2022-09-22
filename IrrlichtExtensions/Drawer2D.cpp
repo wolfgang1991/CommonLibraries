@@ -2,6 +2,7 @@
 #include <utilities.h>
 #include <mathUtils.h>
 #include <MaterialWorkaround.h>
+#include <Triangulate.h>
 
 #include <IrrlichtDevice.h>
 #include <ISceneManager.h>
@@ -221,6 +222,7 @@ Drawer2D::Drawer2D(irr::IrrlichtDevice* device):cCalc(16.f/9.f){
 	imgMb.Indices.push_back(3);
 	imgMb.MappingHint_Index = EHM_STATIC;
 	autoResetEnabled = true;
+	triangulated.reallocate(MAX_VERTICES);
 	if(polyMatType==EMT_TRANSPARENT_ALPHA_CHANNEL && (driver->getDriverType()==EDT_OGLES2 || driver->getDriverType()==EDT_OPENGL)){//TODO other drivers
 		pcbk.init(device);
 		pwtcbk.init(device);
@@ -268,17 +270,22 @@ void Drawer2D::drawArc(irr::video::ITexture* tex, irr::core::position2d<int> m, 
 	draw2DMeshBuffer(&mb);
 }
 
-void Drawer2D::drawLine(irr::video::ITexture* tex, irr::core::position2d<int> start, irr::core::position2d<int> end, int height, float verticalOffset){
+void Drawer2D::drawLine(irr::video::ITexture* tex, irr::core::position2d<s32> start, irr::core::position2d<s32> end, s32 height, f32 verticalOffset){
+	drawLine(tex, vector2d<f32>(start.X, start.Y), vector2d<f32>(end.X, end.Y), height, verticalOffset);
+}
+
+void Drawer2D::drawLine(irr::video::ITexture* tex, irr::core::position2d<f32> start, irr::core::position2d<f32> end, f32 height, f32 verticalOffset){
 	if(start.X==end.X && start.Y==end.Y){return;}
 	vector2d<f32> v = vector2d<f32>(end.X-start.X, end.Y-start.Y);
 	f32 len = v.getLength();
-	float rot = DEG_RAD*acos2(v.X/len);
-	if(end.Y>=start.Y){rot = 360.0f-rot;}
-	draw(tex, start, dimension2d<int>((int)(len+0.5f), height), rot, vector2d<f32>(0, verticalOffset));
+	f32 rot = DEG_RAD*acos2(v.X/len);
+	if(end.Y>=start.Y){rot = 360.f-rot;}
+	draw(tex, start, dimension2d<f32>(len, height), rot, vector2d<f32>(0, verticalOffset));
 }
 
-void Drawer2D::draw(ITexture* tex, position2d<irr::f32> pos, dimension2d<f32> size, float rotation, vector2d<f32> origin){
+void Drawer2D::draw(ITexture* tex, position2d<irr::f32> pos, dimension2d<f32> size, float rotation, vector2d<f32> origin, irr::core::vector2d<irr::f32>* customTCoords){
 	if(size.Width>FLOAT_EPS && size.Height>FLOAT_EPS){
+		irr::core::vector2d<irr::f32>* tc = customTCoords==NULL?tcoords:customTCoords;
 		cCalc.set2DTransforms(device);
 		imgMb.Vertices.set_used(0);
 		imgMb.Material = SMaterial(stdMat);
@@ -287,7 +294,7 @@ void Drawer2D::draw(ITexture* tex, position2d<irr::f32> pos, dimension2d<f32> si
 			vector2d<f32> vi = v[i]-origin;//Move origin -> 0
 			vi.X *= size.Width; vi.Y *= size.Height;//Scale to size
 			vector3d<f32> vertex(pos.X+cosphi*vi.X+sinphi*vi.Y, pos.Y-sinphi*vi.X+cosphi*vi.Y, 1.f);//Rotate and move to pos
-			imgMb.Vertices.push_back(S3DVertex(vertex, vector3d<f32>(0.0,0.0,-1.0), stdColor[i], tcoords[i]));
+			imgMb.Vertices.push_back(S3DVertex(vertex, vector3d<f32>(0.0,0.0,-1.0), stdColor[i], tc[i]));
 		}
 		imgMb.MappingHint_Vertex = EHM_NEVER;
 		imgMb.setDirty(EBT_VERTEX);
@@ -398,6 +405,53 @@ void Drawer2D::drawRectWithCorner(const irr::core::rect<irr::f32>& rectangle, ir
 		draw2DMeshBuffer(&mb, vector2d<f32>(0,0), vector2d<f32>(1.f,1.f), 0.f, vector2d<f32>(0.f,0.f), clip);
 	}else{
 		draw2DMeshBuffer(&mb);
+	}
+}
+
+void Drawer2D::drawFilledPolygon(irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::core::vector2d<irr::f32> bbMin, irr::core::vector2d<irr::f32> bbMax, irr::video::ITexture* tex, float texScale){
+	cCalc.set2DTransforms(device);	
+	//ViewParameter setzen #1
+	//driver->setTransform(ETS_VIEW, imgcam->getViewMatrix());
+	//driver->setTransform(ETS_PROJECTION, imgcam->getProjectionMatrix());
+	//Triangulieren
+	triangulated.set_used(0);
+	Triangulate::Process(p, triangulated);//bool success = 
+	//Meshbuffer aufbauen
+	mb.MappingHint_Index = EHM_NEVER;
+	mb.MappingHint_Vertex = EHM_NEVER;
+	mb.Material = SMaterial(stdMat);//imgplane->getMaterial(0));//stdMat);//gleiches Material wie für Linien
+	mb.Material.TextureLayer[0].Texture = tex;//NULL auch ok
+	mb.Material.BackfaceCulling = false;//da Backfaces ggf. verwendet beim Indizieren
+	int vc = triangulated.size();
+	//if(!success){writeLog("Triangulation unsuccessful\n");}
+	if(vc>MAX_VERTICES){return;}//TODO writeLog("Too many vertices: ");writeLog(vc);writeLog("\n");
+	//Vertices aufbauen
+	mb.Vertices.set_used(vc);
+	f32 bbW = bbMax.X-bbMin.X;
+	f32 bbH = bbMax.Y-bbMin.Y;
+	for(int i=0; i<vc; i++){
+		S3DVertex& v = mb.Vertices[i];
+		v.Color = color;
+		v.Normal = vector3d<f32>(0.f,0.f,-1.f);
+//		line3d<f32> l1 = getRayFromScreenCoordinatesImgCam(triangulated[i]);
+//		v.Pos = HLP_SchnittMitEbene(x,n,l1);
+		v.Pos = vector3d<f32>(triangulated[i].X, triangulated[i].Y, 1.f);
+		v.TCoords = vector2d<f32>((triangulated[i].X-bbMin.X)/bbW*texScale, (triangulated[i].Y-bbMin.Y)/bbH*texScale);
+	}
+	//Indices aufbauen
+	mb.Indices.set_used(0);
+	for(int i=0; i<vc; i++){
+		mb.Indices.push_back(i);
+	}
+	mb.setDirty();
+	//ViewParameter setzen + Rendern #2
+	//driver->setTransform(ETS_WORLD,CMatrix4<f32>());
+	driver->setMaterial(mb.Material);
+	SET_MATERIAL_WORKAROUND(driver, mb.Material)
+	driver->drawMeshBuffer(&mb);
+	UNSET_MATERIAL_WORKAROUND
+	if(autoResetEnabled){
+		cCalc.reset2DTransforms(device);
 	}
 }
 
@@ -853,6 +907,10 @@ void Drawer2D::setColor(SColor color){
 	}
 }
 
+irr::video::SColor Drawer2D::getColor(irr::u32 index) const{
+	return stdColor[index];
+}
+
 void Drawer2D::setColors(irr::video::SColor* colors){
 	for(int i = 0; i<4; i++){
 		stdColor[i] = colors[i];
@@ -885,4 +943,60 @@ void Drawer2D::setMaterialType(E_MATERIAL_TYPE type){
 
 irr::video::E_MATERIAL_TYPE Drawer2D::getMaterialType(){
 	return stdMat.MaterialType;
+}
+
+void drawLoadingBar(irr::IrrlichtDevice* device, const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress){
+	IVideoDriver* driver = device->getVideoDriver();
+	s32 dist = 0.2*Min(positions.getWidth(), positions.getHeight());
+	s32 origin = positions.UpperLeftCorner.X+dist;
+	rect<s32> r(origin, positions.UpperLeftCorner.Y+dist, origin+progress*(positions.LowerRightCorner.X-dist-origin), positions.LowerRightCorner.Y-dist);
+	driver->draw2DRectangleOutline(positions, color);
+	driver->draw2DRectangle(color, r, NULL);
+}
+
+static inline f32 calcTriangleArea(const vector2d<f32>& a, const vector2d<f32>& b, const vector2d<f32>& c){
+	return fabsf(.5f*(a.X*(b.Y-c.Y)+b.X*(c.Y-a.Y)+c.X*(a.Y-b.Y)));
+}
+
+static inline bool mustRemoveB(const vector2d<f32>& a, const vector2d<f32>& b, const vector2d<f32>& c, irr::f32 cutoffArea){
+	vector2d<f32> ba = a-b;
+	vector2d<f32> bc = c-b;
+	f32 mulLength = ba.getLength()*bc.getLength();
+	if(mulLength<0.001f*cutoffArea || mulLength<0.000001f){return true;}
+	double alpha = acos((double)ba.dotProduct(bc)/(double)mulLength);
+	f32 area = calcTriangleArea(a,b,c);
+	double m = ((double)area)*tan(0.5*alpha);
+	return m<cutoffArea;
+}
+
+//static inline bool mustRemoveB(const vector2d<f32>& a, const vector2d<f32>& b, const vector2d<f32>& c, irr::f32 cutoffArea){
+//	return calcTriangleArea(a,b,c)<cutoffArea;
+//}
+
+void optimizePolygon(irr::core::array< irr::core::vector2d<irr::f32> >& polygon, irr::f32 cutoffArea, bool isClosedPolygon){
+	uint32_t shrink = 0;
+	int32_t size = polygon.size();
+	if(size<3){return;}
+	int32_t start = isClosedPolygon?0:1;
+	int32_t end = isClosedPolygon?size:(size-1);
+	for(int32_t i=start; i<end; i++){
+		int32_t nextIndex = (i+1)%size;
+		int32_t ims = i-shrink;
+		int32_t prevIndex = ims==0?(size-1):(ims-1);
+		if(mustRemoveB(polygon[prevIndex],polygon[i],polygon[nextIndex],cutoffArea)){
+			shrink++;//remove by increasing the shrink counter
+			int32_t j = i-shrink;
+			while(j>=start){//recheck reverse for required removals which appear because of the current removal
+				if(mustRemoveB(polygon[j==0?(size-1):(j-1)],polygon[j],polygon[nextIndex],cutoffArea)){
+					shrink++;//remove by increasing the shrink counter
+					j = i-shrink;
+				}else{
+					break;
+				}
+			}
+		}else if(shrink>0){
+			polygon[ims] = polygon[i];
+		}
+	}
+	polygon.set_used(size-shrink);
 }

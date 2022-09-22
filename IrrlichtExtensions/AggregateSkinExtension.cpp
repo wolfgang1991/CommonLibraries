@@ -4,18 +4,19 @@
 
 #include <IrrlichtDevice.h>
 
+#include <algorithm>
 #include <iostream>
 
 using namespace irr;
-using namespace gui;
 using namespace core;
+using namespace gui;
 using namespace video;
 
-AggregateSkinExtension::AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::ITexture* sunkenPaneBgAlpha, irr::video::SColor* bgColor, bool highlightIfPressed):
+AggregateSkinExtension::AggregateSkinExtension(IExtendableSkin* skin, bool highlightIfActive, bool shallDrawSunkenPane, irr::video::ITexture* sunkenPaneBgAlpha, const irr::video::SColor* bgColor, bool highlightIfPressed):
 	IAggregatableSkinExtension(skin, highlightIfActive, highlightIfPressed){
 	this->shallDrawSunkenPane = shallDrawSunkenPane;
 	dimension2d<u32> dim = skin->getDevice()->getVideoDriver()->getScreenSize();
-	realCornerSize = 0.01*sqrt(dim.Width*dim.Height);
+	realCornerSize = 0.005*sqrt(dim.Width*dim.Height);
 	this->sunkenPaneBgAlpha = sunkenPaneBgAlpha;
 	useBgColor = bgColor!=NULL;
 	if(useBgColor){
@@ -31,7 +32,17 @@ void AggregateSkinExtension::drawSunkenPane(irr::gui::IGUIElement* ele, const ir
 		if(sunkenPaneBgAlpha==NULL){
 			skin->draw3DSunkenPane(ele, skin->getColor(EGDC_3D_HIGH_LIGHT), false, false, rect, clip);
 		}else{
-			skin->getDrawer2D()->drawRectWithCorner(core::rect<f32>(rect.UpperLeftCorner.X+realCornerSize, rect.UpperLeftCorner.Y+realCornerSize, rect.LowerRightCorner.X-realCornerSize, rect.LowerRightCorner.Y-realCornerSize), 0.29297f, realCornerSize, sunkenPaneBgAlpha, SColor(255,255,255,255), clip);
+			core::rect<s32> newClip;
+			if(clip){
+				newClip = core::rect<s32>(
+					std::max(clip->UpperLeftCorner.X, rect.UpperLeftCorner.X)-realCornerSize,
+					std::max(clip->UpperLeftCorner.Y, rect.UpperLeftCorner.Y)-realCornerSize,
+					std::min(clip->LowerRightCorner.X, rect.LowerRightCorner.X)+realCornerSize,
+					std::min(clip->LowerRightCorner.Y, rect.LowerRightCorner.Y)+realCornerSize
+				);
+				clip = &newClip;
+			}
+			skin->getDrawer2D()->drawRectWithCorner(core::rect<f32>(rect.UpperLeftCorner.X, rect.UpperLeftCorner.Y, rect.LowerRightCorner.X, rect.LowerRightCorner.Y), 0.2f, realCornerSize, sunkenPaneBgAlpha, SColor(255,255,255,255), clip);
 		}
 	}
 }

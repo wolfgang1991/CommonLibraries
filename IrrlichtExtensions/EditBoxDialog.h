@@ -21,6 +21,7 @@ class IEditBoxDialogCallback{
 
 };
 
+//! Deprecated use lambda constructor instead in EditBoxDialog
 class LambdaEditBoxCallback : public IEditBoxDialogCallback{
 
 	public:
@@ -44,8 +45,11 @@ class EditBoxDialog : public irr::gui::IGUIElement{
 	irr::IrrlichtDevice* device;
 	
 	IEditBoxDialogCallback* cbk;
+	std::function<void(EditBoxDialog* dialog, const wchar_t* text, bool positivePressed)> onResult;
 	
 	GUI* gui;
+	
+	void init(const wchar_t* title, const wchar_t* positiveLabel, const wchar_t* negativeLabel, const wchar_t* defaultText, bool isModal, bool isPasswordBox, wchar_t passwordChar, irr::core::rect<irr::s32>* spaceOverride);
 	
 	public:
 
@@ -57,11 +61,20 @@ class EditBoxDialog : public irr::gui::IGUIElement{
 	
 	
 	//! the .*AggId parameters define the ids for the skin for the aggregation
-	EditBoxDialog(IEditBoxDialogCallback* cbk, irr::IrrlichtDevice* device, const wchar_t* title, const wchar_t* positiveLabel = L"Ok", const wchar_t* negativeLabel = L"Cancel", const wchar_t* defaultText = L"", bool isModal = true, bool isPasswordBox = false, wchar_t passwordChar = L'·');
+	//! spaceOverride: screenArea which is available for the editbox. If not specified a default area is used
+	EditBoxDialog(IEditBoxDialogCallback* cbk, irr::IrrlichtDevice* device, const wchar_t* title, const wchar_t* positiveLabel = L"OK", const wchar_t* negativeLabel = L"Cancel", const wchar_t* defaultText = L"", bool isModal = true, bool isPasswordBox = false, wchar_t passwordChar = L'·', irr::core::rect<irr::s32>* spaceOverride = NULL);
+	
+	//! spaceOverride: screenArea which is available for the editbox. If not specified a default area is used
+	EditBoxDialog(const std::function<void(EditBoxDialog*, const wchar_t*, bool)>& onResult, irr::IrrlichtDevice* device, const wchar_t* title, const wchar_t* positiveLabel = L"OK", const wchar_t* negativeLabel = L"Cancel", const wchar_t* defaultText = L"", bool isModal = true, bool isPasswordBox = false, wchar_t passwordChar = L'·', irr::core::rect<irr::s32>* spaceOverride = NULL);
 	
 	~EditBoxDialog();
 	
 	bool OnEvent(const irr::SEvent& event);
+	
+	//! resizeFactor: multiplies the editbox height (should be >= 1), should only be called once
+	void enableMultLineEditing(irr::f32 resizeFactor = 1.f);
+	
+	irr::gui::IGUIEditBox* getEditBox() const{return eeedit;}
 	
 };
 

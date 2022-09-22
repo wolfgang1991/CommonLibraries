@@ -40,7 +40,8 @@ class RequestBasedJSONRPC2Client : public IRPC{
 	public:
 	
 	//! autoRetries: in case of a unsuccessful request: how many times shall it be retried automatically before calling IRemoteProcedureCaller::OnProcedureError
-	RequestBasedJSONRPC2Client(IRequestSender* sender, uint32_t autoRetries);
+	//! escapeNonPrintableChars: if true it is standard compliant, however it works with this parser also if they are not escaped (==false, more efficient in case binary data is sent as strings)
+	RequestBasedJSONRPC2Client(IRequestSender* sender, uint32_t autoRetries, bool escapeNonPrintableChars = true);
 	
 	~RequestBasedJSONRPC2Client();
 	
@@ -75,7 +76,8 @@ class CURLRequestSender : public IRequestSender{
 
 	public:
 	
-	CURLRequestSender(const std::string& url, bool skipPeerVerification, bool skipHostnameVerification);
+	//! useCompression is only a request and must be supported by the compile options of the curl library and the server
+	CURLRequestSender(const std::string& url, bool skipPeerVerification, bool skipHostnameVerification, bool useCompression = false);
 	
 	~CURLRequestSender();
 	

@@ -40,7 +40,8 @@ bool BeautifulGUIButton::OnEvent(const irr::SEvent& event){
 			if(AbsoluteRect.isPointInside(mPos) && pressedStart.isPointInside(mPos)){
 				if(Parent && isTrulyVisible()){
 					AggregateGUIElement::OnEvent(event);//because parent may decide to delete itself or this element on button event
-					Parent->OnEvent(buttonEvent);
+					irr::SEvent buttonEventCopy = buttonEvent;//make a copy because "this" may be deleted
+					Parent->OnEvent(buttonEventCopy);
 					return true;
 				}
 			}

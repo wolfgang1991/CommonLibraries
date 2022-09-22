@@ -5,12 +5,12 @@
 #include <sstream>
 #include <iostream>
 
-static void handleEntity(std::stringstream& ss, IRPCValue* entity, const std::unordered_map<std::string, IRemoteProcedureCallReceiver*>& receivers){
+static void handleEntity(std::stringstream& ss, IRPCValue* entity, const std::unordered_map<std::string, IRemoteProcedureCallReceiver*>& receivers, bool escapeNonPrintableChars){
 	if(entity){
 		if(entity->getType()==IRPCValue::ARRAY){
 			ArrayValue* array = (ArrayValue*)entity;
 			for(IRPCValue* r:array->values){
-				handleEntity(ss, r, receivers);
+				handleEntity(ss, r, receivers, escapeNonPrintableChars);
 			}
 			array->values.clear();//clear before delete since they already have been deleted in the callback methods as required
 			return;
@@ -25,11 +25,11 @@ static void handleEntity(std::stringstream& ss, IRPCValue* entity, const std::un
 					IRPCValue* result = params?it->second->callProcedure(method->value, params->values):it->second->callProcedure(method->value, {});
 					if(id){
 						if(result){
-							ss << convertRPCValueToJSONResult(*result, id->value);
+							ss << convertRPCValueToJSONResult(*result, id->value, escapeNonPrintableChars);
 							delete result;
 						}else{//return null
 							NULLValue nullVal;
-							ss << convertRPCValueToJSONResult(nullVal, id->value);
+							ss << convertRPCValueToJSONResult(nullVal, id->value, escapeNonPrintableChars);
 						}
 					}else{
 						delete result;
@@ -38,15 +38,15 @@ static void handleEntity(std::stringstream& ss, IRPCValue* entity, const std::un
 					ss << "{\"jsonrpc\": \"2.0\", \"error\": {\"code\":-32601, \"message\": \"Method not found\", \"data\": \"" << method->value << "\"}, \"id\": " << id->value << "}";
 				}
 			}else{
-				std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity) << std::endl;
+				std::cerr << "Error: Invalid / unsupported JSON-RPC: " << convertRPCValueToJSONString(*entity, true) << std::endl;
 			}
 		}else{
-			std::cerr << "Error: Unexpected JSON-RPC type: " << convertRPCValueToJSONString(*entity) << std::endl;
+			std::cerr << "Error: Unexpected JSON-RPC type: " << convertRPCValueToJSONString(*entity, true) << std::endl;
 		}
 	}
 }
 
-std::string processJSONRPC2Request(const std::string& request, const std::unordered_map<std::string, IRemoteProcedureCallReceiver*>& receivers){
+std::string processJSONRPC2Request(const std::string& request, const std::unordered_map<std::string, IRemoteProcedureCallReceiver*>& receivers, bool escapeNonPrintableChars){
 	std::stringstream ss;
 	if(request.size()>=2){//at least {}
 		JSONParser parser;
@@ -54,7 +54,7 @@ std::string processJSONRPC2Request(const std::string& request, const std::unorde
 			IJSONParser::State state = parser.parse(request[i], request[i+1]);//i+1 safe since request[request.size()]=='\0' (guranteed in c++11)
 			if(state==IJSONParser::SUCCESS){
 				IRPCValue* v = parser.stealResult();
-				handleEntity(ss, v, receivers);
+				handleEntity(ss, v, receivers, escapeNonPrintableChars);
 				delete v;
 				parser.reset();
 			}else if(state==IJSONParser::ERROR){

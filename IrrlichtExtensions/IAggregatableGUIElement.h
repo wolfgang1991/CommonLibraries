@@ -6,6 +6,8 @@
 
 #include <IGUIElement.h>
 
+#include <functional>
+
 //! useful to get the appopriate extension for rendering derived aggregatable gui elements 
 extern const std::string aggregatableSkinExtensionName;
 
@@ -53,6 +55,13 @@ class IAggregatableGUIElement : public irr::gui::IGUIElement{
 	
 	void* data;
 	
+	std::function<void(IAggregatableGUIElement* ele)> onClick;
+	std::function<void(IAggregatableGUIElement* ele)> onLongTap;
+	double longTapTime;
+	
+	irr::core::rect<irr::s32> rectWhenPressed;
+	double timeWhenPressed;
+	
 	public:
 	
 	//! rectangle may be later overriden by parents
@@ -96,6 +105,15 @@ class IAggregatableGUIElement : public irr::gui::IGUIElement{
 	virtual void* getData();
 	
 	virtual void setData(void* data);
+	
+	virtual void setActivableFlag(bool isActivateAble);
+	
+	virtual bool getActivableFlag() const;
+	
+	virtual void setOnClickCallback(const std::function<void(IAggregatableGUIElement* ele)>& callback);
+	
+	//! longTapTime in s
+	virtual void setLongTapCallback(const std::function<void(IAggregatableGUIElement* ele)>& callback, double longTapTime = 1.0);
 	
 };
 
