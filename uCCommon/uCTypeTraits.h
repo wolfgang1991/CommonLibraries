@@ -1,6 +1,8 @@
 #ifndef ucTypeTraits_H_INCLUDED
 #define ucTypeTraits_H_INCLUDED
 
+#undef max
+
 namespace ucstd{
 	
 	template<bool B, class T = void>

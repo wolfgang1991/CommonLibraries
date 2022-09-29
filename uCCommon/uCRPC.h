@@ -108,6 +108,23 @@ namespace UCRPC{
 		}
 		#endif
 		
+		//! must not be larger maxLength
+		void resize(uint16_t newSize){
+			actualLength = newSize;
+		}
+		
+		uint16_t size() const{
+			return actualLength;
+		}
+		
+		char* getData(){
+			return data;
+		}
+		
+		static constexpr uint16_t getMaxLength(){
+			return maxLength;
+		}
+		
 		String<maxLength>& operator<<(int32_t i){
 			size_t len = maxLength-actualLength;
 			int written = snprintf(&data[actualLength], len, "%" PRIi32, i);
@@ -449,6 +466,9 @@ namespace UCRPC{
 		uc_time_t lastSendTime;
 		
 		public:
+		
+		using MappedIndex = TIndex;
+		static constexpr TIndex MappedMaxParameterSize = maxParameterSize;
 		
 		UCRPC(TSerialProtocol& serial, TRegisteredFunctions& functions):serial(serial),sendBufferOffset(0),rcvBufferOffset(0),callPtrIndex(0),uidCounter(0),functions(functions),hasLastFunction(false),lastSendTime(0){
 			functions.sort();

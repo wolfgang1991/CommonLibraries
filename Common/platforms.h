@@ -3,7 +3,7 @@
 
 //! Preprocessor directives to detect specific platforms
 
-#if defined(__AVR_ARCH__) || defined(ARDUINO) || defined(STM32F1xx)
+#if defined(__AVR_ARCH__) || defined(ARDUINO) || defined(STM32F1xx) || defined(ARDUINO_ARCH_ESP32)
 	#define MICROCONTROLLER_PLATFORM
 	#define PLATFORM_STRING "uC"
 #elif defined(__APPLE__)
