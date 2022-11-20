@@ -133,6 +133,10 @@ namespace gui
 
 		//! Access the vertical scrollbar
 		virtual IGUIScrollBar* getVerticalScrollBar() const _IRR_OVERRIDE_;
+		
+		//changed
+		virtual void setTextCentered(bool centered) _IRR_OVERRIDE_;
+		//changed end
 
 	private:
 
@@ -187,6 +191,7 @@ namespace gui
 		s32 state;//0 = start state, 1 = move listbox/select item, 2 = move only (no selection if moved > ItemHeight)
 		s32 py;
 		s32 oldScrollPos;
+		bool TextCentered;
 		//changed end
 	};
 

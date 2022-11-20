@@ -122,7 +122,7 @@ class EmptyGUIElement : public IAggregatableGUIElement{
 	
 	public:
 	
-	EmptyGUIElement(irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, irr::f32 aspectRatio, bool maintainAspectRatio, bool isActivateAble, irr::s32 id, void* data = NULL, IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0)):
+	EmptyGUIElement(irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, irr::f32 aspectRatio = 1.f, bool maintainAspectRatio = false, bool isActivateAble = false, irr::s32 id = -1, void* data = NULL, IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0)):
 			IAggregatableGUIElement(environment, recommendedSpace, aspectRatio, recommendedSpace, aspectRatio, maintainAspectRatio, isActivateAble, id, data, parent, rectangle){}
 };
 

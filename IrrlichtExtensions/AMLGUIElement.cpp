@@ -89,8 +89,9 @@ bool AMLGUIElement::setCode(const std::string& utf8Code, bool printParsingErrors
 	Environment->setFocus(NULL);
 	this->utf8Code = utf8Code;
 	this->printParsingErrors = printParsingErrors;
+	bool res = parseAndCreateGUI();
 	contentSet = true;
-	return parseAndCreateGUI();
+	return res;
 }
 
 bool AMLGUIElement::setCodeFromFile(const std::string& path, bool printParsingErrors, bool adaptPath){
@@ -539,5 +540,9 @@ void AMLGUIElement::clear(){
 	id2element.clear();
 	button2Params.clear();
 	id2ScrollLink.clear();
-	removeSubElement(contentIndex);
+	if(content){
+		removeSubElement(contentIndex);
+		content = NULL;
+	}
+	contentSet = false;
 }

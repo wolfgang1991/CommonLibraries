@@ -52,3 +52,8 @@ void CallbackInsertGUIElement::setOnPostRenderCallback(const std::function<void(
 void CallbackInsertGUIElement::setOnEventCallback(const std::function<bool(const irr::SEvent&)>& onEventCbk){
 	this->onEventCbk = onEventCbk;
 }
+
+void CallbackInsertGUIElement::collapse(){
+	setRelativePosition(rect<s32>(0,0,0,0));
+	setNotClipped(true);
+}

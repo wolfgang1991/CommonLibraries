@@ -96,8 +96,6 @@ class AMLGUIElement : public AggregateGUIElement{
 	std::unordered_map<std::string, std::string> environment;//variables => content
 	std::unordered_map<std::string, irr::gui::IGUIElement*> id2element;//id => element
 	std::unordered_map<std::string, std::function<bool(AMLGUIElement* ele, XMLTag* t)>> functions;//name => function
-	
-	void clear();
 
 	irr::video::SColor getDefaultTextColor() const;
 
@@ -155,6 +153,9 @@ class AMLGUIElement : public AggregateGUIElement{
 	
 	//! returns true if it has some content (AML code set by any applicable method)
 	bool hasContent() const;
+	
+	//! clears the content
+	void clear();
 	
 	const std::string& getVariable(const std::string& name) const;
 	

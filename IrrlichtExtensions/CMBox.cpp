@@ -38,12 +38,13 @@ CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr:
 	IGUIFont* font = env->getSkin()->getFont();
 	s32 textW = 0, textH = 0;
 	s32 skinTextPaddingX = env->getSkin()->getSize(EGDS_TEXT_DISTANCE_X);
-	s32 padding = Max(skinTextPaddingX, (s32)round_(0.01*sqrt(w*h)));
+	s32 padding = Max(skinTextPaddingX, (s32)round_(0.02*sqrt(w*h)));
 	s32 maxTW = (s32)(maxW*w+0.5f)-2*padding;
 	text = makeWordWrappedText(text, maxTW, font);
 	dimension2d<u32> dim = font->getDimension(text.c_str());
 	textW = Min(maxTW, (s32)dim.Width);
-	s32 buttonWidth = (textW/2-5>0.3f*w?(0.3f*w):(textW/2-5));
+	s32 buttonWidth = (textW-padding)/2;
+	if(buttonWidth>w/3){buttonWidth = w/3;}
 	std::wstring finalPositive = positive?makeWordWrappedText(positive, 9*buttonWidth/10, font):std::wstring(L"");
 	std::wstring finalNegative = negative?makeWordWrappedText(negative, 9*buttonWidth/10, font):std::wstring(L"");
 	const s32 finalButtonHeight = Max(buttonHeight, 10*(s32)Max(font->getDimension(finalPositive.c_str()).Height, font->getDimension(finalNegative.c_str()).Height)/9);
@@ -57,10 +58,10 @@ CMBox::CMBox(irr::IrrlichtDevice* device, std::wstring text, irr::f32 maxW, irr:
 	stext->setWordWrap(false);
 	pos = neg = NULL;
 	if(positive && negative){
-		neg = env->addButton(rect<s32>(10, padding+textH+padding, 10+buttonWidth, padding+textH+padding+finalButtonHeight), win, negId, finalNegative.c_str(), NULL);
-		pos = env->addButton(rect<s32>(10+textW-buttonWidth, padding+textH+padding, 10+textW, padding+textH+padding+finalButtonHeight), win, posId, finalPositive.c_str(), NULL);
+		neg = env->addButton(rect<s32>(padding, padding+textH+padding, padding+buttonWidth, padding+textH+padding+finalButtonHeight), win, negId, finalNegative.c_str(), NULL);
+		pos = env->addButton(rect<s32>(padding+textW-buttonWidth, padding+textH+padding, padding+textW, padding+textH+padding+finalButtonHeight), win, posId, finalPositive.c_str(), NULL);
 	}else if(positive){
-		pos = env->addButton(rect<s32>(10+textW/2-buttonWidth/2, padding+textH+padding, 10+textW/2+buttonWidth/2, padding+textH+padding+finalButtonHeight), win, posId, finalPositive.c_str(), NULL);
+		pos = env->addButton(rect<s32>(padding+textW/2-buttonWidth/2, padding+textH+padding, padding+textW/2+buttonWidth/2, padding+textH+padding+finalButtonHeight), win, posId, finalPositive.c_str(), NULL);
 	}
 	env->setFocus(pos?(IGUIElement*)pos:(IGUIElement*)win);
 	bringToFrontRecursive(win);

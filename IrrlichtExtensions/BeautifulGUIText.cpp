@@ -81,12 +81,11 @@ void BeautifulGUIText::draw(){
 }
 
 void BeautifulGUIText::recalculateMeshBuffer(){
-	FlexibleFont* guiFont = (FlexibleFont*)(Environment->getSkin()->getFont());
-	if(guiFont!=font){font = guiFont;}
+	font = (FlexibleFont*)(Environment->getSkin()->getFont());
 	mb.Vertices.clear();
 	mb.Indices.clear();
 	font->fillMeshBuffer(mb, getText(), font->getDefaultTabSize(), hcenter, color, italicGradient, useTransformation?&transformation:NULL, font->getFontManager()->getSDFFMaterialType(), true, true);
-	textSize = get2DDimensionFromMeshBuffer(mb);
+	textSize = font->getDimensionWithTabs(getText(), font->getDefaultTabSize());//get2DDimensionFromMeshBuffer(mb);
 }
 
 void BeautifulGUIText::setCenter(bool hcenter, bool vcenter){

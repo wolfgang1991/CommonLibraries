@@ -83,6 +83,12 @@ namespace gui
 
 		//! Reads attributes of the element
 		virtual void deserializeAttributes(io::IAttributes* in, io::SAttributeReadWriteOptions* options) _IRR_OVERRIDE_;
+		
+		//changed:
+		virtual void setSelectedTextCentered(bool centered) _IRR_OVERRIDE_;
+		
+		virtual void setTextCentered(bool centered) _IRR_OVERRIDE_;
+		//changed end
 
 	private:
 
@@ -97,7 +103,8 @@ namespace gui
 
 		//changed:
 		s32 ItemHeight;
-
+		bool TextCentered;
+		//changed end
 
 		struct SComboData
 		{

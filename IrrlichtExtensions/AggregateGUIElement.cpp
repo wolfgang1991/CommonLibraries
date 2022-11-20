@@ -319,3 +319,7 @@ int32_t AggregateGUIElement::getSingleSelected(IAggregatableGUIElement** outGUIE
 	}
 	return -1;
 }
+
+bool AggregateGUIElement::isTrulyScrollable() const{
+	return isScrollable && maxScrollPos>0;
+}

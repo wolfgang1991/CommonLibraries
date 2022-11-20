@@ -10,6 +10,10 @@
 
 #include <timing.h>
 
+#if _WIN32
+#warning "better implementation for windows required"
+#endif
+
 static uint64_t initSecs(){
 	#if _WIN32
 	return timeGetTime()/1000;
@@ -20,7 +24,7 @@ static uint64_t initSecs(){
 	#endif
 }
 
-uint64_t offSeconds = initSecs();
+static const uint64_t offSeconds = initSecs();
 
 double blink(){
 	return fabs(sin(((getMilliSecs()/5) % 360) * (3.14/180.0)));
@@ -46,14 +50,28 @@ uint64_t getMilliSecs(){
 	#endif
 }
 
+uint64_t getMicroSecs(){
+	#if _WIN32
+	return getMilliSecs()*1000;
+	#else
+	struct timespec tc; clock_gettime(CLOCK_MONOTONIC, &tc);
+	return (uint64_t)(tc.tv_sec-offSeconds)*1000000 + (uint64_t)(tc.tv_nsec/1000);//overflow ok
+	#endif
+}
+
 void delay(uint32_t ms){
 	#if _WIN32
 	Sleep(ms);
 	#else
-	struct timespec ts;
-	ts.tv_sec = ms / 1000;
-	ts.tv_nsec = (ms % 1000) * 1000000;
-	nanosleep(&ts, NULL);
+	usleep(ms*1000);
+	#endif
+}
+
+void delayMicroseconds(uint32_t us){
+	#if _WIN32
+	delay(us/1000);
+	#else
+	usleep(us);
 	#endif
 }
 

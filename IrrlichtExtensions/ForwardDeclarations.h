@@ -19,6 +19,7 @@ namespace irr{
 		class IGUIEditBox;
 		class IGUIListBox;
 		class IGUIImage;
+		class IGUISpriteBank;
 	}
 	namespace video{
 		class IVideoDriver;
@@ -37,6 +38,7 @@ namespace irr{
 		class IMesh;
 		class IMeshSceneNode;
 		class IBillboardSceneNode;
+		class IAnimatedMeshSceneNode;
 	}
 	namespace io{
 		class IFileSystem;

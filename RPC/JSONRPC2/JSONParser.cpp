@@ -40,7 +40,8 @@ std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPr
 			std::stringstream ss; ss << "\"" << fvalue << "\"";
 			return ss.str();
 		}
-		return convertToString<double>(fvalue);
+		std::string res = convertToString<double>(fvalue);
+		return res.find('.')==std::string::npos?(res+".0"):res;//must have a . to really be a double
 	}else if(type==IRPCValue::INTEGER){
 		return convertToString<int64_t>(((const IntegerValue&)value).value);
 	}else if(type==IRPCValue::STRING){

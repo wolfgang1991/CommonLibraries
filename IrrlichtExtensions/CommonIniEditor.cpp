@@ -111,13 +111,16 @@ void CommonIniEditor::createGUI(){
 	f32 lineSpace = (f32)c->getRecommendedButtonHeight()/(f32)prect.getHeight();
 	f32 emptySpace = 0.5f*lineSpace;
 	f32 linesPerPage = (1.f-emptySpace)/(lineSpace+emptySpace);
-	AggregateGUIElement* content = new AggregateGUIElement(env, .95f, 1.f, .95f, 1.f, false, false, true, {}, {}, false, customization->getAggregationID());
+	f32 scrollSpace = 0.0125f;
+	f32 scrollMargin = 0.0125f;
+	AggregateGUIElement* content = new AggregateGUIElement(env, 1.f-2.f*(scrollSpace+scrollMargin), 1.f, .95f, 1.f, false, false, true, {}, {}, false, customization->getAggregationID());
 	bool useScrollBar = fieldCount>(linesPerPage/2);//if more than half page filled add scrollbar and large empty space below because of the keyboard
-	ScrollBar* sb = useScrollBar?new ScrollBar(env, .025f, false, customization->getScrollBarID()):NULL;
+	ScrollBar* sb = useScrollBar?new ScrollBar(env, scrollSpace, false, customization->getScrollBarID()):NULL;
 	agg = new AggregateGUIElement(env, 1.f, 1.f, 1.f, 1.f, false, true, false, {
-		new EmptyGUIElement(env, .025f, 1.f, false, false, customization->getAggregatableID()),
+		new EmptyGUIElement(env, scrollSpace+scrollMargin, 1.f, false, false, customization->getAggregatableID()),
 		content,
-		sb?(IAggregatableGUIElement*)sb:(IAggregatableGUIElement*)new EmptyGUIElement(env, .025f, 1.f, false, false, customization->getAggregatableID())
+		new EmptyGUIElement(env, scrollMargin, 1.f, false, false, customization->getAggregatableID()),
+		sb?(IAggregatableGUIElement*)sb:(IAggregatableGUIElement*)new EmptyGUIElement(env, scrollSpace, 1.f, false, false, customization->getAggregatableID())
 	}, {}, false, customization->getAggregationID(), NULL, win, prect);
 	if(sb){sb->linkToScrollable(content);}
 	for(int i=0; i<fieldCount; i++){
@@ -156,15 +159,16 @@ void CommonIniEditor::createGUI(){
 			((IGUIComboBox*)input[i])->addItem(convertUtf8ToWString(defaultValue[i].substr(start,ci-start)).c_str());
 		}else if(valType[i]==COLOR_RGB || valType[i]==COLOR_RGBA){
 			f32 buttonSpace = Min(1.f, .1f+(f32)font->getDimension(fieldName[i].c_str()).Width/wholeWidth);
+			BeautifulGUIButton* but;
 			AggregateGUIElement* line = new AggregateGUIElement(env, lineSpace, 1.f, lineSpace, 1.f, false, true, false, {
-				new EmptyGUIElement(env, (1.f-buttonSpace)/2.f, 1.f, false, false, customization->getAggregatableID()),
-				new BeautifulGUIButton(env, buttonSpace, 1.f, false, true, false, {
+				//new EmptyGUIElement(env, (1.f-buttonSpace)/2.f, 1.f, false, false, customization->getAggregatableID()),
+				but = new BeautifulGUIButton(env, buttonSpace, 1.f, false, true, false, {
 					new BeautifulGUIText(fieldName[i].c_str(), 0.f, NULL, true, true, env, 1.f)
 				}, {}, -1),
-				new EmptyGUIElement(env, (1.f-buttonSpace)/2.f, 1.f, false, false, customization->getAggregatableID())
+				new EmptyGUIElement(env, 1.f-buttonSpace, 1.f, false, false, customization->getAggregatableID())
 			}, {}, false, customization->getInvisibleAggregationID());
 			finalLine = line;
-			input[i] = *(line->getChildren().begin()+1);
+			input[i] = but;
 		}
 		if(finalLine){content->addSubElement(finalLine);}
 	}

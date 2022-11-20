@@ -25,33 +25,6 @@ namespace irr{
 	}
 }
 
-inline irr::video::SColor rgb(irr::u32 r, irr::u32 g, irr::u32 b){
-	return irr::video::SColor(255, r, g, b);
-}
-
-inline irr::video::SColor rgba(irr::u32 r, irr::u32 g, irr::u32 b, irr::u32 a){
-	return irr::video::SColor(a, r, g, b);
-}
-
-inline irr::video::SColor argb(irr::u32 a, irr::u32 r, irr::u32 g, irr::u32 b){
-	return irr::video::SColor(a, r, g, b);
-}
-
-//! usage e.g. rgb(0xA3BEFF) => r=A3, g=BE, b=FF
-inline irr::video::SColor rgb(irr::u32 value){
-	return irr::video::SColor(value | (((irr::u32)0xFF) << 24));
-}
-
-//! usage e.g. argb(0x00A3BEFF) => a=00, r=A3, g=BE, b=FF
-inline irr::video::SColor argb(irr::u32 value){
-	return irr::video::SColor(value);
-}
-
-//! usage e.g. rgba(0xA3BEFF00) => a=00, r=A3, g=BE, b=FF
-inline irr::video::SColor rgba(irr::u32 value){
-	return irr::video::SColor((value >> 8) | ((value&0xFF) << 24));
-}
-
 //! Draw 2D Images, Polygons, Arcs with 3D geometry (e.g. useful for Shading, Transformation)
 class Drawer2D{
 
@@ -167,8 +140,11 @@ class Drawer2D{
 	void draw2DMeshBuffer(irr::scene::SMeshBuffer* mb);
 
 	//! p: Array of pixel coordinates, color Vertexcolor, lineThickness in Pixel, texPerLinePixel: texture parts [0-1] per pixel
+	//! bbMin/bbMax only important for texture coordinates. If texture coordinates are irrelevant this can be something arbitrary as long as the bb area is not zero
 	void drawFilledPolygon(irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::core::vector2d<irr::f32> bbMin, irr::core::vector2d<irr::f32> bbMax, irr::video::ITexture* tex=NULL, float texScale = 1.f);
-
+	
+	void drawRoundLoadingBar(const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress, irr::f32 lineThicknes);
+	
 	void setTextureWrap(irr::video::E_TEXTURE_CLAMP uwrap = irr::video::ETC_REPEAT, irr::video::E_TEXTURE_CLAMP vwrap = irr::video::ETC_REPEAT);
 	
 	//! restores the active cameras transformations and the world transform

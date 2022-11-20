@@ -8,14 +8,12 @@
 #include <IVideoDriver.h>
 #include <IGUIEnvironment.h>
 
-#include <iostream>
-
 using namespace irr;
 using namespace core;
 using namespace video;
 using namespace gui;
 
-ScrollBar::ScrollBar(irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, bool isHorizontal, irr::s32 id, void* data, irr::gui::IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle):
+ScrollBar::ScrollBar(irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, bool isHorizontal, irr::s32 id, void* data, irr::gui::IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle, bool hideIfNothingToScroll):
 	IAggregatableGUIElement(environment, recommendedSpace, 1.f, recommendedSpace, 1.f, false, false, id, data, parent, rectangle),
 	isHorizontal(isHorizontal),
 	scrollable(NULL),
@@ -26,7 +24,10 @@ ScrollBar::ScrollBar(irr::gui::IGUIEnvironment* environment, irr::f32 recommende
 	scrollSpace(0),
 	scrolling(false),
 	storedMPos(0,0),
-	storedPos(0){
+	storedPos(0),
+	hideIfNothingToScroll(hideIfNothingToScroll),
+	originalSpace(recommendedSpace),
+	collapsed(false){
 	dimension2d<u32> dim = environment->getVideoDriver()->getScreenSize();
 	sqrtArea = sqrt(dim.Width*dim.Height);
 	updateAbsolutePosition();
@@ -47,6 +48,7 @@ void ScrollBar::updateAbsolutePosition(){
 }
 
 bool ScrollBar::OnEvent(const irr::SEvent& event){
+	if(hideIfNothingToScroll && scrollable!=NULL && !scrollable->isTrulyScrollable()){return IAggregatableGUIElement::OnEvent(event);}
 	if(event.EventType==EET_MOUSE_INPUT_EVENT){
 		const irr::SEvent::SMouseInput& m = event.MouseInput;
 		vector2d<s32> mPos(m.X, m.Y);
@@ -73,6 +75,18 @@ bool ScrollBar::OnEvent(const irr::SEvent& event){
 		}
 	}
 	return IAggregatableGUIElement::OnEvent(event);
+}
+
+void ScrollBar::setCollapsed(bool collapsed){
+	if(this->collapsed!=collapsed){
+		this->collapsed = collapsed;
+		if(collapsed){
+			setRecommendedSpace(0.f);
+		}else{
+			setRecommendedSpace(originalSpace);
+		}
+		if(Parent){Parent->updateAbsolutePosition();}
+	}
 }
 
 void ScrollBar::linkToScrollable(IScrollable* scrollable){
@@ -103,6 +117,8 @@ irr::f32 ScrollBar::getPos(){
 
 void ScrollBar::draw(){
 	if(isVisible()){
+		setCollapsed(hideIfNothingToScroll && scrollable!=NULL && !scrollable->isTrulyScrollable());
+		if(collapsed){return;}
 		IGUISkin* guiSkin = Environment->getSkin();
 		if(isExtendableSkin(guiSkin)){
 			ScrollBarSkinExtension* skin = (ScrollBarSkinExtension*)((IExtendableSkin*)guiSkin)->getExtension(aggregatableSkinExtensionName, getID());//must be a ScrollBar Skin otherwise the id has been set wrong

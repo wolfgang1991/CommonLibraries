@@ -75,4 +75,24 @@ void removeMeshHardwareBuffers(irr::video::IVideoDriver* driver, irr::scene::IMe
 //! Shows a full screen message, and returns the result of IrrlichtDevice::run()
 bool showState(irr::IrrlichtDevice* device, const wchar_t* txt);
 
+struct ColorStep{
+	irr::video::SColor color;
+	irr::f32 progress;
+};
+
+//! interpolation on a gradient, TContainer: container of ColorStep
+template <typename TContainer>
+irr::video::SColor interpolateColor(const TContainer& colors, irr::f32 progress){
+	for(auto it = colors.begin(); it!=colors.end(); ++it){
+		auto nextIt = it; nextIt++;
+		if(nextIt==colors.end() || it->progress >= progress){
+			return it->color;
+		}else if(it->progress <= progress && nextIt->progress>=progress){
+			irr::f32 relativeProgress = (progress-it->progress)/(nextIt->progress-it->progress);
+			return nextIt->color.getInterpolated(it->color, relativeProgress);
+		}
+	}
+	return irr::video::SColor(0,0,0,0);
+}
+
 #endif

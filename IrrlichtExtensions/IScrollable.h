@@ -37,6 +37,9 @@ class IScrollable{
 	
 	//! used for scrolling with wheel: stepsize depends usually on the content (larger content => smaller stepsize); in [0-1]
 	virtual irr::f32 getScrollStepSize() const = 0;
+	
+	//! returns true if the content is scrollable not only by flag but also because of the used space
+	virtual bool isTrulyScrollable() const = 0;
 
 };
 

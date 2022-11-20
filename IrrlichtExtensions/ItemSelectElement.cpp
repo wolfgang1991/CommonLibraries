@@ -117,7 +117,7 @@ ItemSelectElement::ItemSelectElement(irr::IrrlichtDevice* device, Drawer2D* draw
 	win->getCloseButton()->setVisible(false); win->setDrawTitlebar(false); win->setNotClipped(true);
 	win->setDraggable(false);
 	bringToFrontRecursive(win);
-	s32 padding = 0.015*sqrtArea;
+	s32 padding = 0.025*sqrtArea;
 	IGUIFont* font = env->getSkin()->getFont();
 	const std::wstring& nameLabel = lang->getPhrase(L"ItemSelectElement::NAME", &defaultPhrases);
 	dimension2d<u32> nameLabelSize = font->getDimension(nameLabel.c_str());
@@ -219,13 +219,14 @@ void ItemSelectElement::createPlacesGUI(const irr::core::rect<irr::s32>& r, irr:
 	const std::wstring& placesLabel = lang->getPhrase(L"ItemSelectElement::PLACES", &defaultPhrases);
 	dimension2d<u32> placesLabelSize = font->getDimension(placesLabel.c_str());
 	SColor textColor = env->getSkin()->getColor(EGDC_BUTTON_TEXT);
-	new BeautifulGUIText(placesLabel.c_str(), textColor, 0.f, NULL, true, true, env, 1.f, -1, 1.f, NULL, parent, rect<s32>(r.UpperLeftCorner.X, r.UpperLeftCorner.Y+padding, r.LowerRightCorner.X, r.UpperLeftCorner.Y+placesLabelSize.Height+2*padding));
+	new BeautifulGUIText(placesLabel.c_str(), textColor, 0.f, NULL, false, true, env, 1.f, -1, 1.f, NULL, parent, rect<s32>(r.UpperLeftCorner.X+0.05*r.getWidth(), r.UpperLeftCorner.Y+padding, r.LowerRightCorner.X, r.UpperLeftCorner.Y+placesLabelSize.Height+2*padding));
 	placesAgg = new AggregateGUIElement(env, 1.f, 1.f, 1.f, 1.f, false, false, true, {}, {}, false, aggregationID, NULL, parent, rect<s32>(r.UpperLeftCorner.X, r.UpperLeftCorner.Y+placesLabelSize.Height+3*padding, r.LowerRightCorner.X, r.LowerRightCorner.Y));
 	const std::vector<IItemOrganizer::Place>& p = organizer->getPlaces();
 	f32 space = 1.5f*((f32)buttonHeight)/((f32)r.getHeight());
 	for(uint32_t i=0; i<p.size(); i++){
 		placesAgg->addSubElement(new AggregateGUIElement(env, space, 1.f, space, 1.f, false, true, false, {
-			new BeautifulGUIText(p[i].indication.c_str(), textColor, 0.f, NULL, true, true, env, 1.f)
+			new EmptyGUIElement(env, 0.05f),
+			new BeautifulGUIText(p[i].indication.c_str(), textColor, 0.f, NULL, false, true, env, 0.9f)
 		}, {}, true, listElementAggregationID));
 	}
 }
@@ -301,7 +302,8 @@ void ItemSelectElement::createFileList(){
 	f32 vspaceHeader = 1.25f*((f32)buttonHeight)/((f32)fileListRect.getHeight());
 	f32 vspace = 1.25f*((f32)buttonHeight)/((f32)fileListRect.getHeight()-buttonHeight);
 	f32 lwidth = fileListRect.getWidth();
-	f32 iconspace = ((f32)buttonHeight)/((f32)lwidth);
+	f32 iconspace = ((f32)buttonHeight)/((f32)lwidth);// + 0.05f;//+padding in both directions
+	f32 iconpadding = 0.025f;
 	f32 maxhspace = Max(0.1f,(1.f-iconspace)/((f32)labels.size()));
 	f32 hspacepadding = 0.1f/((f32)labels.size());
 	IGUIFont* font = env->getSkin()->getFont();
@@ -319,25 +321,27 @@ void ItemSelectElement::createFileList(){
 		hspaces.push_back(space);
 		sumSpaces += space;
 	}
-	hspaces[0] += 1.f-iconspace-sumSpaces;//put the remaining space to the first field (usually name), it's guranteed to be >0 because of maxhspace limit
+	hspaces[0] += 1.f-iconspace-sumSpaces-2.f*iconpadding;//put the remaining space to the first field (usually name), it's guranteed to be >0 because of maxhspace limit
 	SColor textColor = env->getSkin()->getColor(EGDC_BUTTON_TEXT);
 	//Header:
 	fieldButtons.clear();
 	AggregateGUIElement* header = new AggregateGUIElement(env, vspaceHeader, 1.f, vspaceHeader, 1.f, false, true, false, {}, {}, false, invisibleAggregationID);
 	//header->addSubElement(new EmptyGUIElement(env, iconspace, 1.f, false, false, -1));
 	for(uint32_t i=0; i<labels.size(); i++){
-		f32 thisSpace = i==0?(hspaces[i]+iconspace):(hspaces[i]);
+		f32 thisSpace = i==0?(hspaces[i]+iconspace+2.f*iconpadding):(hspaces[i]);
 		BeautifulGUIButton* but;
 		if(sortIndex==i){
 			f32 arrowSpace = .0325f/thisSpace;
 			but = new BeautifulGUIButton(env, thisSpace, 1.f, false, true, false, {
-				new BeautifulGUIText(labels[i].c_str(), textColor, 0.f, NULL, true, true, env, .95f-arrowSpace),
+				new EmptyGUIElement(env, 0.025f/thisSpace),
+				new BeautifulGUIText(labels[i].c_str(), textColor, 0.f, NULL, false, true, env, .85f-arrowSpace),
 				new BeautifulGUIImage(drawer, sortAscending?source->getAscendingIcon():source->getDescendingIcon(), env, arrowSpace, true, -1),
 				new EmptyGUIElement(env, 0.05f, 1.f, false, false, -1)
 			}, {}, -1);
 		}else{
 			but = new BeautifulGUIButton(env, thisSpace, 1.f, false, true, false, {
-				new BeautifulGUIText(labels[i].c_str(), textColor, 0.f, NULL, true, true, env, 1.f)
+				new EmptyGUIElement(env, 0.025f/thisSpace),
+				new BeautifulGUIText(labels[i].c_str(), textColor, 0.f, NULL, false, true, env, 0.9f)
 			}, {}, -1);
 		}
 		fieldButtons.push_back(but);
@@ -354,7 +358,9 @@ void ItemSelectElement::createFileList(){
 		if(item->isDirectory || std::regex_match(item->relativePath, regex)){
 			AggregateGUIElement* line = new AggregateGUIElement(env, vspace, 1.f, vspace, 1.f, false, true, false, {}, {}, true, listElementAggregationID);
 			ITexture* icon = item->isDirectory?source->getFolderIcon():source->getItemIcon(*item);
+			line->addSubElement(new EmptyGUIElement(env, iconpadding));
 			line->addSubElement(new BeautifulGUIImage(drawer, icon, env, iconspace, true, -1));
+			line->addSubElement(new EmptyGUIElement(env, iconpadding));
 			assert(labels.size()==item->fields.size());
 			for(uint32_t j=0; j<item->fields.size(); j++){
 				line->addSubElement(new BeautifulGUIText(item->fields[j].c_str(), textColor, 0.f, NULL, j!=0, true, env, hspaces[j]));

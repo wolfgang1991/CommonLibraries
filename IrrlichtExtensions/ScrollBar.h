@@ -28,9 +28,13 @@ class ScrollBar : public IAggregatableGUIElement{
 	irr::core::vector2d<irr::s32> storedMPos;
 	irr::f32 storedPos;
 	
+	bool hideIfNothingToScroll;
+	irr::f32 originalSpace;
+	bool collapsed;
+	
 	public:
 	
-	ScrollBar(irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, bool isHorizontal, irr::s32 id, void* data = NULL, irr::gui::IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0));
+	ScrollBar(irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, bool isHorizontal, irr::s32 id, void* data = NULL, irr::gui::IGUIElement* parent = NULL, const irr::core::rect<irr::s32>& rectangle = irr::core::rect<irr::s32>(0,0,0,0), bool hideIfNothingToScroll = true);
 	
 	~ScrollBar();
 	
@@ -48,6 +52,8 @@ class ScrollBar : public IAggregatableGUIElement{
 	irr::f32 getPos();
 	
 	void draw();
+	
+	void setCollapsed(bool collapsed);
 };
 
 #endif

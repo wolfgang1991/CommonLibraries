@@ -39,6 +39,9 @@ class CallbackInsertGUIElement : public IAggregatableGUIElement{
 	
 	void draw();
 	
+	//! makes it small that it doesn't swallow event and still renders on the whole screen if necessary
+	void collapse();
+	
 };
 
 #endif

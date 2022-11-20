@@ -410,20 +410,16 @@ void Drawer2D::drawRectWithCorner(const irr::core::rect<irr::f32>& rectangle, ir
 
 void Drawer2D::drawFilledPolygon(irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::core::vector2d<irr::f32> bbMin, irr::core::vector2d<irr::f32> bbMax, irr::video::ITexture* tex, float texScale){
 	cCalc.set2DTransforms(device);	
-	//ViewParameter setzen #1
-	//driver->setTransform(ETS_VIEW, imgcam->getViewMatrix());
-	//driver->setTransform(ETS_PROJECTION, imgcam->getProjectionMatrix());
 	//Triangulieren
 	triangulated.set_used(0);
 	Triangulate::Process(p, triangulated);//bool success = 
 	//Meshbuffer aufbauen
 	mb.MappingHint_Index = EHM_NEVER;
 	mb.MappingHint_Vertex = EHM_NEVER;
-	mb.Material = SMaterial(stdMat);//imgplane->getMaterial(0));//stdMat);//gleiches Material wie für Linien
+	mb.Material = SMaterial(stdMat);//gleiches Material wie für Linien
 	mb.Material.TextureLayer[0].Texture = tex;//NULL auch ok
 	mb.Material.BackfaceCulling = false;//da Backfaces ggf. verwendet beim Indizieren
 	int vc = triangulated.size();
-	//if(!success){writeLog("Triangulation unsuccessful\n");}
 	if(vc>MAX_VERTICES){return;}//TODO writeLog("Too many vertices: ");writeLog(vc);writeLog("\n");
 	//Vertices aufbauen
 	mb.Vertices.set_used(vc);
@@ -433,8 +429,6 @@ void Drawer2D::drawFilledPolygon(irr::core::array< irr::core::vector2d<irr::f32>
 		S3DVertex& v = mb.Vertices[i];
 		v.Color = color;
 		v.Normal = vector3d<f32>(0.f,0.f,-1.f);
-//		line3d<f32> l1 = getRayFromScreenCoordinatesImgCam(triangulated[i]);
-//		v.Pos = HLP_SchnittMitEbene(x,n,l1);
 		v.Pos = vector3d<f32>(triangulated[i].X, triangulated[i].Y, 1.f);
 		v.TCoords = vector2d<f32>((triangulated[i].X-bbMin.X)/bbW*texScale, (triangulated[i].Y-bbMin.Y)/bbH*texScale);
 	}
@@ -445,7 +439,6 @@ void Drawer2D::drawFilledPolygon(irr::core::array< irr::core::vector2d<irr::f32>
 	}
 	mb.setDirty();
 	//ViewParameter setzen + Rendern #2
-	//driver->setTransform(ETS_WORLD,CMatrix4<f32>());
 	driver->setMaterial(mb.Material);
 	SET_MATERIAL_WORKAROUND(driver, mb.Material)
 	driver->drawMeshBuffer(&mb);
@@ -514,10 +507,6 @@ void Drawer2D::fillPolygonMeshBuffer(irr::scene::SMeshBuffer* mb, irr::core::arr
 			dir /= len;//normalize
 			//Find next polyline vertex index and next direction
 			int nextIndex = i+1;
-//			for(; nextIndex<vc; nextIndex++){
-//				if(p[nextIndex].getDistanceFrom(thisP)>lineThickness){break;}
-//			}
-//			if(nextIndex%vc==i){return;}//all polyline vertices are basically on one point
 			nextIndex = closed?nextIndex%vc:Min(nextIndex,vc-1);//in case of closed nextIndex can be 0
 			vector2d<f32> nextDir = p[nextIndex]-thisP;
 			f32 nextLen = nextDir.getLength();
@@ -943,6 +932,42 @@ void Drawer2D::setMaterialType(E_MATERIAL_TYPE type){
 
 irr::video::E_MATERIAL_TYPE Drawer2D::getMaterialType(){
 	return stdMat.MaterialType;
+}
+
+static void calcRoundLoadingBar(irr::core::array< irr::core::vector2d<irr::f32> >& out, const irr::core::rect<irr::s32>& r, irr::f32 maxX){
+	out.set_used(0);
+	out.reallocate(360);
+	f32 radius = 0.5f*r.getHeight();
+	vector2d<f32> center(r.LowerRightCorner.X-radius, r.LowerRightCorner.Y-radius);
+	for(int i=0; i<180; i++){//1 degrees per vertex
+		f32 angle = i/DEG_RAD;
+		out.push_back(center + vector2d<f32>(radius*sinf(angle), radius*cosf(angle)));
+	}
+	center = vector2d<f32>(r.UpperLeftCorner.X+radius, r.UpperLeftCorner.Y+radius);
+	for(int i=0; i<180; i++){//1 degrees per vertex
+		f32 angle = i/DEG_RAD;
+		out.push_back(center + vector2d<f32>(-radius*sinf(angle), -radius*cosf(angle)));
+	}
+	for(uint32_t i=0; i<out.size(); i++){
+		if(out[i].X>maxX){
+			out[i].X = maxX;
+		}
+	}
+}
+
+void Drawer2D::drawRoundLoadingBar(const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress, irr::f32 lineThicknes){
+	irr::core::array< irr::core::vector2d<irr::f32> > poly;
+	calcRoundLoadingBar(poly, positions, positions.LowerRightCorner.X);
+	drawPolygon(poly, color, lineThicknes, 0.01f, NULL, true, 0.5f, true);
+	s32 dist = 0.3*Min(positions.getWidth(), positions.getHeight());
+	s32 origin = positions.UpperLeftCorner.X+dist;
+	rect<s32> r(origin, positions.UpperLeftCorner.Y+dist, positions.LowerRightCorner.X-dist, positions.LowerRightCorner.Y-dist);
+	s32 fillX = origin+progress*(r.LowerRightCorner.X-origin);
+	calcRoundLoadingBar(poly, r, fillX);
+	auto mt = getMaterialType();
+	setMaterialType(EMT_SOLID);
+	drawFilledPolygon(poly, color, vector2d<f32>(0,0), vector2d<f32>(1,1), NULL);
+	setMaterialType(mt);
 }
 
 void drawLoadingBar(irr::IrrlichtDevice* device, const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress){

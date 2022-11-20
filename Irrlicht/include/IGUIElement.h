@@ -27,7 +27,7 @@ public:
 	//! Constructor
 	IGUIElement(EGUI_ELEMENT_TYPE type, IGUIEnvironment* environment, IGUIElement* parent,
 		s32 id, const core::rect<s32>& rectangle)
-		: Parent(0), RelativeRect(rectangle), AbsoluteRect(rectangle),
+		: Sorted(true), Parent(0), RelativeRect(rectangle), AbsoluteRect(rectangle),
 		AbsoluteClippingRect(rectangle), DesiredRect(rectangle),
 		MaxSize(0,0), MinSize(1,1), IsVisible(true), IsEnabled(true),
 		IsSubElement(false), NoClip(false), ID(id), IsTabStop(false), TabOrder(-1), IsTabGroup(false),
@@ -539,6 +539,7 @@ public:
 		{
 			if (element == (*it))
 			{
+				Sorted = false;
 				Children.erase(it);
 				Children.push_back(element);
 				return true;
@@ -560,6 +561,7 @@ public:
 		{
 			if (child == (*it))
 			{
+				Sorted = false;
 				Children.erase(it);
 				Children.push_front(child);
 				return true;
@@ -821,6 +823,40 @@ public:
 
 		setNotClipped(in->getAttributeAsBool("NoClip", NoClip));
 	}
+	
+	template <typename TComparator>
+	class SortableGUIElement{
+		
+		public:
+		
+		irr::gui::IGUIElement* ele;
+		const TComparator* comp;
+		
+		SortableGUIElement(irr::gui::IGUIElement* ele, const TComparator* comp):ele(ele),comp(comp){}
+		
+		bool operator<(const SortableGUIElement& other){
+			return comp->isLess(ele, other.ele);
+		}
+		
+	};
+	
+	//! sorts the children by upper left corner if not already sorted
+	//! comp must have a isLess(a, b) method which returns true if a is less than b
+	template <typename TComparator>
+	void sort(const TComparator& comp, bool forceSort = false){
+		if(!Sorted || forceSort){
+			irr::core::array<SortableGUIElement<TComparator>> arr(Children.getSize());
+			for(core::list<IGUIElement*>::Iterator it = Children.begin(); it != Children.end(); ++it){
+				arr.push_back(SortableGUIElement<TComparator>(*it, &comp));
+			}
+			arr.sort();
+			Children.clear();
+			for(u32 i=0; i<arr.size(); i++){
+				Children.push_back(arr[i].ele);
+			}
+			Sorted = true;
+		}
+	}
 
 protected:
 	// not virtual because needed in constructor
@@ -833,6 +869,7 @@ protected:
 			child->LastParentRect = getAbsolutePosition();
 			child->Parent = this;
 			Children.push_back(child);
+			Sorted = false;
 		}
 	}
 
@@ -966,7 +1003,10 @@ protected:
 	}
 
 protected:
-
+	
+	//! true if list sorted
+	bool Sorted;
+	
 	//! List of all children of this element
 	core::list<IGUIElement*> Children;
 

@@ -756,28 +756,11 @@ static inline void clipPos(irr::core::rect<irr::s32>& position, const irr::core:
 }
 
 void FlexibleFont::draw(const irr::core::stringw& text, const irr::core::rect<irr::s32>& position, irr::video::SColor color, bool hcenter, bool vcenter, const irr::core::rect<irr::s32>* clip){
-//	rect<s32> clippedPos(position);
-//	rect<s32> clipRect(device->getVideoDriver()->getViewPort());
-//	if(clip){
-//		rect<s32> clipCp(*clip);
-//		clipCp.clipAgainst(clipRect);
-//		clipRect = clipCp;//clipPos(clippedPos, *clip);
-//	}
-//	clipPos(clippedPos, clipRect);//clipping against viewport required for render targets / fbos
 	//Fill MeshBuffer
 	defaultMeshBuffer.Vertices.set_used(0);
 	defaultMeshBuffer.Indices.set_used(0);
 	fillMeshBuffer(defaultMeshBuffer, text.c_str(), defaultTabSize, hcenter, color, defaultItalicGradient, NULL, defaultMaterialType);
 	defaultMeshBuffer.setDirty();
-//	//Set Transformation and Render
-//	vector2d<f32> translation(position.UpperLeftCorner.X-clippedPos.UpperLeftCorner.X, position.UpperLeftCorner.Y-clippedPos.UpperLeftCorner.Y);
-//	vector2d<f32> origin(0.f, 0.f);
-//	if(hcenter || vcenter){
-//		dimension2d<u32> size = getDimensionWithTabs(text.c_str(), defaultTabSize);//no scale for correct origin calculation
-//		origin = vector2d<f32>(hcenter?(size.Width/2.f):0.f, vcenter?(size.Height/2.f):0.f);
-//		translation += vector2d<f32>(hcenter?(position.getWidth()/2.f):0.f, vcenter?(position.getHeight()/2.f):0.f);
-//	}
-//	drawFontMeshBuffer(defaultMeshBuffer, clippedPos, defaultSmoothingFactor, defaultFatness, defaultBorderSize, defaultBorderColor, &defaultShadow, translation, defaultScale, 0.f, origin);
 	//TODO if text too long for meshbuffer: split at \n
 	drawFontMeshBuffer(defaultMeshBuffer, getDimensionWithTabs(text.c_str(), defaultTabSize), position, hcenter, vcenter, clip);
 }

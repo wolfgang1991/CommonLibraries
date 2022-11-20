@@ -14,7 +14,7 @@ class ColorSelector{
 
 	public:
 
-	ColorSelector(ICommonAppContext* context, irr::video::ITexture* alphaBack, irr::video::SColor Color);
+	ColorSelector(ICommonAppContext* context, irr::video::ITexture* alphaBack, irr::video::SColor Color, bool modal = true);
 
 	~ColorSelector();
 

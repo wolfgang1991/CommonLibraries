@@ -132,6 +132,7 @@ std::string convertWStringToString(const std::wstring& str);
 std::list<std::string> parseSeparatedString(const std::string& s, char separator, bool noEmptyToken = false);
 
 //! parses a separated string e.g. csv and pushed back the token into out. TContainer should be a container where push_back is possible in O(1) (e.g. std::list or std::vector)
+//! if noEmptyToken: duplicate separator don't result in empty token in list
 template<typename TContainer>
 void parseSeparatedString(TContainer& out, const typename TContainer::value_type& s, typename TContainer::value_type separators, bool noEmptyToken = false){
 	typedef typename TContainer::value_type String;

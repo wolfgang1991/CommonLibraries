@@ -307,11 +307,11 @@ void LoadSaveSettingsDialog::addRowToList(irr::video::ITexture* fittingIcon, con
 		new EmptyGUIElement(Environment, .025f, 1.f/1.f, false, false, defaultAggId),
 		new BeautifulGUIText(calculateIndication(convertUtf8ToWString(indication),ini,std::string(currentPrefix).append(indication[0]=='/'?"":"/").append(indication)).c_str(), Environment->getSkin()->getColor(EGDC_BUTTON_TEXT), 0.f, NULL, false, true, Environment, 1.3f),
 		createButtons?
-			(IAggregatableGUIElement*)new AggregatableGUIElementAdapter(Environment, .2f, 7.f/4.f, true, Environment->addButton(rect<s32>(0,0,0,0), NULL, renameId, renameId<0?L"Move":L""), false, defaultAggId)//Attention: indices in OnEvent must match the order, else => crash
+			(IAggregatableGUIElement*)new AggregatableGUIElementAdapter(Environment, .2f, 7.f/4.f, false, Environment->addButton(rect<s32>(0,0,0,0), NULL, renameId, renameId<0?L"Move":L""), false, defaultAggId)//Attention: indices in OnEvent must match the order, else => crash
 		:
 			(IAggregatableGUIElement*)new EmptyGUIElement(Environment, .2f, 7.f/4.f, true, false, defaultAggId),
 		createButtons?
-			(IAggregatableGUIElement*)new AggregatableGUIElementAdapter(Environment, .2f, 7.f/4.f, true, Environment->addButton(rect<s32>(0,0,0,0), NULL, deleteId, deleteId<0?L"Delete":L""), false, defaultAggId)
+			(IAggregatableGUIElement*)new AggregatableGUIElementAdapter(Environment, .2f, 7.f/4.f, false, Environment->addButton(rect<s32>(0,0,0,0), NULL, deleteId, deleteId<0?L"Delete":L""), false, defaultAggId)
 		:
 			(IAggregatableGUIElement*)new EmptyGUIElement(Environment, .2f, 7.f/4.f, true, false, defaultAggId),
 	}, {}, true, noBorderAggId);

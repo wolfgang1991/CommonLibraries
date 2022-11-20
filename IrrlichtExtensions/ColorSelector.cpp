@@ -4,6 +4,7 @@
 #include <mathUtils.h>
 #include <IInput.h>
 #include <Drawer2D.h>
+#include <CMBox.h>
 
 #include <IGUIStaticText.h>
 #include <IGUIEditBox.h>
@@ -22,7 +23,7 @@ using namespace video;
 using namespace io;
 using namespace gui;
 
-ColorSelector::ColorSelector(ICommonAppContext* context, irr::video::ITexture* alphaBack, irr::video::SColor Color){
+ColorSelector::ColorSelector(ICommonAppContext* context, irr::video::ITexture* alphaBack, irr::video::SColor Color, bool modal){
 	c = context;
 	color = Color;
 	lastSucc = false;
@@ -37,7 +38,7 @@ ColorSelector::ColorSelector(ICommonAppContext* context, irr::video::ITexture* a
 	int tw = Min(w, 6*c->getRecommendedButtonWidth()), th = Min(h, 8*c->getRecommendedButtonHeight());
 	wrect = irr::core::rect<irr::s32>(w/2-tw/2, h/2-th/2, w/2+tw/2, h/2+th/2);
 	th -= 40;
-	win = env->addWindow(wrect, false, L"");
+	win = env->addWindow(wrect, modal, L"");
 	win->setDrawTitlebar(false);
 	win->getCloseButton()->setVisible(false);
 	tr = env->addStaticText(L"R: ", rect<s32>(tw/3, 10, 5*tw/12, 10+th/7), false, false, win, -1);
@@ -90,6 +91,7 @@ void ColorSelector::setColor(irr::video::SColor Color){
 void ColorSelector::select(bool SelectAlpha){
 	selectAlpha = SelectAlpha;
 	win->setVisible(true);
+	bringToFrontRecursive(win);
 	win->setRelativePosition(wrect);
 	if(!selectAlpha){color.setAlpha(255);}
 	er->setText(convertToWString(color.getRed()).c_str());

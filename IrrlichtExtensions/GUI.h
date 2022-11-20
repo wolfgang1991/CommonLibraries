@@ -11,6 +11,7 @@ namespace irr{
 }
 
 #include <rect.h>
+#include <IEventReceiver.h>
 
 #include <list>
 #include <string>

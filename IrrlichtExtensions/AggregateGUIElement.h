@@ -106,6 +106,8 @@ class AggregateGUIElement : public IAggregatableGUIElement, public IScrollable{
 	int32_t getSingleSelected(IAggregatableGUIElement** outGUIElement = NULL);
 	
 	irr::f32 getScrollStepSize() const;
+	
+	bool isTrulyScrollable() const;
 
 };
 

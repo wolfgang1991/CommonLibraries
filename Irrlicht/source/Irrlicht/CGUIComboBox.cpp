@@ -59,12 +59,23 @@ CGUIComboBox::CGUIComboBox(IGUIEnvironment* environment, IGUIElement* parent,
 	setTabOrder(-1);
 	//changed:
 	ItemHeight = 0;
+	TextCentered = false;
+	//changed end
 }
 
 //changed:
 void CGUIComboBox::setItemHeight(s32 height){
 	ItemHeight = height;
 }
+
+void CGUIComboBox::setSelectedTextCentered(bool centered){
+	SelectedText->setTextAlignment(centered?EGUIA_CENTER:EGUIA_UPPERLEFT, EGUIA_CENTER);
+}
+		
+void CGUIComboBox::setTextCentered(bool centered){
+	TextCentered = centered;
+}
+
 //changed end
 
 void CGUIComboBox::setTextAlignment(EGUI_ALIGNMENT horizontal, EGUI_ALIGNMENT vertical)
@@ -380,12 +391,20 @@ void CGUIComboBox::updateListButtonWidth(s32 width)
 		r.UpperLeftCorner.Y = 2;
 		r.LowerRightCorner.Y = RelativeRect.getHeight() - 2;
 		ListButton->setRelativePosition(r);
-
-		r.UpperLeftCorner.X = 2;
-		r.UpperLeftCorner.Y = 2;
-		r.LowerRightCorner.X = RelativeRect.getWidth() - (width + 2);
-		r.LowerRightCorner.Y = RelativeRect.getHeight() - 2;
-		SelectedText->setRelativePosition(r);
+	
+		//changed
+		IGUISkin* skin = 0;
+		if(Environment){
+			skin = Environment->getSkin();
+			if(skin){
+				r.UpperLeftCorner.X = 2 + skin->getSize(EGDS_TEXT_DISTANCE_X);
+				r.UpperLeftCorner.Y = 2 + skin->getSize(EGDS_TEXT_DISTANCE_Y);
+				r.LowerRightCorner.X = RelativeRect.getWidth() - (width + 2) - skin->getSize(EGDS_TEXT_DISTANCE_X);
+				r.LowerRightCorner.Y = RelativeRect.getHeight() - 2 - skin->getSize(EGDS_TEXT_DISTANCE_Y);
+				SelectedText->setRelativePosition(r);
+			}
+		}
+		//changed end
 	}
 }
 
@@ -478,6 +497,8 @@ void CGUIComboBox::openCloseMenu()
 		ListBox->setNotClipped(true);
 		//changed:
 		ListBox->setItemHeight(ItemHeight);
+		ListBox->setTextCentered(TextCentered);
+		//changed end
 		ListBox->drop();
 
 		// ensure that list box is always completely visible

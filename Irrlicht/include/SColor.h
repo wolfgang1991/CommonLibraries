@@ -805,6 +805,37 @@ namespace video
 
 		return rm1;
 	}
+	
+	//changed
+
+	inline irr::video::SColor rgb(irr::u32 r, irr::u32 g, irr::u32 b){
+		return irr::video::SColor(255, r, g, b);
+	}
+
+	inline irr::video::SColor rgba(irr::u32 r, irr::u32 g, irr::u32 b, irr::u32 a){
+		return irr::video::SColor(a, r, g, b);
+	}
+
+	inline irr::video::SColor argb(irr::u32 a, irr::u32 r, irr::u32 g, irr::u32 b){
+		return irr::video::SColor(a, r, g, b);
+	}
+
+	//! usage e.g. rgb(0xA3BEFF) => r=A3, g=BE, b=FF
+	inline irr::video::SColor rgb(irr::u32 value){
+		return irr::video::SColor(value | (((irr::u32)0xFF) << 24));
+	}
+
+	//! usage e.g. argb(0x00A3BEFF) => a=00, r=A3, g=BE, b=FF
+	inline irr::video::SColor argb(irr::u32 value){
+		return irr::video::SColor(value);
+	}
+
+	//! usage e.g. rgba(0xA3BEFF00) => a=00, r=A3, g=BE, b=FF
+	inline irr::video::SColor rgba(irr::u32 value){
+		return irr::video::SColor((value >> 8) | ((value&0xFF) << 24));
+	}
+
+	//changed end
 
 } // end namespace video
 } // end namespace irr
