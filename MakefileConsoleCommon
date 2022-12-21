@@ -23,10 +23,10 @@ else#no debugging, with optimizations
 OPTIM = $(USEROPTIM) -O3 -DNDEBUG
 endif
 
-all_linux: CPPFLAGS += -std=c++11
+CPPFLAGS += -Wall -std=c++11
 
 all_linux: build_deps $(LINKOBJ) $(C_LINKOBJ)
-	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) -o $(FINALEXECFILE) $(FINALLIBFLAGS)
+	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) $(C_LINKOBJ) -o $(FINALEXECFILE) $(FINALLIBFLAGS)
 
 # Create dependency files for automatic recompilation
 $(LINKOBJ:.o=.d):$(OBJDIR)/%.d:$(SRCDIR)/%.cpp
