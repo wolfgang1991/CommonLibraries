@@ -8,6 +8,7 @@
 #include <BitFunctions.h>
 #include <CRC32.h>
 #include <platforms.h>
+#include <uCArray.h>
 
 #include <cinttypes>
 
@@ -38,21 +39,37 @@ namespace UCRPC{
 	}
 	
 	//! for objects
-	template<typename T, typename TIndex, typename ucstd::enable_if<!is_bool<T>::value && !is_integer<T>::value && !is_float<T>::value, int>::type = 0>
+	template<typename T, typename TIndex, typename ucstd::enable_if<!is_bool<T>::value && !is_integer<T>::value && !is_float<T>::value && !ucstd::is_array<T>::value, int>::type = 0>
 	void serialize(uint8_t* buffer, TIndex& offset, const T& value){
 		offset += value.template serialize<TIndex>(&(buffer[offset]));
 	}
 	
-	//! for integers/bools, true if successful
+	//! for arrays
+	template<typename T, typename TIndex, typename ucstd::enable_if<ucstd::is_array<T>::value, int>::type = 0>
+	void serialize(uint8_t* buffer, TIndex& offset, const T& value){
+		for(size_t i=0; i<value.size(); i++){
+			serialize(buffer, offset, value[i]);
+		}
+	}
+	
+	//! for integers/bools
 	template<typename T, typename TIndex, typename ucstd::enable_if<is_bool<T>::value || is_integer<T>::value, int>::type = 0>
 	void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize, T& outValue){
 		outValue = readLittleEndian<T,TIndex>(buffer, offset);
 	}
 	
-	//! for objects, true if successful
-	template<typename T, typename TIndex, typename ucstd::enable_if<!is_bool<T>::value && !is_integer<T>::value && !is_float<T>::value, int>::type = 0>
+	//! for objects,
+	template<typename T, typename TIndex, typename ucstd::enable_if<!is_bool<T>::value && !is_integer<T>::value && !is_float<T>::value && !ucstd::is_array<T>::value, int>::type = 0>
 	void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize, T& outValue){
 		outValue.deserialize(buffer, offset, bufferSize);
+	}
+	
+	//! for arrays
+	template<typename T, typename TIndex, typename ucstd::enable_if<ucstd::is_array<T>::value, int>::type = 0>
+	void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize, T& outValue){
+		for(size_t i=0; i<outValue.size(); i++){
+			deserialize(buffer, offset, bufferSize, outValue[i]);
+		}
 	}
 	
 	template<typename T>
@@ -65,9 +82,15 @@ namespace UCRPC{
 	}
 	
 	//! for objects
-	template<typename T, typename TIndex, typename ucstd::enable_if<!is_scalar<T>::value, int>::type = 0>
+	template<typename T, typename TIndex, typename ucstd::enable_if<!is_scalar<T>::value && !ucstd::is_array<T>::value, int>::type = 0>
 	constexpr TIndex getSpaceRequirement(){
 		return ucstd::remove_reference<T>::type::template getSpaceRequirement<TIndex>();
+	}
+	
+	//! for arrays
+	template<typename T, typename TIndex, typename ucstd::enable_if<ucstd::is_array<T>::value, int>::type = 0>
+	constexpr TIndex getSpaceRequirement(){
+		return T::size() * getSpaceRequirement<typename T::value_type, TIndex>();
 	}
 	
 	//! syntactic sugar for deserialize usage on function return values, returns true if successful
@@ -82,19 +105,34 @@ namespace UCRPC{
 	}
 	
 	//! A string representation for ucrpc, needs some special implementations for getSpaceRequirement, serialize and deserialize
-	template <uint16_t maxLength>
+	template <uint16_t maxLength, typename TChar = char>
 	class String{
 		
 		public:
 
 		uint16_t actualLength;
-		char data[maxLength];
+		TChar data[maxLength];
 		
 		String():actualLength(0){}
 		
-		String(const char* cString){
+		String(const TChar* cString){
 			actualLength = 0;
 			operator<<(cString);
+		}
+		
+		String(const TChar* cString, uint16_t cStringLength){
+			setFromData(cString, cStringLength);
+		}
+		
+		void setFromData(const TChar* cString, uint16_t cStringLength){
+			if(cStringLength>maxLength){cStringLength = maxLength;}
+			memcpy(data, cString, cStringLength);
+			actualLength = cStringLength;
+		}
+		
+		String(char c){
+			data[0] = c;
+			actualLength = 1;
 		}
 		
 		#ifndef MICROCONTROLLER_PLATFORM
@@ -104,7 +142,7 @@ namespace UCRPC{
 		}
 		
 		std::string convertToStdString() const{
-			return std::string(data, actualLength);
+			return std::string((char*)data, actualLength);
 		}
 		#endif
 		
@@ -117,15 +155,33 @@ namespace UCRPC{
 			return actualLength;
 		}
 		
-		char* getData(){
+		bool empty() const{
+			return actualLength==0;
+		}
+		
+		TChar* getData(){
 			return data;
+		}
+		
+		TChar operator[](uint16_t index) const{
+			return data[index];
+		}
+		
+		TChar& operator[](uint16_t index){
+			return data[index];
 		}
 		
 		static constexpr uint16_t getMaxLength(){
 			return maxLength;
 		}
 		
-		String<maxLength>& operator<<(int32_t i){
+		//! Warning no range check for single char
+		void push_back(TChar b){
+			data[actualLength] = b;
+			actualLength++;
+		}
+		
+		String<maxLength, TChar>& operator<<(int32_t i){
 			size_t len = maxLength-actualLength;
 			int written = snprintf(&data[actualLength], len, "%" PRIi32, i);
 			if(written>=0 && written<len){
@@ -134,7 +190,7 @@ namespace UCRPC{
 			return *this;
 		}
 		
-		String<maxLength>& operator<<(const char* cString){
+		String<maxLength, TChar>& operator<<(const TChar* cString){
 			uint16_t length = 0; for(;cString[length]!='\0';length++){}
 			uint16_t toCopy = (maxLength>actualLength+length)?length:(maxLength-actualLength);
 			memcpy(&(data[actualLength]), cString, toCopy);
@@ -142,9 +198,8 @@ namespace UCRPC{
 			return *this;
 		}
 		
-		String<maxLength>& clear(){
+		void clear(){
 			actualLength = 0;
-			return *this;
 		}
 		
 		template<typename TIndex>
@@ -171,6 +226,75 @@ namespace UCRPC{
 		
 	};
 	
+	//! Encode variable length arrays with a maximum capacity. Only sends and receives the used capacity (safety tradeoff: lengths cannot be checked, see UCRPC_DESERIALIZE_PARAMS_WITH_STRINGS)
+	template <typename TObject, uint16_t maxLength>
+	struct ObjectString{
+		
+		ucstd::array<TObject, maxLength> data;
+		uint16_t actualLength;
+		
+		public:
+		
+		bool isFull() const{
+			return actualLength>=maxLength;
+		}
+		
+		void clear(){
+			actualLength = 0;
+		}
+		
+		const TObject& operator[](uint16_t index) const{
+			return data[index];
+		}
+		
+		TObject& operator[](uint16_t index){
+			return data[index];
+		}
+		
+		uint16_t size() const{
+			return actualLength;
+		}
+		
+		bool empty() const{
+			return actualLength==0;
+		}
+		
+		static constexpr uint16_t getMaxLength(){
+			return maxLength;
+		}
+		
+		//! Warning no range check for single object
+		void push_back(const TObject& object){
+			data[actualLength] = object;
+			actualLength++;
+		}
+
+		template<typename TIndex>
+		static constexpr TIndex getSpaceRequirement(){
+			return sizeof(actualLength)+UCRPC::getSpaceRequirement<decltype(data), TIndex>();
+		}
+		
+		template<typename TIndex>
+		TIndex serialize(uint8_t* target) const{
+			TIndex offset = 0;
+			UCRPC::serialize<decltype(actualLength)>(target, offset, actualLength);
+			for(uint16_t i=0; i<actualLength; i++){
+				UCRPC::serialize<decltype(data[i])>(target, offset, data[i]);
+			}
+			return offset;
+		}
+			
+		template<typename TIndex>
+		void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
+			UCRPC::deserialize<decltype(actualLength)>(buffer, offset, bufferSize, actualLength);
+			if(actualLength>maxLength){actualLength = maxLength;}
+			for(uint16_t i=0; i<actualLength; i++){
+				UCRPC::deserialize<decltype(data[i])>(buffer, offset, bufferSize, data[i]);
+			}
+		}
+		
+	};
+	
 	//! special implementation for strings
 	template<typename TIndex, uint16_t maxLength>
 	bool deserializeResult(const uint8_t* buffer, TIndex bufferSize, String<maxLength>& outValue){
@@ -178,7 +302,7 @@ namespace UCRPC{
 		return true;//always true / string may contain rubbish in case of malevolent sender
 	}
 	
-	//TODO serialize/deserialize/getSpaceRequirement: arrays, floats
+	//TODO serialize/deserialize/getSpaceRequirement: floats
 
 	class IUCRemoteProcedureCaller{
 		
@@ -245,24 +369,26 @@ namespace UCRPC{
 		IUCRemoteProcedureCallReceiver<TIndex,maxParameterSize>* receiver;
 		bool operator<(const RegisteredFunction& other) const{return functionID < other.functionID;}
 	};
+	
+	static constexpr uint16_t getAdditionalRetryPeriod(uint16_t i){
+		return 1 << (i%6);//0..32ms
+	}
 
 	//! A lightweight remote procedure call implementation for microcontrollers over serial communication
+	//! TSerial must not block during receive or send. If data cannot be send they shall be discarded.
 	//! maxParameterSize: max. amount of bytes of the largest parameters data (see callProcedure) and the largest return value
 	//! minBufferFillToSend: how many bytes must be there before a message is sent (optimum for USB/VCP in case of a STM32 is 16-32 bytes)
 	//! maxSimultaneousFunctionCalls: should be a small number to save space in case of microcontrollers, in case of a PC it may be large
-	//! retryPeriod: time in ms after which a function call is retried
+	//! retryPeriod: time in ms after which a function call is retried (+ some offset to avoid simultanous sending)
 	//! for compatibility between different API versions new functions have to be introduced, optional fields are not possible
 	//! sendPeriod time in ms after which a package is sent regardless if the accumulated size is optimal
 	//! Important: It can happen that a function call happens twice if the return value gets lost (automatic resend of remote procedure call). An API needs to be designed to have no problems with that.
-	template <typename TIndex, typename TSerialProtocol, TIndex maxParameterSize, uint8_t maxParallelFunctionCalls, typename TRegisteredFunctions, uc_time_t retryPeriod = 200, uint8_t retryCount = 10, uint16_t minBufferFillToSend = 16, uc_time_t sendPeriod = 10>
+	//! maxSendBytesBeforeReceive: (useful from host perspective) max amount of bytes which can be sent before a receive (excess bytes are discarded), 0 disables this feature. On some STM32 microcontrollers the USB receive buffer must not be fully filled (deadlock, freeze). In this case maxSendBytesBeforeReceive should be around half the USB receive buffer.
+	//! maxSendReceiveTimeUS: time in us after which sending/receiving is paused to yield to other "tasks" (manual scheduling), there are two read tasks (without second serial one) and one send task in the update function  (worst case delay is 3*maxSendReceiveTimeUS)
+	template <typename TIndex, typename TSerial, TIndex maxParameterSize, uint8_t maxParallelFunctionCalls, typename TRegisteredFunctions, uint16_t maxSendBytesBeforeReceive = 0, typename TSecondarySerial = TSerial, uc_time_t retryPeriod = 200, uint8_t retryCount = 10, uint16_t minBufferFillToSend = 16, uc_time_t sendPeriod = 10, uc_time_t maxSendReceiveTimeUS = 10000/3>
 	class UCRPC : public IUCRPC<TIndex, maxParameterSize>{
 
-		static constexpr uint8_t delimeter = 0b10101010;
-		static constexpr uint8_t escape = 0b11001100;
-		static constexpr uint16_t returnFlag = 1 << 15;
-		static constexpr uint16_t errorFlag = 1 << 14;//13 bits remaining for actual function id
-		
-		TSerialProtocol& serial;
+		public:
 		
 		//! stuffed package size with delimeter, function id, uid and escaped data
 		static constexpr TIndex getMaxPackageSize(TIndex parameterSize){
@@ -270,12 +396,25 @@ namespace UCRPC{
 		}
 		
 		static constexpr TIndex bufferSize = getMaxPackageSize(maxParameterSize);
+		
+		private:
 
+		static constexpr uint8_t delimeter = 0b10101010;
+		static constexpr uint8_t escape = 0b11001100;
+		static constexpr uint16_t returnFlag = 1 << 15;
+		static constexpr uint16_t errorFlag = 1 << 14;//13 bits remaining for actual function id
+		
+		TSerial& serial;
+		TSecondarySerial* secondarySerial;
+		
 		uint8_t sendBuffer[bufferSize];
 		TIndex sendBufferOffset;
 		
 		uint8_t rcvBuffer[bufferSize];
 		TIndex rcvBufferOffset;
+		
+		uint8_t fwdBuffer[bufferSize];
+		TIndex fwdBufferOffset;
 		
 		struct Call{
 			uint16_t functionID;
@@ -290,6 +429,8 @@ namespace UCRPC{
 		Call calls[maxParallelFunctionCalls];
 		Call* callPtrs[maxParallelFunctionCalls];//allows re-sorting without copying if function returns
 		uint8_t callPtrIndex;//index of the next available call
+		
+		uint16_t bytesSentBeforeReceive;
 		
 		void erase(Call* c){
 			for(uint8_t i=0; i<callPtrIndex; i++){
@@ -400,7 +541,10 @@ namespace UCRPC{
 		}
 		
 		void send(){
-			serial.send((const char*)sendBuffer, sendBufferOffset);
+			if(maxSendBytesBeforeReceive==0 || maxSendBytesBeforeReceive-bytesSentBeforeReceive>=sendBufferOffset){
+				serial.send((const char*)sendBuffer, sendBufferOffset);
+				bytesSentBeforeReceive += sendBufferOffset;//overflow ok, can only happen with maxSendBytesBeforeReceive==0
+			}
 			sendBufferOffset = 0;
 		}
 		
@@ -470,11 +614,15 @@ namespace UCRPC{
 		using MappedIndex = TIndex;
 		static constexpr TIndex MappedMaxParameterSize = maxParameterSize;
 		
-		UCRPC(TSerialProtocol& serial, TRegisteredFunctions& functions):serial(serial),sendBufferOffset(0),rcvBufferOffset(0),callPtrIndex(0),uidCounter(0),functions(functions),hasLastFunction(false),lastSendTime(0){
+		UCRPC(TSerial& serial, TRegisteredFunctions& functions):serial(serial),secondarySerial(NULL),sendBufferOffset(0),rcvBufferOffset(0),fwdBufferOffset(0),callPtrIndex(0),bytesSentBeforeReceive(0),uidCounter(0),functions(functions),hasLastFunction(false),lastSendTime(0){
 			functions.sort();
 			for(uint8_t i=0; i<maxParallelFunctionCalls; i++){
 				callPtrs[i] = &(calls[i]);
 			}
+		}
+		
+		void setSecondarySerial(TSecondarySerial* s){
+			secondarySerial = s;
 		}
 		
 		//! TParameter represents the function parameters and is either a scalar or needs to have the serialize, deserialize and static constexpr getSpaceRequirement functions
@@ -482,35 +630,28 @@ namespace UCRPC{
 		//! If no caller is present: It get's sent if it fits into the sendbuffer regardless of free function calls.
 		template <typename TParameter>
 		void callRemoteProcedure(uint16_t functionID, const TParameter& parameter, IUCRemoteProcedureCaller* caller = nullptr){
+			constexpr TIndex spaceReq = getSpaceRequirement<TParameter, TIndex>();
+			static_assert(spaceReq<=maxParameterSize, "Sendbuffer too small");
 			if(caller){
 				if(callPtrIndex<maxParallelFunctionCalls){
-					if(getSpaceRequirement<decltype(parameter), TIndex>()<=maxParameterSize){
-						Call* toFill = callPtrs[callPtrIndex];
-						callPtrIndex++;
-						toFill->functionID = functionID;
-						toFill->uniqueID = getUnusedUID();
-						//std::cout << "call: functionID: " << functionID << " toFill->uniqueID: " << (int)(toFill->uniqueID) << std::endl;
-						toFill->caller = caller;
-						toFill->usedParameterSpace = 0;
-						serialize(toFill->parameter, toFill->usedParameterSpace, parameter);
-						toFill->sendCount = 0;
-						resendCall(toFill, millis());
-					}else{
-						caller->OnProcedureError(IUCRemoteProcedureCaller::SENDBUFFER_TOO_SMALL, functionID);
-					}
+					Call* toFill = callPtrs[callPtrIndex];
+					callPtrIndex++;
+					toFill->functionID = functionID;
+					toFill->uniqueID = getUnusedUID();
+					//std::cout << "call: functionID: " << functionID << " toFill->uniqueID: " << (int)(toFill->uniqueID) << std::endl;
+					toFill->caller = caller;
+					toFill->usedParameterSpace = 0;
+					serialize(toFill->parameter, toFill->usedParameterSpace, parameter);
+					toFill->sendCount = 0;
+					resendCall(toFill, millis());
 				}else{
 					caller->OnProcedureError(IUCRemoteProcedureCaller::NO_FREE_FUNCTION_CALLS, functionID);
 				}
 			}else{//no caller
-				TIndex spaceReq = getSpaceRequirement<decltype(parameter), TIndex>();
-				if(spaceReq<=maxParameterSize){
-					uint8_t buffer[spaceReq];
-					TIndex usedParameterSpace = 0;
-					serialize(buffer, usedParameterSpace, parameter);
-					callRemoteProcedure(functionID, buffer, usedParameterSpace);
-				}else{
-					caller->OnProcedureError(IUCRemoteProcedureCaller::SENDBUFFER_TOO_SMALL, functionID);
-				}
+				uint8_t buffer[spaceReq];
+				TIndex usedParameterSpace = 0;
+				serialize(buffer, usedParameterSpace, parameter);
+				callRemoteProcedure(functionID, buffer, usedParameterSpace);
 			}
 		}
 		
@@ -557,12 +698,55 @@ namespace UCRPC{
 			if(sendBufferOffset>0){send();}
 		}
 		
-		//TODO forwarding to different port if function unknown, forwarding result back if function unknown
-		void update(){
-			//TODO forward from secondary serial to serial
+		//! returns true if new data has been received
+		bool update(){
+			//forward from secondary serial to serial
+			if(secondarySerial){
+				int32_t received = secondarySerial->recv((char*)&(fwdBuffer[fwdBufferOffset]), bufferSize-fwdBufferOffset);
+				uc_time_t startT = micros();
+				while(received>0){
+					fwdBufferOffset += received;
+					int32_t dataStart = -1, dataEnd = -1;
+					uint8_t state = 0;//0: start before packet, 1: first packet delimeter read, 2: reading content
+					for(TIndex i=0; i<fwdBufferOffset; i++){
+						uint8_t c = fwdBuffer[i];
+						if(state==0){
+							if(c==delimeter){
+								state = 1;
+								if(dataStart<0){dataStart = i;}
+							}
+						}else if(state==1){
+							if(c!=delimeter){state = 2;}
+						}else{//state==2
+							if(c==delimeter){
+								dataEnd = i+1;//points one after the delimeter
+								state = 0;
+							}
+						}		
+					}
+					if(dataStart>=0 && dataEnd>=0){//found something to forward
+						serial.send((char*)&(fwdBuffer[dataStart]), dataEnd-dataStart);
+						TIndex remaining = fwdBufferOffset-dataEnd;
+						if(remaining>0){memmove(fwdBuffer, &(fwdBuffer[dataEnd]), remaining);}
+						fwdBufferOffset = remaining;
+					}else if(fwdBufferOffset==bufferSize || dataStart==-1){//buffer full or no start found => discard
+						fwdBufferOffset = 0;
+					}
+					if(calcTimeDifference(micros(), startT)<maxSendReceiveTimeUS){
+						received = secondarySerial->recv((char*)&(fwdBuffer[fwdBufferOffset]), bufferSize-fwdBufferOffset);
+					}else{
+						break;
+					}
+				}
+				if(received<0){
+					UCRPC_DEBUG("Error while receiving data from secondarySerial")
+				}
+			}
 			//Receive:
 			int32_t received = serial.recv((char*)&(rcvBuffer[rcvBufferOffset]), bufferSize-rcvBufferOffset);
-			if(received>0){
+			if(received>0){bytesSentBeforeReceive = 0;}
+			uc_time_t startT = micros();
+			while(received>0){
 				rcvBufferOffset += received;
 				bool pkgMaybeAvail = true;
 				TIndex pkgStartPos = 0;
@@ -579,6 +763,8 @@ namespace UCRPC{
 								memmove(rcvBuffer, &(rcvBuffer[pkgStartPos]), rcvBufferOffset-pkgStartPos);
 								rcvBufferOffset = rcvBufferOffset-pkgStartPos;
 								pkgStartPos = 0;
+							}else if(rcvBufferOffset==bufferSize){//buffer full => discard
+								rcvBufferOffset = 0;
 							}
 						}else if(pkgEndPos==pkgStartPos+1){//duplicate delimeter => border of packages
 							pkgStartPos = pkgEndPos;
@@ -588,16 +774,23 @@ namespace UCRPC{
 						}
 					}
 				}
-			}else if(received<0){
-				UCRPC_DEBUG("Error in while receiving data.")
+				if(calcTimeDifference(micros(), startT)<maxSendReceiveTimeUS){
+					received = serial.recv((char*)&(rcvBuffer[rcvBufferOffset]), bufferSize-rcvBufferOffset);
+				}else{
+					break;
+				}
+			}
+			if(received<0){
+				UCRPC_DEBUG("Error while receiving data.")
 			}
 			//Send:
 			uc_time_t t = millis();
+			startT = micros();
 			//resend calls if necessary:
 			uint8_t i=0;
-			while(i<callPtrIndex){
+			while(i<callPtrIndex && calcTimeDifference(micros(), startT)<maxSendReceiveTimeUS){//for(uc_time_t startT = micros(); i<callPtrIndex && calcTimeDifference(micros(), startT)<maxSendReceiveTimeUS;){//
 				Call* c = callPtrs[i];
-				if(calcTimeDifference(t, c->lastSendTime)>=retryPeriod){
+				if(calcTimeDifference(t, c->lastSendTime)>=retryPeriod+getAdditionalRetryPeriod(i)){
 					if(resendCall(c, t)){i++;}
 				}else{
 					i++;
@@ -608,6 +801,7 @@ namespace UCRPC{
 				send();
 				lastSendTime = t;
 			}
+			return received>0;
 		}
 		
 		//with delimeters && escaped
@@ -616,11 +810,13 @@ namespace UCRPC{
 				TIndex offset = 1;
 				STARTCRC32(crc32)
 				lastFunctionID = readEscapedScalar<uint16_t>(buffer, length, offset, crc32);//if length doesn't match it's rubbish (which is ok)
+				if(offset>length-6){return;}//at least uid + crc32 + delimeter remaining
 				lastUid = readEscapedScalar<uint8_t>(buffer, length, offset, crc32);
+				if(offset>length-5){return;}//at least crc32 + delimeter remaining
 				TIndex newLength = unescapeInPlace(&(buffer[offset]), length-1-offset);//-1 for last delimeter
-				crc32 = updateCRC(&(buffer[offset]), newLength-4, crc32);
-				ENDCRC32(crc32)
 				if(newLength>=4){//must at least hold crc
+					crc32 = updateCRC(&(buffer[offset]), newLength-4, crc32);
+					ENDCRC32(crc32)
 					TIndex cpos = newLength-4; uint32_t readCRC = readLittleEndian<uint32_t>(&(buffer[offset]), cpos);
 					if(readCRC==crc32){
 						if((lastFunctionID & returnFlag) != 0){//return value read
@@ -642,14 +838,18 @@ namespace UCRPC{
 							hasLastFunction = true;
 							size_t fidx = functions.findBisect(RegisteredFunction<TIndex,maxParameterSize>{lastFunctionID});
 							if(fidx==functions.size()){//not found
-								//TODO forward package if forwarding method available else send error
-								returnError(IUCRemoteProcedureCaller::NOT_FOUND);
+								if(secondarySerial){//forward package if forwarding method available else send error
+									secondarySerial->send((char*)buffer, length);//send buffer (see HardwareSerial.h) must be large enough to hold the largest package
+								}else{
+									returnError(IUCRemoteProcedureCaller::NOT_FOUND);
+								}
 							}else{//found
 								functions[fidx].receiver->callProcedure(this, lastFunctionID, &(buffer[offset]), newLength-4);
 							}
 						}
 					}else{
-						UCRPC_DEBUG("Bad CRC.")
+						UCRPC_DEBUG("Bad CRC:")
+						UCRPC_DEBUG(lastFunctionID)
 					}
 				}else{
 					UCRPC_DEBUG("Bad Payload Length.")
@@ -664,34 +864,34 @@ namespace UCRPC{
 
 #define UCRPC_SERIALIZE_START\
 	template<typename TIndex>\
-	TIndex serialize(uint8_t* target) const{\
-		TIndex offset = 0;
+	TIndex serialize(uint8_t* ucrcp_macro_prefix_target) const{\
+		TIndex ucrcp_macro_prefix_offset = 0;
 
 #define UCRPC_WRITE(PARAM)\
-	UCRPC::serialize<decltype(PARAM)>(target, offset, PARAM);
+	UCRPC::serialize<decltype(PARAM)>(ucrcp_macro_prefix_target, ucrcp_macro_prefix_offset, PARAM);
 	
 #define UCRPC_SERIALIZE_END\
-		return offset;\
+		return ucrcp_macro_prefix_offset;\
 	}
 
 #define UCRPC_SPACEREQ_START\
 	template<typename TIndex>\
 	static constexpr TIndex getSpaceRequirement(){\
-		TIndex res = 0;
+		return (TIndex)0
 
 #define UCRPC_ADD_SPACEREQ(PARAM)\
-		res += UCRPC::getSpaceRequirement<decltype(PARAM), TIndex>();
+		 + UCRPC::getSpaceRequirement<decltype(PARAM), TIndex>()
 
 #define UCRPC_SPACEREQ_END\
-		return res;\
+		;\
 	}
 
 #define UCRPC_DESERIALIZE_START\
 	template<typename TIndex>\
-	void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
+	void deserialize(const uint8_t* ucrcp_macro_prefix_buffer, TIndex& ucrcp_macro_prefix_offset, TIndex ucrcp_macro_prefix_bufferSize){
 
 #define UCRPC_DESERIALIZE(PARAM)\
-		UCRPC::deserialize<decltype(PARAM)>(buffer, offset, bufferSize, PARAM);
+		UCRPC::deserialize<decltype(PARAM)>(ucrcp_macro_prefix_buffer, ucrcp_macro_prefix_offset, ucrcp_macro_prefix_bufferSize, PARAM);
 
 #define UCRPC_DESERIALIZE_END\
 	}
@@ -729,13 +929,13 @@ static constexpr TA uCRPCMax(TA a, TB b){
 		ucrpc->returnError(UCRPC::IUCRemoteProcedureCaller::BAD_FORMAT);\
 		return;\
 	}\
-	TINDEX offset = 0;\
-	UCRPC::deserialize(parameter, offset, parameterLength, VALUE);
+	TINDEX ucrcp_macro_prefix_offset = 0;\
+	UCRPC::deserialize(parameter, ucrcp_macro_prefix_offset, parameterLength, VALUE);
 
 //! Dangerous in case of a malevolent/buggy sender, otherwise ok because of CRC
 #define UCRPC_DESERIALIZE_PARAMS_WITH_STRINGS(VALUE, TINDEX)\
-	TINDEX offset = 0;\
-	UCRPC::deserialize(parameter, offset, parameterLength, VALUE);
+	TINDEX ucrcp_macro_prefix_offset = 0;\
+	UCRPC::deserialize(parameter, ucrcp_macro_prefix_offset, parameterLength, VALUE);
 
 struct UCRPC_EMTPY{
 	uint8_t c;

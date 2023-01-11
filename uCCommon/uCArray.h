@@ -1,6 +1,8 @@
 #ifndef uCArray_H_INCLUDED
 #define uCArray_H_INCLUDED
 
+#include "uCTypeTraits.h"
+
 namespace ucstd{
 	
 	//! like std::array (some things missing)
@@ -79,6 +81,12 @@ namespace ucstd{
 		}
 		
 	};
+	
+	template<typename T>
+	struct is_array : ucstd::false_type {};
+
+	template<typename T, size_t N>
+	struct is_array<ucstd::array<T, N>> : ucstd::true_type {};
 	
 };
 

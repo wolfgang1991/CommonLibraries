@@ -9,6 +9,9 @@
 inline uint32_t millis(){
 	return (uint32_t)getMilliSecs();
 }
+inline uint32_t micros(){
+	return (uint32_t)getMicroSecs();
+}
 typedef uint32_t uc_time_t;
 #else
 typedef unsigned long uc_time_t;

@@ -33,6 +33,8 @@ class TestCaller : public IUCRemoteProcedureCaller{
 	
 };
 
+ApiString longString("0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF");
+
 int main(int argc, char *argv[]){
 
 	IPv4UDPSocket s;
@@ -52,7 +54,8 @@ int main(int argc, char *argv[]){
 		if(t-lastTime>1.0){
 			addTestValues(&ucrpc, TestValues{1,2,3,4,5,6}, &caller);
 			subtractTestValues2(&ucrpc, TestValues2{1000,100,10}, &caller);
-			concatStrings(&ucrpc, ApiString("bedolf\xaa"), ApiString("\xcc-cedolf"), &caller);
+			//concatStrings(&ucrpc, ApiString("bedolf\xaa"), ApiString("\xcc-cedolf"), &caller);
+			concatStrings(&ucrpc, longString, longString, &caller);
 			lastTime = t;
 		}
 		ucrpc.update();

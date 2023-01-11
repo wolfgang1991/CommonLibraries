@@ -33,7 +33,7 @@ struct TestValues2{
 	
 };
 
-using ApiString = UCRPC::String<128>;
+using ApiString = UCRPC::String<256>;
 
 struct ConcatStringParams{
 	
