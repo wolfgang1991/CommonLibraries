@@ -4,11 +4,11 @@
 #include "uCTiming.h"
 #include "uCTypeTraits.h"
 
-#include <ForEachMacro.h>
-#include <BitFunctions.h>
-#include <CRC32.h>
-#include <platforms.h>
-#include <uCArray.h>
+#include "ForEachMacro.h"
+#include "BitFunctions.h"
+#include "CRC32.h"
+#include "platforms.h"
+#include "uCArray.h"
 
 #include <cinttypes>
 
