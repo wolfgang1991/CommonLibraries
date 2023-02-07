@@ -226,6 +226,75 @@ namespace UCRPC{
 		
 	};
 	
+	//! A string interpretation of foreign memory with binary compatibility to String when sending via rpc (useful to save copy operations)
+	//! maxLength is used to determine buffer sizes for rpc implementation
+	template <uint16_t maxLength, typename TChar = char>
+	class StringInterpretation{
+		
+		public:
+
+		uint16_t actualLength;
+		const TChar* data;
+		
+		StringInterpretation(){
+			actualLength = 0;
+		}
+		
+		StringInterpretation(const StringInterpretation& other){
+			actualLength = other.actualLength;
+			data = other.data;
+		}
+		
+		StringInterpretation(const TChar* cString){
+			data = cString;
+			actualLength = strlen(cString);
+		}
+		
+		StringInterpretation(const TChar* cString, uint16_t cStringLength){
+			data = cString;
+			actualLength = cStringLength;
+		}
+		
+		uint16_t size() const{
+			return actualLength;
+		}
+		
+		bool empty() const{
+			return actualLength==0;
+		}
+		
+		const TChar* getData(){
+			return data;
+		}
+		
+		TChar operator[](uint16_t index) const{
+			return data[index];
+		}
+		
+		template<typename TIndex>
+		static constexpr TIndex getSpaceRequirement(){
+			return sizeof(uint16_t)+maxLength;
+		}
+		
+		template<typename TIndex>
+		TIndex serialize(uint8_t* target) const{
+			TIndex offset = 0;
+			UCRPC::serialize<decltype(actualLength)>(target, offset, actualLength);
+			memcpy(&(target[offset]), data, actualLength);
+			return offset+actualLength;
+		}
+			
+		template<typename TIndex>
+		void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
+			UCRPC::deserialize<decltype(actualLength)>(buffer, offset, bufferSize, actualLength);
+			if(actualLength>maxLength){actualLength = maxLength;}
+			if(actualLength>bufferSize-offset){actualLength = bufferSize-offset;}
+			data = (const TChar*)&(buffer[offset]);
+			offset += actualLength;
+		}
+		
+	};
+	
 	//! Encode variable length arrays with a maximum capacity. Only sends and receives the used capacity (safety tradeoff: lengths cannot be checked, see UCRPC_DESERIALIZE_PARAMS_WITH_STRINGS)
 	template <typename TObject, uint16_t maxLength>
 	struct ObjectString{
