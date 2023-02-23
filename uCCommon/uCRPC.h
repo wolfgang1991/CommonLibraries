@@ -402,6 +402,8 @@ namespace UCRPC{
 		
 		virtual ~IUCRPC(){}
 		
+		virtual bool expectsReturnValue() const = 0;
+		
 		virtual void returnValue(uint8_t* returnValue, TIndex length) = 0;
 		
 		virtual void returnError(IUCRemoteProcedureCaller::ProcedureError error) = 0;
@@ -454,6 +456,7 @@ namespace UCRPC{
 	//! Important: It can happen that a function call happens twice if the return value gets lost (automatic resend of remote procedure call). An API needs to be designed to have no problems with that.
 	//! maxSendBytesBeforeReceive: (useful from host perspective) max amount of bytes which can be sent before a receive (excess bytes are discarded), 0 disables this feature. On some STM32 microcontrollers the USB receive buffer must not be fully filled (deadlock, freeze). In this case maxSendBytesBeforeReceive should be around half the USB receive buffer.
 	//! maxSendReceiveTimeUS: time in us after which sending/receiving is paused to yield to other "tasks" (manual scheduling), there are two read tasks (without second serial one) and one send task in the update function  (worst case delay is 3*maxSendReceiveTimeUS)
+	//! retryCount: if 0 retries calls forever
 	template <typename TIndex, typename TSerial, TIndex maxParameterSize, uint8_t maxParallelFunctionCalls, typename TRegisteredFunctions, uint16_t maxSendBytesBeforeReceive = 0, typename TSecondarySerial = TSerial, uc_time_t retryPeriod = 200, uint8_t retryCount = 10, uint16_t minBufferFillToSend = 16, uc_time_t sendPeriod = 10, uc_time_t maxSendReceiveTimeUS = 10000/3>
 	class UCRPC : public IUCRPC<TIndex, maxParameterSize>{
 
@@ -540,7 +543,7 @@ namespace UCRPC{
 		
 		// returns false if erased
 		bool resendCall(Call* c, uc_time_t t){
-			if(c->sendCount<retryCount){
+			if(c->sendCount<retryCount || retryCount==0){
 				c->sendCount++;
 				c->lastSendTime = t;
 				if(!writeFunctionPackage(c->functionID, c->uniqueID, c->parameter, c->usedParameterSpace, true)){
@@ -725,8 +728,31 @@ namespace UCRPC{
 		}
 		
 		//! like the other callRemoteProcedure but with a simple data array instead of parameters
-		void callRemoteProcedure(uint16_t functionID, uint8_t* data, TIndex length){
-			writeFunctionPackage(functionID, 0, data, length, false);
+		//! returns if successfully added for sending
+		bool callRemoteProcedure(uint16_t functionID, uint8_t* data, TIndex length){
+			return writeFunctionPackage(functionID, 0, data, length, false);
+		}
+		
+		//! with raw data but with caller for return values / error handling
+		void callRemoteProcedure(uint16_t functionID, uint8_t* data, TIndex length, IUCRemoteProcedureCaller* caller){
+			if(callPtrIndex<maxParallelFunctionCalls){
+				if(length<=maxParameterSize){
+					Call* toFill = callPtrs[callPtrIndex];
+					callPtrIndex++;
+					toFill->functionID = functionID;
+					toFill->uniqueID = getUnusedUID();
+					toFill->caller = caller;
+					toFill->usedParameterSpace = 0;
+					memcpy(toFill->parameter, data, length);
+					toFill->usedParameterSpace = length;
+					toFill->sendCount = 0;
+					resendCall(toFill, millis());
+				}else{
+					caller->OnProcedureError(IUCRemoteProcedureCaller::SENDBUFFER_TOO_SMALL, functionID);
+				}
+			}else{
+				caller->OnProcedureError(IUCRemoteProcedureCaller::NO_FREE_FUNCTION_CALLS, functionID);
+			}
 		}
 		
 		//! gets called by IUCRemoteProcedureCallReceiver::callProcedure to return a value of the currently called function
@@ -740,8 +766,13 @@ namespace UCRPC{
 			}
 		}
 		
+		//! true if the current / last call expects a return value, useful from callProcedure
+		bool expectsReturnValue() const{
+			return hasLastFunction && lastUid!=0;
+		}
+		
 		void returnError(IUCRemoteProcedureCaller::ProcedureError error) override{
-			if(hasLastFunction && lastUid!=0){
+			if(expectsReturnValue()){
 				writeDelimeter();
 				STARTCRC32(crc32)
 				crc32 = writeEscapedScalar<uint16_t>(lastFunctionID | errorFlag, crc32);
