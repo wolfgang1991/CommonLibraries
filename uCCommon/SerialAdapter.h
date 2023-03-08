@@ -3,6 +3,7 @@
 
 #include "ICommunicationEndpoint.h"
 
+//! Implements ICommunicationEndpoint for Arduino library like serial ports
 template <typename TSerial>
 class SerialAdapter : public ICommunicationEndpoint{
 	

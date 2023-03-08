@@ -386,6 +386,7 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 					auto it = receivers.find(method->value);
 					if(it != receivers.end()){
 						ArrayValue* params = getObjectField<ArrayValue>(o, "params");
+						it->second->OnSetRPC(this);
 						IRPCValue* result = params?it->second->callProcedure(method->value, params->values):it->second->callProcedure(method->value, {});
 						if(id){
 							if(result){
