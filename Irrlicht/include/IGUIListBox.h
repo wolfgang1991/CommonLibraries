@@ -132,11 +132,6 @@ namespace gui
 
 		//! Access the vertical scrollbar
 		virtual IGUIScrollBar* getVerticalScrollBar() const = 0;
-		
-		//changed:
-		//! sets if text in list shall be centered
-		virtual void setTextCentered(bool centered) = 0;
-		//changed end
 };
 
 

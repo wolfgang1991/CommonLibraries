@@ -1,8 +1,8 @@
-#include <ChooseFromListDialog.h>
+#include "ChooseFromListDialog.h"
 
-#include <AggregateGUIElement.h>
-#include <AggregatableGUIElementAdapter.h>
-#include <timing.h>
+#include "AggregateGUIElement.h"
+#include "AggregatableGUIElementAdapter.h"
+#include "timing.h"
 
 #include <IrrlichtDevice.h>
 #include <IVideoDriver.h>

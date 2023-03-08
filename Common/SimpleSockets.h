@@ -1,7 +1,7 @@
 #ifndef SIMPLESOCKETS_H_INCLUDED
 #define SIMPLESOCKETS_H_INCLUDED
 
-#include <ICommunicationEndpoint.h>
+#include "ICommunicationEndpoint.h"
 
 #include <string>
 #include <list>

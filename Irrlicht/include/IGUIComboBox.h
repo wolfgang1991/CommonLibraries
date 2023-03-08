@@ -68,16 +68,6 @@ namespace gui
 
 		//! Get the maximal number of rows for the selection listbox
 		virtual u32 getMaxSelectionRows() const = 0;
-		
-		//changed:
-		
-		//! Sets if selected text shall be centered
-		virtual void setSelectedTextCentered(bool centered) = 0;
-		
-		//! sets if text in list shall be centered
-		virtual void setTextCentered(bool centered) = 0;
-		
-		//changed end
 	};
 
 

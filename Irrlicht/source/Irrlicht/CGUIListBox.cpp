@@ -56,15 +56,8 @@ CGUIListBox::CGUIListBox(IGUIEnvironment* environment, IGUIElement* parent,
 
 	//changed:
 	state = 0;
-	TextCentered = false;
-	//changed end
 }
 
-//changed:
-void CGUIListBox::setTextCentered(bool centered){
-	TextCentered = centered;
-}
-//changed end
 
 //! destructor
 CGUIListBox::~CGUIListBox()
@@ -562,14 +555,6 @@ void CGUIListBox::draw()
 	frameRect.LowerRightCorner.Y -= ScrollBar->getPos();
 
 	bool hl = (HighlightWhenNotFocused || Environment->hasFocus(this) || Environment->hasFocus(ScrollBar));
-	
-	//changed
-	s32 paddingX = 3, paddingY = 0;
-	if(skin){
-		paddingX = skin->getSize(EGDS_TEXT_DISTANCE_X);
-		paddingY = skin->getSize(EGDS_TEXT_DISTANCE_Y);
-	}
-	//changed end
 
 	for (s32 i=0; i<(s32)Items.size(); ++i)
 	{
@@ -580,12 +565,7 @@ void CGUIListBox::draw()
 				skin->draw2DRectangle(this, skin->getColor(EGDC_HIGH_LIGHT), frameRect, &clientClip);
 
 			core::rect<s32> textRect = frameRect;
-			//changed
-			textRect.UpperLeftCorner.X += paddingX;//3 + 
-			textRect.UpperLeftCorner.Y += paddingY;
-			textRect.LowerRightCorner.X -= paddingX;
-			textRect.LowerRightCorner.Y -= paddingY;
-			//changed end
+			textRect.UpperLeftCorner.X += 3;
 
 			if (Font)
 			{
@@ -617,13 +597,13 @@ void CGUIListBox::draw()
 					Font->draw(Items[i].Text.c_str(), textRect,
 						hasItemOverrideColor(i, EGUI_LBC_TEXT_HIGHLIGHT) ?
 						getItemOverrideColor(i, EGUI_LBC_TEXT_HIGHLIGHT) : getItemDefaultColor(EGUI_LBC_TEXT_HIGHLIGHT),
-						TextCentered, true, &clientClip);//changed
+						false, true, &clientClip);
 				}
 				else
 				{
 					Font->draw(Items[i].Text.c_str(), textRect,
 						hasItemOverrideColor(i, EGUI_LBC_TEXT) ? getItemOverrideColor(i, EGUI_LBC_TEXT) : getItemDefaultColor(EGUI_LBC_TEXT),
-						TextCentered, true, &clientClip);//changed
+						false, true, &clientClip);
 				}
 
 				textRect.UpperLeftCorner.X -= ItemsIconWidth+3;

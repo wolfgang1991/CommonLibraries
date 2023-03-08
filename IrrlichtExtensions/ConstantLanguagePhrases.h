@@ -1,7 +1,7 @@
 #ifndef ConstantLanguagePhrases_H_INCLUDED
 #define ConstantLanguagePhrases_H_INCLUDED
 
-#include <ILanguagePhrases.h>
+#include "ILanguagePhrases.h"
 
 #include <unordered_map>
 #include <initializer_list>

@@ -3,7 +3,7 @@
 #include <timing.h>
 #include <StringHelpers.h>
 #include <ZSocket.h>
-#include <JSONParser.h>
+#include "JSONParser.h"
 
 #include <cmath>
 #include <cstring>

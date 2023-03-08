@@ -26,7 +26,7 @@
 #include <pwd.h>
 #endif
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(__MACH__)
 #import "../iOS/MCSMKeychainItem.h"
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
@@ -34,6 +34,10 @@
 #if __DARWIN_ONLY_64_BIT_INO_T
 #define stat64 stat
 #endif
+#endif
+
+#if defined(__APPLE__) && defined(__MACH__)
+#define stat64 stat
 #endif
 
 #ifdef __ANDROID__
@@ -156,7 +160,7 @@ FileSystemItemOrganizer::FileSystemItemOrganizer(irr::IrrlichtDevice* device):fs
 			}
 		}
 	}
-	#elif defined(__APPLE__)
+	#elif defined(__APPLE__) && !defined(__MACH__)
 	NSString *appSupportDir = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) lastObject];
 	if (![[NSFileManager defaultManager] fileExistsAtPath:appSupportDir isDirectory:NULL]) {//If there isn't an App Support Directory yet ...
 		NSError *error = nil;

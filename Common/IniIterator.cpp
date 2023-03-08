@@ -2,8 +2,8 @@
 #include <string>
 #include <map>
 
-#include <IniIterator.h>
-#include <IniFile.h>
+#include "IniIterator.h"
+#include "IniFile.h"
 
 IniIterator::IniIterator(const std::map< std::string, std::map<std::string, std::string> >* data){
 	dataptr =  data;

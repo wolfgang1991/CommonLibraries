@@ -1,6 +1,6 @@
 #include "FlexibleFont.h"
 
-#include <MaterialWorkaround.h>
+#include "MaterialWorkaround.h"
 
 #include <IrrlichtDevice.h>
 #include <fast_atof.h>

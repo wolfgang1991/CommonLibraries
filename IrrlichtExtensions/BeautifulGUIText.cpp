@@ -1,5 +1,5 @@
-#include <BeautifulGUIText.h>
-#include <FlexibleFont.h>
+#include "BeautifulGUIText.h"
+#include "FlexibleFont.h"
 
 #include <IGUIEnvironment.h>
 

@@ -1,5 +1,5 @@
-#include <ConstantLanguagePhrases.h>
-#include <UnicodeCfgParser.h>
+#include "ConstantLanguagePhrases.h"
+#include "UnicodeCfgParser.h"
 
 #include <StringHelpers.h>
 

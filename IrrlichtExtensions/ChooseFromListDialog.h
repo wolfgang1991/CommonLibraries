@@ -1,7 +1,7 @@
 #ifndef ChooseFromListDialog_H_INCLUDED
 #define ChooseFromListDialog_H_INCLUDED
 
-#include <ForwardDeclarations.h>
+#include "ForwardDeclarations.h"
 
 #include <SColor.h>
 #include <IGUIWindow.h>

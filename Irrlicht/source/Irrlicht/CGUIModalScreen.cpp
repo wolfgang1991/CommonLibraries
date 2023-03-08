@@ -151,14 +151,6 @@ void CGUIModalScreen::draw()
 
 	if (!skin)
 		return;
-	
-	//changed
-	if(isVisible()){
-		video::SColor bgColor = Environment->getSkin()->getColor(gui::EGDC_GRAY_TEXT);
-		bgColor.setAlpha(128);
-		skin->draw2DRectangle(this, bgColor, AbsoluteRect, &AbsoluteClippingRect);
-	}
-	//changed end
 
 	u32 now = os::Timer::getTime();
 	if (now - MouseDownTime < 300 && (now / 70)%2)

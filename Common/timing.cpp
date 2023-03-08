@@ -8,7 +8,7 @@
 #include <unistd.h>
 #endif
 
-#include <timing.h>
+#include "timing.h"
 
 #if _WIN32
 #warning "better implementation for windows required"
