@@ -276,12 +276,17 @@ class IRemoteProcedureCaller{
 
 };
 
+class IRPC;
+
 //! Interface for Remote Procedure Call receiver
 class IRemoteProcedureCallReceiver{
 
 	public:
 	
 	virtual ~IRemoteProcedureCallReceiver(){}
+	
+	//! called before callProcedure to notify about the RPC interface
+	virtual void OnSetRPC(IRPC* rpc){}
 	
 	//! values and result need to be deleted by the caller of this method
 	virtual IRPCValue* callProcedure(const std::string& procedure, const std::vector<IRPCValue*>& values) = 0;
