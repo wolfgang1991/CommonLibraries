@@ -13,6 +13,7 @@ class BeautifulCheckBox : public BeautifulGUIText{
 	bool pressed;
 	
 	irr::SEvent event;
+	irr::SEvent checkBoxEvent;
 	irr::core::rect<irr::s32> pressedStart;
 	
 	public:

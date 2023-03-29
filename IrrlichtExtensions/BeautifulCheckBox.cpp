@@ -17,6 +17,8 @@ BeautifulCheckBox::BeautifulCheckBox(const wchar_t* text, irr::video::SColor col
 	event.GUIEvent.EventType = EGET_CHECKBOX_CHANGED;
 	pressedStart = rect<s32>(0,0,0,0);
 	pressed = false;
+
+	checkBoxEvent = event;
 }
 
 BeautifulCheckBox::BeautifulCheckBox(const wchar_t* text, irr::f32 italicGradient, irr::core::matrix4* transformation, bool hcenter, bool vcenter, irr::gui::IGUIEnvironment* environment, irr::f32 recommendedSpace, irr::s32 id, irr::f32 scale, void* data, irr::gui::IGUIElement* parent, const irr::core::rect<irr::s32>& rectangle):
@@ -67,6 +69,8 @@ bool BeautifulCheckBox::OnEvent(const irr::SEvent& event){
 				if(Parent && isTrulyVisible()){
 					checked = !checked;
 					BeautifulGUIText::OnEvent(event);//important, otherwise e.g. parent aggregations don't scroll properly
+					irr::SEvent checkBoxEventCopy = checkBoxEvent;
+					Parent->OnEvent(checkBoxEventCopy);
 					return true;
 				}
 			}
