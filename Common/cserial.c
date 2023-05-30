@@ -14,7 +14,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 extern "C" {
 #endif
 
-#include <serial.h>
+#include <cserial.h>
 
 #ifdef _WIN32
 /*TODO*/

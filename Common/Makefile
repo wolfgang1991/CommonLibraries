@@ -2,7 +2,7 @@
 _LINKOBJ = IniFile.o IniIterator.o IniParser.o timing.o StringHelpers.o SimpleSockets.o CRC32.o Threading.o AParallelFunction.o \
 XMLParser.o utf8.o Serial.o misc.o ConcurrentCommunicationEndpoint.o NamedPipes.o ZSocket.o SSLSocket.o
 
-_C_LINKOBJ = serial.o
+_C_LINKOBJ = cserial.o
 
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj
