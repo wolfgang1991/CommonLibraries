@@ -1,8 +1,8 @@
 #include "Serial.h"
 
-#include "serial.h"
-#include "platforms.h"
-#include "timing.h"
+#include <cserial.h>
+#include <platforms.h>
+#include <timing.h>
 
 #if defined(LINUX_PLATFORM) || defined(ANDROID_PLATFORM)
 #include <dirent.h>
