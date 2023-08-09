@@ -13,3 +13,4 @@ xcuserdata/
 .reviewboardrc
 *.orig
 *#
+.DS_Store
