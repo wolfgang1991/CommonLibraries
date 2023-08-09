@@ -1,7 +1,7 @@
 #ifndef Serial_H_INCLUDED
 #define Serial_H_INCLUDED
 
-#include <ICommunicationEndpoint.h>
+#include "ICommunicationEndpoint.h"
 
 #include <string>
 #include <list>
