@@ -6,7 +6,7 @@
 #include <SimpleSockets.h>
 #include <Threading.h>
 
-#include <JSONParser.h>
+#include "JSONParser.h"
 
 #include <limits>
 #include <map>

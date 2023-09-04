@@ -1,7 +1,7 @@
 #include <cstring>
 #include <string>
 
-#include <IniParser.h>
+#include "IniParser.h"
 
 IniParser::IniParser(){
 	state = 0;

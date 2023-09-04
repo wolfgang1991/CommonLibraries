@@ -1,4 +1,4 @@
-#include <BeautifulGUIButton.h>
+#include "BeautifulGUIButton.h"
 
 #include <IGUISkin.h>
 #include <IEventReceiver.h>
