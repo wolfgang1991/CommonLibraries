@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00005C5B2AA60EC600A10904 /* IOctreeSceneNode.h in Headers */ = {isa = PBXBuildFile; fileRef = 00005C5A2AA60EC600A10904 /* IOctreeSceneNode.h */; };
+		00005C5C2AA60EC600A10904 /* IOctreeSceneNode.h in Headers */ = {isa = PBXBuildFile; fileRef = 00005C5A2AA60EC600A10904 /* IOctreeSceneNode.h */; };
+		00005C5E2AA60F1800A10904 /* IMemoryReadFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 00005C5D2AA60F1800A10904 /* IMemoryReadFile.h */; };
+		00005C5F2AA60F1800A10904 /* IMemoryReadFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 00005C5D2AA60F1800A10904 /* IMemoryReadFile.h */; };
+		00005C662AA6251200A10904 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 00005C582AA60B2300A10904 /* OpenGL.framework */; settings = {ATTRIBUTES = (Required, ); }; };
+		00005C692AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 00005C672AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp */; };
+		00005C6A2AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 00005C672AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp */; };
+		00005C6B2AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h in Headers */ = {isa = PBXBuildFile; fileRef = 00005C682AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h */; };
+		00005C6C2AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h in Headers */ = {isa = PBXBuildFile; fileRef = 00005C682AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h */; };
 		5E1DF8E11E96BFE100FC3523 /* CIrrDeviceOSX.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C8141B7F535C00F212E8 /* CIrrDeviceOSX.mm */; };
 		5E34C9F91B7F6EBF00F212E8 /* CDefaultGUIElementFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C7E21B7F50DE00F212E8 /* CDefaultGUIElementFactory.cpp */; };
 		5E34C9FB1B7F6EBF00F212E8 /* CGUIButton.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C7A91B7F50A900F212E8 /* CGUIButton.cpp */; };
@@ -282,7 +291,6 @@
 		5E34CBD91B7F6EC700F212E8 /* CImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9AC1B7F6B6800F212E8 /* CImage.cpp */; };
 		5E34CBDB1B7F6EC700F212E8 /* CNullDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9AE1B7F6B6800F212E8 /* CNullDriver.cpp */; };
 		5E34CBDE1B7F6EC700F212E8 /* COpenGLDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B11B7F6BA700F212E8 /* COpenGLDriver.cpp */; };
-		5E34CBE01B7F6EC700F212E8 /* COpenGLExtensionHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B31B7F6BA700F212E8 /* COpenGLExtensionHandler.cpp */; };
 		5E34CBE31B7F6EC700F212E8 /* COpenGLNormalMapRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B61B7F6BA700F212E8 /* COpenGLNormalMapRenderer.cpp */; };
 		5E34CBE51B7F6EC700F212E8 /* COpenGLParallaxMapRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B81B7F6BA700F212E8 /* COpenGLParallaxMapRenderer.cpp */; };
 		5E34CBE71B7F6EC700F212E8 /* COpenGLShaderMaterialRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9BA1B7F6BA700F212E8 /* COpenGLShaderMaterialRenderer.cpp */; };
@@ -579,7 +587,6 @@
 		5E5733C61C18E212003F664E /* CNullDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9AE1B7F6B6800F212E8 /* CNullDriver.cpp */; };
 		5E5733C71C18E212003F664E /* COpenGLCacheHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E7908911C10EEC000DFE7FE /* COpenGLCacheHandler.cpp */; };
 		5E5733C81C18E212003F664E /* COpenGLDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B11B7F6BA700F212E8 /* COpenGLDriver.cpp */; };
-		5E5733C91C18E212003F664E /* COpenGLExtensionHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B31B7F6BA700F212E8 /* COpenGLExtensionHandler.cpp */; };
 		5E5733CA1C18E212003F664E /* COpenGLNormalMapRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B61B7F6BA700F212E8 /* COpenGLNormalMapRenderer.cpp */; };
 		5E5733CB1C18E212003F664E /* COpenGLParallaxMapRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9B81B7F6BA700F212E8 /* COpenGLParallaxMapRenderer.cpp */; };
 		5E5733CC1C18E212003F664E /* COpenGLShaderMaterialRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E34C9BA1B7F6BA700F212E8 /* COpenGLShaderMaterialRenderer.cpp */; };
@@ -616,6 +623,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		00005C582AA60B2300A10904 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		00005C5A2AA60EC600A10904 /* IOctreeSceneNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IOctreeSceneNode.h; path = ../../include/IOctreeSceneNode.h; sourceTree = "<group>"; };
+		00005C5D2AA60F1800A10904 /* IMemoryReadFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IMemoryReadFile.h; path = ../../include/IMemoryReadFile.h; sourceTree = "<group>"; };
+		00005C672AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = COpenGLExtensionHandlerMacOS.cpp; sourceTree = "<group>"; };
+		00005C682AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = COpenGLExtensionHandlerMacOS.h; sourceTree = "<group>"; };
 		5E34C6E21B7F4AFB00F212E8 /* aabbox3d.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = aabbox3d.h; path = ../../include/aabbox3d.h; sourceTree = "<group>"; };
 		5E34C6E31B7F4AFB00F212E8 /* CDynamicMeshBuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CDynamicMeshBuffer.h; path = ../../include/CDynamicMeshBuffer.h; sourceTree = "<group>"; };
 		5E34C6E41B7F4AFB00F212E8 /* CIndexBuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CIndexBuffer.h; path = ../../include/CIndexBuffer.h; sourceTree = "<group>"; };
@@ -1290,8 +1302,6 @@
 		5E34C9B01B7F6B6800F212E8 /* IImagePresenter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IImagePresenter.h; sourceTree = "<group>"; };
 		5E34C9B11B7F6BA700F212E8 /* COpenGLDriver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = COpenGLDriver.cpp; sourceTree = "<group>"; };
 		5E34C9B21B7F6BA700F212E8 /* COpenGLDriver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = COpenGLDriver.h; sourceTree = "<group>"; };
-		5E34C9B31B7F6BA700F212E8 /* COpenGLExtensionHandler.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = COpenGLExtensionHandler.cpp; sourceTree = "<group>"; };
-		5E34C9B41B7F6BA700F212E8 /* COpenGLExtensionHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = COpenGLExtensionHandler.h; sourceTree = "<group>"; };
 		5E34C9B51B7F6BA700F212E8 /* COpenGLMaterialRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = COpenGLMaterialRenderer.h; sourceTree = "<group>"; };
 		5E34C9B61B7F6BA700F212E8 /* COpenGLNormalMapRenderer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = COpenGLNormalMapRenderer.cpp; sourceTree = "<group>"; };
 		5E34C9B71B7F6BA700F212E8 /* COpenGLNormalMapRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = COpenGLNormalMapRenderer.h; sourceTree = "<group>"; };
@@ -1373,6 +1383,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				00005C662AA6251200A10904 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1386,12 +1397,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		00005C572AA60B2300A10904 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				00005C582AA60B2300A10904 /* OpenGL.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		5E34C6D81B7F4A0C00F212E8 = {
 			isa = PBXGroup;
 			children = (
 				5E34C6DF1B7F4AB500F212E8 /* include */,
 				5E34C6E01B7F4ABD00F212E8 /* Irrlicht */,
 				5E34C9F41B7F6E3400F212E8 /* Products */,
+				00005C572AA60B2300A10904 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1486,6 +1506,7 @@
 				5E34C6FC1B7F4AFC00F212E8 /* ETerrainElements.h */,
 				5E34C7001B7F4AFC00F212E8 /* IAnimatedMesh.h */,
 				5E34C7011B7F4AFC00F212E8 /* IAnimatedMeshMD2.h */,
+				00005C5A2AA60EC600A10904 /* IOctreeSceneNode.h */,
 				5E34C7021B7F4AFC00F212E8 /* IAnimatedMeshMD3.h */,
 				5E34C7031B7F4AFC00F212E8 /* IAnimatedMeshSceneNode.h */,
 				5E34C7061B7F4AFC00F212E8 /* IBillboardSceneNode.h */,
@@ -1567,6 +1588,7 @@
 				5E34C7121B7F4AFC00F212E8 /* IFileSystem.h */,
 				5E34C7551B7F4AFC00F212E8 /* IReadFile.h */,
 				5E34C7631B7F4AFC00F212E8 /* irrXML.h */,
+				00005C5D2AA60F1800A10904 /* IMemoryReadFile.h */,
 				5E34C77B1B7F4AFC00F212E8 /* IWriteFile.h */,
 				5E34C77C1B7F4AFC00F212E8 /* IXMLReader.h */,
 				5E34C77D1B7F4AFC00F212E8 /* IXMLWriter.h */,
@@ -2280,13 +2302,13 @@
 				5E7908931C10EEC000DFE7FE /* COpenGLCommon.h */,
 				5E34C9B11B7F6BA700F212E8 /* COpenGLDriver.cpp */,
 				5E34C9B21B7F6BA700F212E8 /* COpenGLDriver.h */,
-				5E34C9B31B7F6BA700F212E8 /* COpenGLExtensionHandler.cpp */,
-				5E34C9B41B7F6BA700F212E8 /* COpenGLExtensionHandler.h */,
 				5E34C9B51B7F6BA700F212E8 /* COpenGLMaterialRenderer.h */,
 				5E34C9B61B7F6BA700F212E8 /* COpenGLNormalMapRenderer.cpp */,
 				5E34C9B71B7F6BA700F212E8 /* COpenGLNormalMapRenderer.h */,
 				5E34C9B81B7F6BA700F212E8 /* COpenGLParallaxMapRenderer.cpp */,
 				5E34C9B91B7F6BA700F212E8 /* COpenGLParallaxMapRenderer.h */,
+				00005C672AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp */,
+				00005C682AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h */,
 				5E34C9BA1B7F6BA700F212E8 /* COpenGLShaderMaterialRenderer.cpp */,
 				5E34C9BB1B7F6BA700F212E8 /* COpenGLShaderMaterialRenderer.h */,
 				5E34C9BC1B7F6BA700F212E8 /* COpenGLSLMaterialRenderer.cpp */,
@@ -2445,6 +2467,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				00005C5B2AA60EC600A10904 /* IOctreeSceneNode.h in Headers */,
+				00005C5E2AA60F1800A10904 /* IMemoryReadFile.h in Headers */,
+				00005C6B2AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2452,6 +2477,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				00005C5C2AA60EC600A10904 /* IOctreeSceneNode.h in Headers */,
+				00005C5F2AA60F1800A10904 /* IMemoryReadFile.h in Headers */,
+				00005C6C2AA6653500A10904 /* COpenGLExtensionHandlerMacOS.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2510,6 +2538,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 5E34C6D81B7F4A0C00F212E8;
@@ -2683,6 +2712,7 @@
 				5E34CAF41B7F6EC100F212E8 /* CMetaTriangleSelector.cpp in Sources */,
 				5E34CAF61B7F6EC100F212E8 /* COctreeTriangleSelector.cpp in Sources */,
 				5E34CAF81B7F6EC100F212E8 /* CSceneCollisionManager.cpp in Sources */,
+				00005C692AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp in Sources */,
 				5E34CAFA1B7F6EC100F212E8 /* CTerrainTriangleSelector.cpp in Sources */,
 				5E34CAFC1B7F6EC100F212E8 /* CTriangleBBSelector.cpp in Sources */,
 				5E34CAFE1B7F6EC100F212E8 /* CTriangleSelector.cpp in Sources */,
@@ -2806,7 +2836,6 @@
 				5E34CBDB1B7F6EC700F212E8 /* CNullDriver.cpp in Sources */,
 				5E7908971C10EF3F00DFE7FE /* COpenGLCacheHandler.cpp in Sources */,
 				5E34CBDE1B7F6EC700F212E8 /* COpenGLDriver.cpp in Sources */,
-				5E34CBE01B7F6EC700F212E8 /* COpenGLExtensionHandler.cpp in Sources */,
 				5E34CBE31B7F6EC700F212E8 /* COpenGLNormalMapRenderer.cpp in Sources */,
 				5E34CBE51B7F6EC700F212E8 /* COpenGLParallaxMapRenderer.cpp in Sources */,
 				5E34CBE71B7F6EC700F212E8 /* COpenGLShaderMaterialRenderer.cpp in Sources */,
@@ -2971,6 +3000,7 @@
 				5E5733371C18E212003F664E /* inftrees.c in Sources */,
 				5E5733381C18E212003F664E /* trees.c in Sources */,
 				5E5733391C18E212003F664E /* uncompr.c in Sources */,
+				00005C6A2AA6653500A10904 /* COpenGLExtensionHandlerMacOS.cpp in Sources */,
 				5E57333A1C18E212003F664E /* zutil.c in Sources */,
 				5E57333B1C18E212003F664E /* CLogger.cpp in Sources */,
 				5E57333C1C18E212003F664E /* COSOperator.cpp in Sources */,
@@ -3120,7 +3150,6 @@
 				5E5733C61C18E212003F664E /* CNullDriver.cpp in Sources */,
 				5E5733C71C18E212003F664E /* COpenGLCacheHandler.cpp in Sources */,
 				5E5733C81C18E212003F664E /* COpenGLDriver.cpp in Sources */,
-				5E5733C91C18E212003F664E /* COpenGLExtensionHandler.cpp in Sources */,
 				5E5733CA1C18E212003F664E /* COpenGLNormalMapRenderer.cpp in Sources */,
 				5E5733CB1C18E212003F664E /* COpenGLParallaxMapRenderer.cpp in Sources */,
 				5E5733CC1C18E212003F664E /* COpenGLShaderMaterialRenderer.cpp in Sources */,

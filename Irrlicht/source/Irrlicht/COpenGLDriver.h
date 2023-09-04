@@ -22,7 +22,11 @@ namespace irr
 #include "IMaterialRendererServices.h"
 #include "CNullDriver.h"
 
+#if defined(__APPLE__) || defined(MACOSX)
+#include "COpenGLExtensionHandlerMacOS.h"
+#else
 #include "COpenGLExtensionHandler.h"
+#endif
 #include "IContextManager.h"
 
 namespace irr
