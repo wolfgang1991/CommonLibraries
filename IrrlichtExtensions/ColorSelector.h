@@ -1,8 +1,8 @@
 #ifndef COLOR_SELECTOR_H_INCLUDED
 #define COLOR_SELECTOR_H_INCLUDED
 
-#include <ForwardDeclarations.h>
-#include <ICommonAppContext.h>
+#include "ForwardDeclarations.h"
+#include "ICommonAppContext.h"
 
 #include <SColor.h>
 #include <rect.h>

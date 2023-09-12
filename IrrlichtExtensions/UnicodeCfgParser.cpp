@@ -1,6 +1,6 @@
-#include <UnicodeCfgParser.h>
-#include <StringHelpers.h>
-#include <utf8.h>
+#include "UnicodeCfgParser.h"
+#include "StringHelpers.h"
+#include "utf8.h"
 
 #include <irrString.h>
 #include <IReadFile.h>

@@ -1,10 +1,10 @@
-#include <ColorSelector.h>
-#include <StringHelpers.h>
-#include <font.h>
-#include <mathUtils.h>
-#include <IInput.h>
-#include <Drawer2D.h>
-#include <CMBox.h>
+#include "ColorSelector.h"
+#include "StringHelpers.h"
+#include "font.h"
+#include "mathUtils.h"
+#include "IInput.h"
+#include "Drawer2D.h"
+#include "CMBox.h"
 
 #include <IGUIStaticText.h>
 #include <IGUIEditBox.h>

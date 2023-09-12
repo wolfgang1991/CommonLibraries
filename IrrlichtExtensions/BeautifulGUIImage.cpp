@@ -1,7 +1,7 @@
-#include <BeautifulGUIImage.h>
-#include <Drawer2D.h>
-#include <utilities.h>
-#include <mathUtils.h>
+#include "BeautifulGUIImage.h"
+#include "Drawer2D.h"
+#include "utilities.h"
+#include "mathUtils.h"
 
 #include <ITexture.h>
 #include <IVideoDriver.h>

@@ -1,7 +1,7 @@
-#include <IniFile.h>
-#include <IniIterator.h>
-#include <IniParser.h>
-#include <utf8.h>
+#include "IniFile.h"
+#include "IniIterator.h"
+#include "IniParser.h"
+#include "utf8.h"
 
 #include <iostream>
 #include <cstring>

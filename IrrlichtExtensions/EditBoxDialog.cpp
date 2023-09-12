@@ -1,7 +1,7 @@
-#include <EditBoxDialog.h>
-#include <GUI.h>
-#include <IniFile.h>
-#include <mathUtils.h>
+#include "EditBoxDialog.h"
+#include "GUI.h"
+#include "IniFile.h"
+#include "mathUtils.h"
 
 #include <IVideoDriver.h>
 #include <IGUIWindow.h>

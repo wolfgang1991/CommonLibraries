@@ -4,10 +4,10 @@
 #include <map>
 #include <list>
 
-#include <GUI.h>
-#include <IniFile.h>
-#include <StringHelpers.h>
-#include <utf8.h>
+#include "GUI.h"
+#include "IniFile.h"
+#include "StringHelpers.h"
+#include "utf8.h"
 
 using namespace std;
 using namespace irr;

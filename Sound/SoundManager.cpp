@@ -2,6 +2,7 @@
 #include "ISoundDriver.h"
 #include "AlsaSoundDriver.h"
 #include "OpenSLESSoundDriver.h"
+#include "NoSoundDriver.h"
 
 #include <Threading.h>
 #include <platforms.h>
@@ -72,6 +73,8 @@ class SoundManagerPrivate{
 		driver = new AlsaSoundDriver();
 		#elif defined(ANDROID_PLATFORM)
 		driver = new OpenSLESSoundDriver();
+		#elif defined(__APPLE__) && defined(__MACH__)
+		driver = new NoSoundDriver();
 		#else
 		#error Unsupported Operating System: Missing ISoundDriver implementation
 		#endif

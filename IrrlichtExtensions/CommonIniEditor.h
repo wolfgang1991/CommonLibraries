@@ -1,9 +1,9 @@
 #ifndef CommonIniEditor_H_INCLUDED
 #define CommonIniEditor_H_INCLUDED
 
-#include <ColorSelector.h>
-#include <ICommonAppContext.h>
-#include <ForwardDeclarations.h>
+#include "ColorSelector.h"
+#include "ICommonAppContext.h"
+#include "ForwardDeclarations.h"
 
 #include <IniFile.h>
 
