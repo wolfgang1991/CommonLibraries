@@ -4,6 +4,7 @@
 #include <StringHelpers.h>
 
 #include <sstream>
+#include <iostream>
 
 static const std::wstring emptyResult(L"");
 
@@ -40,7 +41,13 @@ ConstantLanguagePhrases::ConstantLanguagePhrases(irr::io::IFileSystem* fsys, con
 	parser.parseFromUTF8File(fsys, path);
 	const std::list<std::vector<std::wstring>>& res = parser.getResult();
 	for(auto it = res.begin(); it != res.end(); ++it){
-		insertPhrase((*it)[0], (*it)[1]);
+		if(it->size()>=2){
+			insertPhrase((*it)[0], (*it)[1]);
+		}else{
+			std::cerr << "ERROR: Wrong number of arguments (must be 2 for key value pairs)." << std::endl;
+			for(const std::wstring& s : *it){std::cerr << convertWStringToUtf8String(s) << " ";}
+			std::cerr << std::endl;
+		}
 	}
 }
 	

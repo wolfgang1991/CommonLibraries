@@ -96,7 +96,7 @@ class TransposeMatrix{
 	TParentMatrix& parentMatrix;
 	
 	TransposeMatrix(TParentMatrix& parentMatrix):parentMatrix(parentMatrix){
-		static_assert(isMatrix);
+		static_assert(isMatrix, "");
 	}
 	
 	const Scalar& get(uint32_t row, uint32_t column = 0) const{
@@ -143,8 +143,8 @@ class SubMatrix{
 	TParentMatrix& parentMatrix;
 	
 	SubMatrix(TParentMatrix& parentMatrix):parentMatrix(parentMatrix){
-		static_assert(isMatrix);
-		static_assert(TRowIndex+TRowCount<=TParentMatrix::rowCount && TColumnIndex+TColumnCount<=TParentMatrix::columnCount);
+		static_assert(isMatrix, "");
+		static_assert(TRowIndex+TRowCount<=TParentMatrix::rowCount && TColumnIndex+TColumnCount<=TParentMatrix::columnCount, "");
 	}
 	
 	const Scalar& get(uint32_t row, uint32_t column = 0) const{
@@ -201,7 +201,7 @@ class SubMatrixIJ{
 	TParentMatrix& parentMatrix;
 	
 	SubMatrixIJ(TParentMatrix& parentMatrix, uint32_t i, uint32_t j):i(i),j(j),parentMatrix(parentMatrix){
-		static_assert(isMatrix);
+		static_assert(isMatrix, "");
 	}
 	
 	const Scalar& get(uint32_t row, uint32_t column = 0) const{
@@ -237,6 +237,15 @@ using Vector2D = Vector<2, TScalar>;
 template<typename TScalar>
 using Vector3D = Vector<3, TScalar>;
 
+template<typename TScalar>
+using Matrix2D = Matrix<2, 2, TScalar>;
+
+template<typename TScalar>
+using Matrix3D = Matrix<3, 3, TScalar>;
+
+template<typename TScalar>
+using Matrix4D = Matrix<4, 4, TScalar>;
+
 //! gives the type which results from automatic type conversions when calculating with the scalars of two matrices
 template <typename TMatrixA, typename TMatrixB>
 struct ResultScalar{using type = decltype((typename TMatrixA::Scalar)1*(typename TMatrixB::Scalar)1);};
@@ -244,7 +253,7 @@ struct ResultScalar{using type = decltype((typename TMatrixA::Scalar)1*(typename
 //! multiply two matrices
 template <typename TMatrixA, typename TMatrixB>
 Matrix<TMatrixA::rowCount, TMatrixB::columnCount, typename ResultScalar<TMatrixA,TMatrixB>::type> operator*(const TMatrixA& a, const TMatrixB& b){
-	static_assert(TMatrixA::columnCount==TMatrixB::rowCount);//check compatibility to make runtime errors to compile time errors
+	static_assert(TMatrixA::columnCount==TMatrixB::rowCount, "");//check compatibility to make runtime errors to compile time errors
 	Matrix<TMatrixA::rowCount, TMatrixB::columnCount, typename ResultScalar<TMatrixA,TMatrixB>::type> res;
 	for(uint32_t inColumn=0; inColumn<TMatrixB::columnCount; inColumn++){
 		for(uint32_t row=0; row<TMatrixA::rowCount; row++){
@@ -271,7 +280,7 @@ void visitMatrix(TMatrix& matrix, const std::function<void(uint32_t,uint32_t,typ
 //! Copy Matrices and returns the target
 template <typename TMatrixA, typename TMatrixB>
 TMatrixB& copyMatrix(const TMatrixA& source, TMatrixB& target){
-	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount);
+	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount, "");
 	visitMatrix(const_cast<TMatrixA&>(source), [&target](uint32_t row, uint32_t column, typename TMatrixA::Scalar& value){target.set(row, column, value);});
 	return target;
 }
@@ -289,7 +298,7 @@ std::ostream& operator<<(std::ostream &out, const TMatrix& m){
 //! Subtract Matrices
 template <typename TMatrixA, typename TMatrixB, typename std::enable_if<TMatrixA::isMatrix&&TMatrixB::isMatrix, int>::type = 0>
 Matrix<TMatrixA::rowCount, TMatrixA::columnCount, typename ResultScalar<TMatrixA, TMatrixB>::type> operator-(const TMatrixA& a, const TMatrixB& b){
-	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount);
+	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount, "");
 	using ResScalar = typename ResultScalar<TMatrixA, TMatrixB>::type;
 	Matrix<TMatrixA::rowCount, TMatrixA::columnCount, ResScalar> res;
 	visitMatrix(res, [&a, &b](uint32_t row, uint32_t column, ResScalar& value){value = a.get(row, column)-b.get(row, column);});
@@ -307,7 +316,7 @@ Matrix<TMatrix::rowCount, TMatrix::columnCount, typename TMatrix::Scalar> operat
 //! Add Matrices
 template <typename TMatrixA, typename TMatrixB, typename std::enable_if<TMatrixA::isMatrix&&TMatrixB::isMatrix, int>::type = 0>
 Matrix<TMatrixA::rowCount, TMatrixA::columnCount, typename ResultScalar<TMatrixA, TMatrixB>::type> operator+(const TMatrixA& a, const TMatrixB& b){
-	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount);
+	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount, "");
 	using ResScalar = typename ResultScalar<TMatrixA, TMatrixB>::type;
 	Matrix<TMatrixA::rowCount, TMatrixA::columnCount, ResScalar> res;
 	visitMatrix(res, [&a, &b](uint32_t row, uint32_t column, ResScalar& value){value = a.get(row, column)+b.get(row, column);});
@@ -339,13 +348,13 @@ Matrix<TMatrix::rowCount, TMatrix::columnCount, typename TMatrix::Scalar> operat
 //! Linear Interpolation, time specifices the progress of the interpolaton form start (0) to end (1)
 template <typename TMatrixA, typename TMatrixB, typename std::enable_if<TMatrixA::isMatrix&&TMatrixB::isMatrix, int>::type = 0>
 Matrix<TMatrixA::rowCount, TMatrixA::columnCount, typename ResultScalar<TMatrixA, TMatrixB>::type> lerp(const TMatrixA& start, const TMatrixB& end, typename ResultScalar<TMatrixA, TMatrixB>::type time){
-	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount);
+	static_assert(TMatrixA::rowCount==TMatrixB::rowCount && TMatrixA::columnCount==TMatrixB::columnCount, "");
 	return start*(1-time)+end*time;
 }
 
 template <typename TMatrixA, typename TMatrixB>
 bool areMatricesEqual(const TMatrixA& a, const TMatrixB& b, typename ResultScalar<TMatrixA, TMatrixB>::type eps = 0){
-	static_assert(TMatrixA::columnCount==TMatrixB::columnCount && TMatrixA::rowCount==TMatrixB::rowCount);//check compatibility to make runtime errors to compile time errors
+	static_assert(TMatrixA::columnCount==TMatrixB::columnCount && TMatrixA::rowCount==TMatrixB::rowCount, "");//check compatibility to make runtime errors to compile time errors
 	for(uint32_t i=0; i<TMatrixA::rowCount; i++){
 		for(uint32_t j=0; j<TMatrixA::columnCount; j++){
 			auto delta = a.get(i,j)-b.get(i,j);
@@ -410,7 +419,7 @@ Matrix<TMatrix::rowCount, TMatrix::columnCount, typename TMatrix::Scalar> calcCo
 //! WARNING: Inefficient (O(n*n!) for nxn matrix)! For large matrices use sth. like LR decomposition!!!
 template<typename TMatrix, typename std::enable_if<is_square_matrix<TMatrix>::value, int>::type = 0>
 Matrix<TMatrix::rowCount, TMatrix::columnCount, typename TMatrix::Scalar> calcInverse(const TMatrix& m){
-	static_assert(std::is_floating_point<typename TMatrix::Scalar>::value);
+	static_assert(std::is_floating_point<typename TMatrix::Scalar>::value, "");
 	typedef typename TMatrix::Scalar Scalar;
 	auto c = calcCofactorMatrix(m);
 	Scalar invDet = (((Scalar)1)/calcDeterminant(m));
@@ -474,7 +483,7 @@ typename TMatrix::Scalar calcSquareSumNorm(const TMatrix& m){
 //! The Frobenius Norm is the root of the sum of the squares of the elements (like euklidean vector norm)
 template<typename TMatrix, typename TFloat = typename TMatrix::Scalar, typename std::enable_if<TMatrix::isMatrix, int>::type = 0>
 TFloat calcFrobeniusNorm(const TMatrix& m){
-	static_assert(std::is_floating_point<TFloat>::value);
+	static_assert(std::is_floating_point<TFloat>::value, "");
 	return (TFloat)sqrt(calcSquareSumNorm(m));
 }
 
@@ -518,6 +527,44 @@ Matrix<TOutVectorSize,TInVectorSize,TScalar> calcNumericalJacobiMatrix(	const st
 		}
 	}
 	return res;
+}
+
+//special functions for special matrices:
+
+//! Rotation around first axis
+template <typename TScalar = double>
+Matrix3D<double> createPitchMatrix3D(TScalar phi){
+	TScalar cosPhi = cos(phi);
+	TScalar sinPhi = sin(phi);
+	return Matrix3D<TScalar>{1, 0, 0,
+		      0, cosPhi, -sinPhi,
+		      0, sinPhi, cosPhi};
+}
+
+//! Rotation around second axis
+template <typename TScalar = double>
+Matrix3D<TScalar> createYawMatrix3D(TScalar phi){
+	TScalar cosPhi = cos(phi);
+	TScalar sinPhi = sin(phi);
+	return Matrix3D<TScalar>{cosPhi, 0, sinPhi,
+		      0, 1, 0,
+		      -sinPhi, 0, cosPhi};
+}
+
+//! Rotation around third axis
+template <typename TScalar = double>
+Matrix3D<TScalar> createRollMatrix3D(TScalar phi){
+	TScalar cosPhi = cos(phi);
+	TScalar sinPhi = sin(phi);
+	return Matrix3D<TScalar>{cosPhi, -sinPhi, 0,
+		      sinPhi, cosPhi, 0,
+		      0, 0, 1};
+}
+
+//! converts to other vector representations by assuming the constructor
+template <typename TTarget, typename TScalar>
+TTarget convertVector3D(Vector3D<TScalar> v){
+	return TTarget(v[0], v[1], v[2]);
 }
 
 #endif

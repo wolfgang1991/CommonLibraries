@@ -760,7 +760,7 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 	if (FeatureAvailable[IRR_NVX_gpu_memory_info])
 	{
 		// undocumented flags, so use the RAW values
-		GLint val;
+		GLint val = 0;
 		glGetIntegerv(0x9047, &val);
 		os::Printer::log("Dedicated video memory (kB)", core::stringc(val));
 		glGetIntegerv(0x9048, &val);
@@ -772,6 +772,7 @@ void COpenGLExtensionHandler::initExtensions(bool stencilBuffer)
 	if (FeatureAvailable[IRR_ATI_meminfo])
 	{
 		GLint val[4];
+		val[0] = 0;
 		glGetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, val);
 		os::Printer::log("Free texture memory (kB)", core::stringc(val[0]));
 		glGetIntegerv(GL_VBO_FREE_MEMORY_ATI, val);

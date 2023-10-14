@@ -11,6 +11,8 @@
 #include "os.h"
 #include "irrString.h"
 
+#include <iostream>//changed
+
 namespace irr
 {
 namespace video
@@ -110,12 +112,16 @@ void CImageLoaderJPG::error_exit (j_common_ptr cinfo)
 
 void CImageLoaderJPG::output_message(j_common_ptr cinfo)
 {
+	//changed: 
 	// display the error message.
 	c8 temp1[JMSG_LENGTH_MAX];
 	(*cinfo->err->format_message)(cinfo, temp1);
-	core::stringc errMsg("JPEG FATAL ERROR in ");
-	errMsg += core::stringc(Filename);
-	os::Printer::log(errMsg.c_str(),temp1, ELL_ERROR);
+	//removed to make it thread safe: os::Printer::log
+	std::cout << "JPEG FATAL ERROR in " << Filename.c_str() << ": " << temp1 << std::endl;
+	//jump also here in case of error output without exit to avoid broken images
+	irr_jpeg_error_mgr *myerr = (irr_jpeg_error_mgr*) cinfo->err;
+	longjmp(myerr->setjmp_buffer, 1);
+	//changed end
 }
 #endif // _IRR_COMPILE_WITH_LIBJPEG_
 

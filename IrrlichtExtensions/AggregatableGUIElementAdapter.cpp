@@ -5,6 +5,7 @@
 #include <IGUIEditBox.h>
 #include <IGUICheckBox.h>
 #include <IGUIComboBox.h>
+#include <IGUIListBox.h>
 
 using namespace irr;
 using namespace gui;
@@ -43,6 +44,10 @@ AggregatableGUIElementAdapter* addAggregatableCheckBox(irr::gui::IGUIEnvironment
 
 AggregatableGUIElementAdapter* addAggregatableComboBox(irr::gui::IGUIEnvironment* env, irr::f32 weight, irr::s32 id){
 	return new AggregatableGUIElementAdapter(env, weight, 1.f, false, env->addComboBox(rect<s32>(0,0,0,0), NULL, id), false, 0);
+}
+
+AggregatableGUIElementAdapter* addAggregatableListBox(irr::gui::IGUIEnvironment* env, irr::f32 weight, irr::s32 id){
+	return new AggregatableGUIElementAdapter(env, weight, 1.f, false, env->addListBox(rect<s32>(0,0,0,0), NULL, id), false, 0);
 }
 
 irr::gui::IGUIElement* getFirstGUIElementChild(irr::gui::IGUIElement* ele){

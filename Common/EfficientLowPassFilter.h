@@ -7,7 +7,7 @@
 template<typename TSample, typename TTime>
 class EfficientLowPassFilter{
 
-	private:
+	protected:
 	
 	TSample value;
 	TTime lastTime;
@@ -24,18 +24,20 @@ class EfficientLowPassFilter{
 		reset(unitializedSample);
 	}
 	
-	void setWeightParameters(double weightAfterDT, TTime dT, TTime minSamplePeriod){
+	virtual ~EfficientLowPassFilter(){}
+	
+	virtual void setWeightParameters(double weightAfterDT, TTime dT, TTime minSamplePeriod){
 		b = -log(weightAfterDT)/static_cast<double>(dT);
 		this->minSamplePeriod = minSamplePeriod;
 	}
 	
-	void reset(TSample unitializedSample = static_cast<TSample>(0)){
+	virtual void reset(TSample unitializedSample = static_cast<TSample>(0)){
 		init = false;
 		value = unitializedSample;
 	}	
 	
 	//! Updates the value of the low pass filter and returns it
-	const TSample& update(const TSample& newSample, TTime newTime){
+	virtual const TSample& update(const TSample& newSample, TTime newTime){
 		if(init){
 			TTime dt = newTime-lastTime;
 			if(dt>minSamplePeriod){
@@ -51,11 +53,11 @@ class EfficientLowPassFilter{
 		return value;
 	}
 	
-	const TSample& getValue() const{
+	virtual const TSample& getValue() const{
 		return value;
 	}
 	
-	bool isInitialized() const{
+	virtual bool isInitialized() const{
 		return init;
 	}
 	

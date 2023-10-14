@@ -22,6 +22,7 @@
 #include <IGUIComboBox.h>
 #include <IGUIStaticText.h>
 #include <IGUIEditBox.h>
+#include <IGUIListBox.h>
 
 #include <iostream>
 
@@ -42,7 +43,16 @@ CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section
 	init(HelpFile);
 }
 
-static const std::wstring valueTypeStr[CommonIniEditor::TYPE_COUNT] = {L"INT", L"DOUBLE", L"STRING", L"BOOLEAN", L"NOT_EDITABLE", L"ONE_OF", L"COLOR_RGB", L"COLOR_RGBA"};
+static const std::wstring valueTypeStr[] = {L"INT", L"DOUBLE", L"STRING", L"BOOLEAN", L"NOT_EDITABLE", L"ONE_OF", L"COLOR_RGB", L"COLOR_RGBA"};
+static_assert(sizeof(valueTypeStr)/sizeof(valueTypeStr[0])==CommonIniEditor::TYPE_COUNT, "");
+
+static bool areWStringsEqual(const std::wstring& a, const std::wstring& b){//workaround for compiler or valgrind bug (== results in problems)
+	if(a.size()!=b.size()){return false;}
+	for(uint32_t i=0; i<a.size(); i++){
+		if(a[i]!=b[i]){return false;}
+	}
+	return true;
+}
 
 CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section, const std::wstring& guiCode, IIniEditorCustomization* customization, const char* HelpFile):c(context), customization(customization), section(Section), sel(context, customization->getAlphaBackground(), SColor(255, 255, 255,255)){
 	UnicodeCfgParser parser(4);
@@ -56,15 +66,25 @@ CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section
 	uint32_t i = 0;
 	for(auto it = result.begin(); it != result.end(); ++it){
 		const std::vector<std::wstring>& line = *it;
-		key[i] = convertWStringToUtf8String(line[0]);
-		fieldName[i] = line[1];
-		defaultValue[i] = convertWStringToUtf8String(line[2]);
-		const std::wstring& t = line[3];
-		valType[i] = NOT_EDITABLE;
-		for(uint32_t j=0; j<TYPE_COUNT; j++){
-			if(valueTypeStr[j].compare(t)==0){
-				valType[i] = (ValueType)j;
-				break;
+		if(line.size()!=4){
+			key[i] = "error_stderr";
+			fieldName[i] = L"Syntax error";
+			valType[i] = NOT_EDITABLE;
+			defaultValue[i] = "see stderr";
+			std::cerr << "ERROR: Wrong number of arguments (must be 4 for IniEditor)." << std::endl;
+			for(const std::wstring& s : *it){std::cerr << convertWStringToUtf8String(s) << " ";}
+			std::cerr << std::endl;
+		}else{
+			key[i] = convertWStringToUtf8String(line[0]);
+			fieldName[i] = line[1];
+			defaultValue[i] = convertWStringToUtf8String(line[2]);
+			const std::wstring& t = line[3];
+			valType[i] = NOT_EDITABLE;
+			for(uint32_t j=0; j<TYPE_COUNT; j++){
+				if(areWStringsEqual(valueTypeStr[j],t)){//valueTypeStr[j]==t){
+					valType[i] = (ValueType)j;
+					break;
+				}
 			}
 		}
 		i++;
@@ -140,23 +160,31 @@ void CommonIniEditor::createGUI(){
 			finalLine = new BeautifulCheckBox(makeWordWrappedText(fieldName[i], 4*wholeWidth/5, font).c_str(), 0.f, NULL, false, true, env, lineSpace);
 			input[i] = finalLine;
 		}else if(valType[i]==ONE_OF){
-			AggregateGUIElement* line = new AggregateGUIElement(env, lineSpace, 1.f, lineSpace, 1.f, false, true, false, {
+			s32 lineCount = 1;
+			for(u32 ci = 0; ci<defaultValue[i].size(); ci++){
+				if(defaultValue[i][ci]==';'){lineCount++;}
+			}
+			f32 finalLineSpace = (lineCount>5?5:lineCount)*lineSpace;
+			AggregateGUIElement* line = new AggregateGUIElement(env, finalLineSpace, 1.f, finalLineSpace, 1.f, false, true, false, {
 				new BeautifulGUIText(makeWordWrappedText(fieldName[i], labelWidth, font).c_str(), 0.f, NULL, false, true, env, labelSpace),
-				addAggregatableComboBox(env, 1.f-labelSpace)
+				addAggregatableListBox(env, 1.f-labelSpace)//addAggregatableBeautifulListBox(env, 1.f-labelSpace, customization->getAggregationID(), customization->getInvisibleAggregationID(), customization->getScrollBarID(), customization->getAggregationID(), customization->getAggregatableID())//addAggregatableComboBox(env, 1.f-labelSpace)
 			}, {}, false, customization->getInvisibleAggregationID());
 			input[i] = getFirstGUIElementChild(*(line->getChildren().begin()+1));
 			finalLine = line;
-			((IGUIComboBox*)input[i])->setItemHeight(c->getRecommendedButtonHeight());
+			((IGUIListBox*)input[i])->setItemHeight(c->getRecommendedButtonHeight());//IGUIComboBox
 			uint32_t start = 0;
 			uint32_t ci = 0;
 			for(; ci<defaultValue[i].size(); ci++){
 				char c = defaultValue[i][ci];
 				if(c==';'){
-					((IGUIComboBox*)input[i])->addItem(convertUtf8ToWString(defaultValue[i].substr(start,ci-start)).c_str());//ss.str().c_str());
+					((IGUIListBox*)input[i])->addItem(convertUtf8ToWString(defaultValue[i].substr(start,ci-start)).c_str());//IGUIComboBox
 					start = ci+1;
 				}
 			}
-			((IGUIComboBox*)input[i])->addItem(convertUtf8ToWString(defaultValue[i].substr(start,ci-start)).c_str());
+			((IGUIListBox*)input[i])->addItem(convertUtf8ToWString(defaultValue[i].substr(start,ci-start)).c_str());//IGUIComboBox
+//			if(lineCount>5 && ((IGUIListBox*)input[i])->getVerticalScrollBar()!=NULL){
+//				((IGUIListBox*)input[i])->getVerticalScrollBar()->setVisible(false);
+//			}
 		}else if(valType[i]==COLOR_RGB || valType[i]==COLOR_RGBA){
 			f32 buttonSpace = Min(1.f, .1f+(f32)font->getDimension(fieldName[i].c_str()).Width/wholeWidth);
 			BeautifulGUIButton* but;
@@ -215,11 +243,12 @@ void CommonIniEditor::edit(IniFile* Ini){
 		}else if(valType[i]==BOOLEAN){
 			((BeautifulCheckBox*)input[i])->setChecked((bool)atoi(def.c_str()));
 		}else if(valType[i]==ONE_OF){
-			IGUIComboBox* combo = (IGUIComboBox*)input[i];
-			for(uint32_t it=0; it<combo->getItemCount(); it++){
-				std::string item = convertWStringToUtf8String(std::wstring(combo->getItem(it)));
+			IGUIListBox* ele = (IGUIListBox*)input[i];//IGUIComboBox
+			if(ele->getItemCount()>0){ele->setSelected(0);}
+			for(uint32_t it=0; it<ele->getItemCount(); it++){
+				std::string item = convertWStringToUtf8String(std::wstring(ele->getListItem(it)));//getItem
 				if(item.compare(def)==0){
-					combo->setSelected(it);
+					ele->setSelected(it);
 					break;
 				}
 			}
@@ -306,10 +335,6 @@ void CommonIniEditor::processEvent(const irr::SEvent& event){
 						}
 					}
 				}
-			}else if(guievent.EventType==EGET_ELEMENT_HOVERED || guievent.EventType==EGET_ELEMENT_FOCUSED){
-				for(int32_t i=0; i<fieldCount; i++){
-						bringToFrontRecursive(guievent.Caller);
-				}
 			}else if(guievent.EventType == EGET_BUTTON_CLICKED){
 				for(int i=0; i<fieldCount; i++){
 					if((valType[i]==COLOR_RGB || valType[i]==COLOR_RGBA) && guievent.Caller==input[i]){
@@ -358,9 +383,9 @@ void CommonIniEditor::processEvent(const irr::SEvent& event){
 						}else if(valType[i]==NOT_EDITABLE){
 							value = defaultValue[i];
 						}else if(valType[i]==ONE_OF){
-							int idx = ((IGUIComboBox*)input[i])->getSelected();
+							int idx = ((IGUIListBox*)input[i])->getSelected();//IGUIComboBox
 							if(idx==-1){idx=0;}
-							value = convertWStringToUtf8String(std::wstring(((IGUIComboBox*)input[i])->getItem(idx)));
+							value = convertWStringToUtf8String(std::wstring(((IGUIListBox*)input[i])->getListItem(idx)));//IGUIComboBox getItem
 						}else if(valType[i]==COLOR_RGB || valType[i]==COLOR_RGBA){
 							std::string def[4]; int di=0;
 							for(uint32_t ci=0; ci<defaultValue[i].size(); ci++){
@@ -441,6 +466,7 @@ bool IniEditorGUIElement::OnEvent(const SEvent& event){
 		remove();
 		return true;
 	}else{
+		grab();
 		bool res = IGUIElement::OnEvent(event);//it may get deleted in onSuccess
 		if(iniEditor->isVisible()){
 			iniEditor->processEvent(event);
@@ -450,6 +476,7 @@ bool IniEditorGUIElement::OnEvent(const SEvent& event){
 				onCancel();
 			}
 		}
+		drop();
 		return res;
 	}
 }

@@ -107,6 +107,12 @@ class Drawer2D{
 	//! Mirror UV Coordinates for Images, call again with same parameters to undo/mirror twice
 	void setMirroring(bool horizontal, bool vertical);
 	
+	//! sets absolute texture coordinates for mirroring
+	void setMirrorTexCoords(bool horizontal = false, bool vertical = false);
+	
+	//! rotates tex coords counterclockwise in degrees
+	void setTexCoordsRotation(float angle);
+	
 	void drawRectWithCorner(const irr::core::rect<irr::f32>& rectangle, irr::f32 uvCornerSize, irr::f32 realCornerSize, irr::video::ITexture* tex, irr::video::SColor color = irr::video::SColor(255,255,255,255), const irr::core::rect<irr::s32>* clip = NULL);
 	
 	//! creates a rectangle which vertices make it possible to have non sharp corners. This is done by inner and outer vertices.
@@ -118,6 +124,13 @@ class Drawer2D{
 	//! p: Array of pixel coordinates, color vertex color, lineThickness in pixels, texPerLinePixel: texture parts [0-1] per pixel
 	//! weldedVertices: true: less vertex count but distorted texture coordinates, false: double vertex count but correct texture coordinates
 	void drawPolygon(irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::f32 lineThickness = 3,float texPerLinePixel = 0.01f, irr::video::ITexture* tex = NULL, bool closed = true, float lineHandle = 0.f, bool weldedVertices = true);
+	
+	void drawRectOutline(irr::core::rect<irr::f32> r, irr::video::SColor color, irr::f32 lineThickness = 3, float texPerLinePixel = 0.01f, irr::video::ITexture* tex = NULL, float lineHandle = 0.f, bool weldedVertices = true);
+
+	void drawRectOutline(irr::core::rect<irr::s32> r, irr::video::SColor color, irr::f32 lineThickness = 3, float texPerLinePixel = 0.01f, irr::video::ITexture* tex = NULL, float lineHandle = 0.f, bool weldedVertices = true);
+
+	//! uses drawPolygon
+	void drawCircle(irr::core::vector2d<irr::f32> center, irr::f32 radius, irr::s32 subdivionCount, irr::video::SColor color, irr::f32 lineThickness = 3,float texPerLinePixel = 0.01f, irr::video::ITexture* tex = NULL, float lineHandle = 0.f);
 	
 	//! fill arc using a polygon, angle in degrees, deltaAngle: distance between subdivisions in degrees (e.g. 5)
 	//! angles start at (center.X-radius, center.Y) and increase in clockwise direction
@@ -143,7 +156,7 @@ class Drawer2D{
 	//! bbMin/bbMax only important for texture coordinates. If texture coordinates are irrelevant this can be something arbitrary as long as the bb area is not zero
 	void drawFilledPolygon(irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::core::vector2d<irr::f32> bbMin, irr::core::vector2d<irr::f32> bbMax, irr::video::ITexture* tex=NULL, float texScale = 1.f);
 	
-	void drawRoundLoadingBar(const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress, irr::f32 lineThicknes);
+	void drawRoundLoadingBar(const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress, irr::f32 lineThickness);
 	
 	void setTextureWrap(irr::video::E_TEXTURE_CLAMP uwrap = irr::video::ETC_REPEAT, irr::video::E_TEXTURE_CLAMP vwrap = irr::video::ETC_REPEAT);
 	
