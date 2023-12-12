@@ -70,6 +70,7 @@ void delay(uint32_t ms){
 void delayMicroseconds(uint32_t us){
 	#if _WIN32
 	delay(us/1000);
+	#warning "Proper implementation of delayMicroseconds missing"
 	#else
 	usleep(us);
 	#endif

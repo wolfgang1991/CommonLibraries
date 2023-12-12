@@ -811,6 +811,21 @@ void preprocessPoly(const irr::core::array< irr::core::vector2d<irr::f32> >& inP
 	//std::cout << "inP.size(): " << inP.size() << " outP.size(): " << outP.size() << std::endl;
 }
 
+void Drawer2D::drawCircle(irr::core::vector2d<irr::f32> center, irr::f32 radius, irr::s32 subdivionCount, irr::video::SColor color, irr::f32 lineThickness, float texPerLinePixel, irr::video::ITexture* tex, float lineHandle){
+	if(subdivionCount<3){return;}
+	irr::core::array< irr::core::vector2d<irr::f32> > vertices;
+	vertices.set_used(subdivionCount);
+	double dangle = 2.0*::PI/subdivionCount;
+	double negativeRadius = -radius;
+	for(s32 i=0; i<subdivionCount; i++){
+		vector2d<f32>& v = vertices[i];
+		double angle = i*dangle;
+		v.X = center.X + negativeRadius * sin(angle);
+		v.Y = center.Y + negativeRadius * cos(angle);
+	}
+	drawPolygon(vertices, color, lineThickness, texPerLinePixel, tex, true, lineHandle, true);
+}
+
 void Drawer2D::drawPolygon(irr::core::array< irr::core::vector2d<irr::f32> >& p, irr::video::SColor color, irr::f32 lineThickness, float texPerLinePixel, irr::video::ITexture* tex, bool closed, float lineHandle, bool weldedVertices){
 	//Build meshbuffer
 	mb.MappingHint_Index = EHM_NEVER;
@@ -919,6 +934,26 @@ void Drawer2D::setTextureCoordinates(){
 	tcoords[3] = vector2d<f32>(1.f,1.f);
 }
 
+void Drawer2D::setMirrorTexCoords(bool horizontal, bool vertical){
+	tcoords[0] = vector2d<f32>(horizontal?1.f:0.f,vertical?1.f:0.f);
+	tcoords[1] = vector2d<f32>(horizontal?0.f:1.f,vertical?1.f:0.f);
+	tcoords[2] = vector2d<f32>(horizontal?1.f:0.f,vertical?0.0:1.f);
+	tcoords[3] = vector2d<f32>(horizontal?0.f:1.f,vertical?0.f:1.f);
+}
+
+void Drawer2D::setTexCoordsRotation(float angle){
+	angle /= DEG_RAD;
+	vector2d<f32> center(0.5f, 0.5f);
+	float halfCos = 0.5*cos(angle);
+	float halfSin = 0.5*sin(angle);
+	vector2d<f32> halfX(halfCos, -halfSin);
+	vector2d<f32> halfY(halfSin, halfCos);
+	tcoords[0] = center - halfX - halfY;
+	tcoords[1] = center + halfX - halfY;
+	tcoords[2] = center - halfX + halfY;
+	tcoords[3] = center + halfX + halfY;
+}
+
 void Drawer2D::setMirroring(bool horizontal, bool vertical){
 	for(int i = 0; i<4; i++){
 		if(horizontal){tcoords[i].X = 1.0f-tcoords[i].X;}
@@ -932,6 +967,19 @@ void Drawer2D::setMaterialType(E_MATERIAL_TYPE type){
 
 irr::video::E_MATERIAL_TYPE Drawer2D::getMaterialType(){
 	return stdMat.MaterialType;
+}
+
+void Drawer2D::drawRectOutline(irr::core::rect<irr::f32> r, irr::video::SColor color, irr::f32 lineThickness, float texPerLinePixel, irr::video::ITexture* tex, float lineHandle, bool weldedVertices){
+	irr::core::array< irr::core::vector2d<irr::f32> > p(4);
+	p.push_back(r.UpperLeftCorner);
+	p.push_back(vector2d<irr::f32>(r.LowerRightCorner.X, r.UpperLeftCorner.Y));
+	p.push_back(r.LowerRightCorner);
+	p.push_back(vector2d<irr::f32>(r.UpperLeftCorner.X, r.LowerRightCorner.Y));
+	drawPolygon(p, color, lineThickness, texPerLinePixel, tex, true, lineHandle, weldedVertices);
+}
+
+void Drawer2D::drawRectOutline(irr::core::rect<irr::s32> r, irr::video::SColor color, irr::f32 lineThickness, float texPerLinePixel, irr::video::ITexture* tex, float lineHandle, bool weldedVertices){
+	drawRectOutline(rect<f32>(r.UpperLeftCorner.X, r.UpperLeftCorner.Y, r.LowerRightCorner.X, r.LowerRightCorner.Y), color, lineThickness, texPerLinePixel, tex, lineHandle, weldedVertices);
 }
 
 static void calcRoundLoadingBar(irr::core::array< irr::core::vector2d<irr::f32> >& out, const irr::core::rect<irr::s32>& r, irr::f32 maxX){
@@ -955,10 +1003,10 @@ static void calcRoundLoadingBar(irr::core::array< irr::core::vector2d<irr::f32> 
 	}
 }
 
-void Drawer2D::drawRoundLoadingBar(const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress, irr::f32 lineThicknes){
+void Drawer2D::drawRoundLoadingBar(const irr::video::SColor& color, const irr::core::rect<irr::s32>& positions, irr::f32 progress, irr::f32 lineThickness){
 	irr::core::array< irr::core::vector2d<irr::f32> > poly;
 	calcRoundLoadingBar(poly, positions, positions.LowerRightCorner.X);
-	drawPolygon(poly, color, lineThicknes, 0.01f, NULL, true, 0.5f, true);
+	drawPolygon(poly, color, lineThickness, 0.01f, NULL, true, 0.5f, true);
 	s32 dist = 0.3*Min(positions.getWidth(), positions.getHeight());
 	s32 origin = positions.UpperLeftCorner.X+dist;
 	rect<s32> r(origin, positions.UpperLeftCorner.Y+dist, positions.LowerRightCorner.X-dist, positions.LowerRightCorner.Y-dist);

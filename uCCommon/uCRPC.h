@@ -109,9 +109,12 @@ namespace UCRPC{
 	class String{
 		
 		public:
-
+		
 		uint16_t actualLength;
-		TChar data[maxLength];
+		TChar d[maxLength];
+		
+		static constexpr uint16_t capacity = maxLength;
+		using value_type = TChar;
 		
 		String():actualLength(0){}
 		
@@ -126,30 +129,25 @@ namespace UCRPC{
 		
 		void setFromData(const TChar* cString, uint16_t cStringLength){
 			if(cStringLength>maxLength){cStringLength = maxLength;}
-			memcpy(data, cString, cStringLength);
+			memcpy(d, cString, cStringLength);
 			actualLength = cStringLength;
 		}
 		
 		String(char c){
-			data[0] = c;
+			d[0] = c;
 			actualLength = 1;
 		}
 		
 		#ifndef MICROCONTROLLER_PLATFORM
-		String(std::string s){
+		String(const std::string& s){
 			actualLength = maxLength>s.size()?s.size():maxLength;
-			memcpy(data, &(s[0]), actualLength);
+			memcpy(d, &(s[0]), actualLength);
 		}
 		
 		std::string convertToStdString() const{
-			return std::string((char*)data, actualLength);
+			return std::string((char*)d, actualLength);
 		}
 		#endif
-		
-		//! must not be larger maxLength
-		void resize(uint16_t newSize){
-			actualLength = newSize;
-		}
 		
 		uint16_t size() const{
 			return actualLength;
@@ -159,16 +157,24 @@ namespace UCRPC{
 			return actualLength==0;
 		}
 		
-		TChar* getData(){
-			return data;
+		bool full() const{
+			return actualLength>=maxLength;
+		}
+		
+		TChar* data(){
+			return d;
+		}
+		
+		const TChar* data() const{
+			return d;
 		}
 		
 		TChar operator[](uint16_t index) const{
-			return data[index];
+			return d[index];
 		}
 		
 		TChar& operator[](uint16_t index){
-			return data[index];
+			return d[index];
 		}
 		
 		static constexpr uint16_t getMaxLength(){
@@ -177,14 +183,19 @@ namespace UCRPC{
 		
 		//! Warning no range check for single char
 		void push_back(TChar b){
-			data[actualLength] = b;
+			d[actualLength] = b;
 			actualLength++;
+		}
+		
+		//! no initialization, must not be larger maxLength
+		void resize(uint16_t newLength){
+			actualLength = newLength;
 		}
 		
 		String<maxLength, TChar>& operator<<(int32_t i){
 			size_t len = maxLength-actualLength;
-			int written = snprintf(&data[actualLength], len, "%" PRIi32, i);
-			if(written>=0 && written<len){
+			int written = snprintf(&d[actualLength], len, "%" PRIi32, i);
+			if(written>=0 && written<=len){
 				actualLength += written;
 			}
 			return *this;
@@ -193,7 +204,7 @@ namespace UCRPC{
 		String<maxLength, TChar>& operator<<(const TChar* cString){
 			uint16_t length = 0; for(;cString[length]!='\0';length++){}
 			uint16_t toCopy = (maxLength>actualLength+length)?length:(maxLength-actualLength);
-			memcpy(&(data[actualLength]), cString, toCopy);
+			memcpy(&(d[actualLength]), cString, toCopy);
 			actualLength += toCopy;
 			return *this;
 		}
@@ -211,7 +222,7 @@ namespace UCRPC{
 		TIndex serialize(uint8_t* target) const{
 			TIndex offset = 0;
 			UCRPC::serialize<decltype(actualLength)>(target, offset, actualLength);
-			memcpy(&(target[offset]), data, actualLength);
+			memcpy(&(target[offset]), d, actualLength);
 			return offset+actualLength;
 		}
 			
@@ -220,7 +231,7 @@ namespace UCRPC{
 			UCRPC::deserialize<decltype(actualLength)>(buffer, offset, bufferSize, actualLength);
 			if(actualLength>maxLength){actualLength = maxLength;}
 			if(actualLength>bufferSize-offset){actualLength = bufferSize-offset;}
-			memcpy(data, &(buffer[offset]), actualLength);
+			memcpy(d, &(buffer[offset]), actualLength);
 			offset += actualLength;
 		}
 		
@@ -231,10 +242,13 @@ namespace UCRPC{
 	template <uint16_t maxLength, typename TChar = char>
 	class StringInterpretation{
 		
-		public:
-
 		uint16_t actualLength;
-		const TChar* data;
+		const TChar* d;
+		
+		public:
+		
+		static constexpr uint16_t capacity = maxLength;
+		using value_type = TChar;
 		
 		StringInterpretation(){
 			actualLength = 0;
@@ -242,16 +256,16 @@ namespace UCRPC{
 		
 		StringInterpretation(const StringInterpretation& other){
 			actualLength = other.actualLength;
-			data = other.data;
+			d = other.d;
 		}
 		
 		StringInterpretation(const TChar* cString){
-			data = cString;
+			d = cString;
 			actualLength = strlen(cString);
 		}
 		
 		StringInterpretation(const TChar* cString, uint16_t cStringLength){
-			data = cString;
+			d = cString;
 			actualLength = cStringLength;
 		}
 		
@@ -263,12 +277,12 @@ namespace UCRPC{
 			return actualLength==0;
 		}
 		
-		const TChar* getData(){
-			return data;
+		const TChar* data() const{
+			return d;
 		}
 		
 		TChar operator[](uint16_t index) const{
-			return data[index];
+			return d[index];
 		}
 		
 		template<typename TIndex>
@@ -280,7 +294,7 @@ namespace UCRPC{
 		TIndex serialize(uint8_t* target) const{
 			TIndex offset = 0;
 			UCRPC::serialize<decltype(actualLength)>(target, offset, actualLength);
-			memcpy(&(target[offset]), data, actualLength);
+			if(d!=NULL){memcpy(&(target[offset]), d, actualLength);}
 			return offset+actualLength;
 		}
 			
@@ -289,7 +303,7 @@ namespace UCRPC{
 			UCRPC::deserialize<decltype(actualLength)>(buffer, offset, bufferSize, actualLength);
 			if(actualLength>maxLength){actualLength = maxLength;}
 			if(actualLength>bufferSize-offset){actualLength = bufferSize-offset;}
-			data = (const TChar*)&(buffer[offset]);
+			d = (const TChar*)&(buffer[offset]);
 			offset += actualLength;
 		}
 		
@@ -304,7 +318,7 @@ namespace UCRPC{
 		
 		public:
 		
-		bool isFull() const{
+		bool full() const{
 			return actualLength>=maxLength;
 		}
 		
@@ -337,6 +351,11 @@ namespace UCRPC{
 			data[actualLength] = object;
 			actualLength++;
 		}
+		
+		//! no initialization, must not be larger maxLength
+		void resize(uint16_t newLength){
+			actualLength = newLength;
+		}
 
 		template<typename TIndex>
 		static constexpr TIndex getSpaceRequirement(){
@@ -367,6 +386,13 @@ namespace UCRPC{
 	//! special implementation for strings
 	template<typename TIndex, uint16_t maxLength>
 	bool deserializeResult(const uint8_t* buffer, TIndex bufferSize, String<maxLength>& outValue){
+		TIndex offset = 0; deserialize(buffer, offset, bufferSize, outValue); // sanity checks included in deserialize
+		return true;//always true / string may contain rubbish in case of malevolent sender
+	}
+	
+	//! special implementation for strings
+	template<typename TIndex, uint16_t maxLength>
+	bool deserializeResult(const uint8_t* buffer, TIndex bufferSize, StringInterpretation<maxLength>& outValue){
 		TIndex offset = 0; deserialize(buffer, offset, bufferSize, outValue); // sanity checks included in deserialize
 		return true;//always true / string may contain rubbish in case of malevolent sender
 	}
@@ -457,7 +483,7 @@ namespace UCRPC{
 	//! maxSendBytesBeforeReceive: (useful from host perspective) max amount of bytes which can be sent before a receive (excess bytes are discarded), 0 disables this feature. On some STM32 microcontrollers the USB receive buffer must not be fully filled (deadlock, freeze). In this case maxSendBytesBeforeReceive should be around half the USB receive buffer.
 	//! maxSendReceiveTimeUS: time in us after which sending/receiving is paused to yield to other "tasks" (manual scheduling), there are two read tasks (without second serial one) and one send task in the update function  (worst case delay is 3*maxSendReceiveTimeUS)
 	//! retryCount: if 0 retries calls forever
-	template <typename TIndex, typename TSerial, TIndex maxParameterSize, uint8_t maxParallelFunctionCalls, typename TRegisteredFunctions, uint16_t maxSendBytesBeforeReceive = 0, typename TSecondarySerial = TSerial, uc_time_t retryPeriod = 200, uint8_t retryCount = 10, uint16_t minBufferFillToSend = 16, uc_time_t sendPeriod = 10, uc_time_t maxSendReceiveTimeUS = 10000/3>
+	template <typename TIndex, typename TSerial, TIndex maxParameterSize, uint8_t maxParallelFunctionCalls, typename TRegisteredFunctions, uint16_t maxSendBytesBeforeReceive = 0, typename TSecondarySerial = TSerial, uc_time_t initialRetryPeriod = 200, uint8_t initialRetryCount = 10, uint16_t minBufferFillToSend = 16, uc_time_t sendPeriod = 10, uc_time_t maxSendReceiveTimeUS = 10000/3>
 	class UCRPC : public IUCRPC<TIndex, maxParameterSize>{
 
 		public:
@@ -526,6 +552,9 @@ namespace UCRPC{
 		}
 		
 		uint8_t uidCounter;
+		
+		uint8_t retryCount;
+		uint32_t retryPeriod;
 		
 		uint8_t getUnusedUID(){
 			bool used = true;
@@ -596,7 +625,7 @@ namespace UCRPC{
 			if(required>bufferSize){
 				return false;
 			}else if(required>bufferSize-sendBufferOffset){
-				send();
+				send(true);
 			}
 			writeDelimeter();
 			STARTCRC32(crc32)
@@ -607,13 +636,13 @@ namespace UCRPC{
 			writeEscapedScalar<uint32_t>(crc32, 0);
 			writeDelimeter();
 			if(forceSend || sendBufferOffset>minBufferFillToSend){
-				send();
+				send(true);
 			}
 			return true;
 		}
 		
-		void send(){
-			if(maxSendBytesBeforeReceive==0 || maxSendBytesBeforeReceive-bytesSentBeforeReceive>=sendBufferOffset){
+		void send(bool force = false){
+			if(force || maxSendBytesBeforeReceive==0 || maxSendBytesBeforeReceive-bytesSentBeforeReceive>=sendBufferOffset){
 				serial.send((const char*)sendBuffer, sendBufferOffset);
 				bytesSentBeforeReceive += sendBufferOffset;//overflow ok, can only happen with maxSendBytesBeforeReceive==0
 			}
@@ -687,10 +716,27 @@ namespace UCRPC{
 		static constexpr TIndex MappedMaxParameterSize = maxParameterSize;
 		
 		UCRPC(TSerial& serial, TRegisteredFunctions& functions):serial(serial),secondarySerial(NULL),sendBufferOffset(0),rcvBufferOffset(0),fwdBufferOffset(0),callPtrIndex(0),bytesSentBeforeReceive(0),uidCounter(0),functions(functions),hasLastFunction(false),lastSendTime(0){
+			retryCount = initialRetryCount;
+			retryPeriod = initialRetryPeriod;
 			functions.sort();
 			for(uint8_t i=0; i<maxParallelFunctionCalls; i++){
 				callPtrs[i] = &(calls[i]);
 			}
+		}
+		
+		//! 0: retries calls forever
+		//! retryPeriod: used for timeout (fail) and resend
+		void setRetryParameters(uint8_t retryCount = initialRetryCount, uc_time_t retryPeriod = initialRetryPeriod){
+			this->retryCount = retryCount;
+			this->retryPeriod = retryPeriod;
+		}
+		
+		uint8_t getRetryCount() const{
+			return retryCount;
+		}
+		
+		uc_time_t getRetryPeriod() const{
+			return retryPeriod;
 		}
 		
 		void setSecondarySerial(TSecondarySerial* s){
@@ -710,7 +756,6 @@ namespace UCRPC{
 					callPtrIndex++;
 					toFill->functionID = functionID;
 					toFill->uniqueID = getUnusedUID();
-					//std::cout << "call: functionID: " << functionID << " toFill->uniqueID: " << (int)(toFill->uniqueID) << std::endl;
 					toFill->caller = caller;
 					toFill->usedParameterSpace = 0;
 					serialize(toFill->parameter, toFill->usedParameterSpace, parameter);
@@ -1042,5 +1087,40 @@ struct UCRPC_EMTPY{
 	UCRPC_EMTPY():c(0){}
 	UCRPC_FUNCTIONS(c)
 };
+
+#ifndef MICROCONTROLLER_PLATFORM
+
+template <typename TResult, typename TRPC>
+bool executeBlockingRPC(TResult& returnValue, TRPC* rpc, uint16_t functionID, const std::function<void(TRPC*,UCRPC::IUCRemoteProcedureCaller*)>& call){
+	class : public UCRPC::IUCRemoteProcedureCaller{
+		public:
+		bool running = true;
+		bool success = false;
+		TResult* returnValue;
+		uint16_t funcID;
+		void OnProcedureResult(uint8_t* result, uint16_t resultLength, uint16_t functionID){
+			if(functionID==funcID){
+				running = false;
+				success = UCRPC::deserializeResult(result, resultLength, *returnValue);
+			}
+		}
+		void OnProcedureError(UCRPC::IUCRemoteProcedureCaller::ProcedureError error, uint16_t functionID){
+			if(functionID==funcID){
+				std::cout << "Procedure error of function " << functionID << ": " << (int)error << std::endl;
+				running = success = false;
+			}
+		}
+	} caller;
+	caller.returnValue = &returnValue;
+	caller.funcID = functionID;
+	call(rpc, &caller);
+	while(caller.running){
+		rpc->update();
+		delay(1);
+	}
+	return caller.success;
+}
+
+#endif
 
 #endif

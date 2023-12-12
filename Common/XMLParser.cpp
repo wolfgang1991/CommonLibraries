@@ -179,10 +179,23 @@ void XMLParser::parse(char c){
 		if(c==']'){
 			mode = 16;
 		}else{
-			dom->intermediate << c;
+			dom->parent->intermediate << c;
 		}
 	}else if(mode==16){
-		mode = 11;//last ]
+		if(c==']'){//second ] from CDATA
+			mode = 17;
+		}else if(!(c==' ' || c=='\t')){
+			dom->parent->intermediate << ']' << c;
+			mode = 15;
+		}
+	}else if(mode==17){
+		if(c=='>'){
+			mode = 0;
+			domBack();
+		}else if(!(c==' ' || c=='\t' || c==']')){//in case of legal duplicate ] at end
+			dom->parent->intermediate << "]]" << c;
+			mode = 15;
+		}
 	}
 }
 

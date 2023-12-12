@@ -25,8 +25,9 @@ class IniFile{
 
 	IniFile(){}
 
+	//! sets new content from string without erasing the old content (merge)
 	void setFromString(const char* str);
-
+	
 	std::string toString() const;
 
 	IniFile(const std::string& file);

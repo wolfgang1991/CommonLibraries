@@ -66,6 +66,7 @@ bool BeautifulCheckBox::OnEvent(const irr::SEvent& event){
 			if(AbsoluteRect.isPointInside(mPos) && pressedStart.isPointInside(mPos)){
 				if(Parent && isTrulyVisible()){
 					checked = !checked;
+					BeautifulGUIText::OnEvent(this->event);
 					BeautifulGUIText::OnEvent(event);//important, otherwise e.g. parent aggregations don't scroll properly
 					return true;
 				}

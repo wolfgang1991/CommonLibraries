@@ -23,6 +23,8 @@ AggregatableGUIElementAdapter* addAggregatableCheckBox(irr::gui::IGUIEnvironment
 
 AggregatableGUIElementAdapter* addAggregatableComboBox(irr::gui::IGUIEnvironment* env, irr::f32 weight, irr::s32 id = -1);
 
+AggregatableGUIElementAdapter* addAggregatableListBox(irr::gui::IGUIEnvironment* env, irr::f32 weight, irr::s32 id = -1);
+
 //! useful in case an adapter is sometimes used to avoid unnecessary ifs
 irr::gui::IGUIElement* getFirstGUIElementChild(irr::gui::IGUIElement* ele);
 

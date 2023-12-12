@@ -163,6 +163,11 @@ class ASocket : public ISocket{
 	
 	virtual bool setReceiveBufferSize(uint32_t size);
 	
+	virtual bool setSendBufferSize(uint32_t size);
+	
+	//! useful only for blocking reads
+	virtual void setBlockingReceiveTimeout(uint32_t microseconds);
+	
 	virtual ~ASocket();
 
 };
@@ -241,6 +246,9 @@ class IPv4UDPSocket : public IPv4Socket{
 	uint32_t recv(char* buf, uint32_t bufSize, bool readBlocking = false);
 	
 	const IPv4Address& getLastDatagramAddress() const;
+	
+	//! addressString must be a multicast address from 224.0.0.0/4 subnet, true if successful
+	bool joinMulticastGroup(const std::string& addressString);
 
 };
 

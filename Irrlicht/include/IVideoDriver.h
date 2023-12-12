@@ -330,7 +330,7 @@ namespace video
 		\return Pointer to the newly created texture. This pointer
 		should not be dropped. See IReferenceCounted::drop() for more
 		information. */
-		_IRR_DEPRECATED_ ITexture* addTexture(const io::path& name, IImage* image, void* mipmapData)
+		ITexture* addTexture(const io::path& name, IImage* image, void* mipmapData)//changed: removed _IRR_DEPRECATED_
 		{
 			if (image)
 				image->setMipMapsData(mipmapData, false, true);
@@ -1421,7 +1421,7 @@ namespace video
 		you have to render some special things, you can clear the
 		zbuffer during the rendering process with this method any time.
 		*/
-		_IRR_DEPRECATED_ void clearZBuffer()
+		void clearZBuffer()//changed: removed _IRR_DEPRECATED_
 		{
 			clearBuffers(ECBF_DEPTH, SColor(255,0,0,0), 1.f, 0);
 		}

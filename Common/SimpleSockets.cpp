@@ -281,16 +281,40 @@ void IPv6Address::setInternalRepresentation(const sockaddr_in6& r){
 	addr = r;
 }
 
+void ASocket::setBlockingReceiveTimeout(uint32_t microseconds){
+	#if SIMPLESOCKETS_WIN
+	#warning "setBlockingReceiveTimeout implementation missing"
+	#else
+	struct timeval tv;
+	tv.tv_sec = microseconds/1000000;
+	tv.tv_usec = microseconds%1000000;
+	setsockopt(socketHandle, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+	#endif
+}
+
 int ASocket::getSocketHandle() const{
 	return socketHandle;
 }
 
 bool ASocket::setReceiveBufferSize(uint32_t size){
-	#ifdef SIMPLESOCKETS_WIN
+	#if SIMPLESOCKETS_WIN
 	int s = size;
 	if(setsockopt(socketHandle, SOL_SOCKET, SO_RCVBUF, (const char*)&s, sizeof(size))!=-1){
 	#else
 	if(setsockopt(socketHandle, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size))!=-1){
+	#endif
+		restoreReceiveSize = size;
+		return true;
+	}
+	return false;
+}
+
+bool ASocket::setSendBufferSize(uint32_t size){
+	#if SIMPLESOCKETS_WIN
+	int s = size;
+	if(setsockopt(socketHandle, SOL_SOCKET, SO_SNDBUF, (const char*)&s, sizeof(size))!=-1){
+	#else
+	if(setsockopt(socketHandle, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size))!=-1){
 	#endif
 		restoreReceiveSize = size;
 		return true;
@@ -593,6 +617,20 @@ uint32_t IPv4UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	
 const IPv4Address& IPv4UDPSocket::getLastDatagramAddress() const{
 	return lastReceivedAddress;
+}
+
+bool IPv4UDPSocket::joinMulticastGroup(const std::string& addressString){
+	static struct ip_mreq command;
+	command.imr_multiaddr.s_addr = inet_addr(addressString.c_str());
+	command.imr_interface.s_addr = htonl(INADDR_ANY);
+	if(command.imr_multiaddr.s_addr != (in_addr_t)-1){
+		if(setsockopt(socketHandle, IPPROTO_IP, IP_ADD_MEMBERSHIP, &command, sizeof(command))<0){
+			handleErrorMessage();
+		}else{
+			return true;
+		}
+	}
+	return false;
 }
 
 IPv6Socket::IPv6Socket(){restoreBind = -1; restoreIPv4ReceptionEnabled = false; restoreReusePort = false;}

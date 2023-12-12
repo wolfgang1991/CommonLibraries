@@ -42,6 +42,9 @@ std::function<bool(char*&, uint32_t&)> createLoadFileFunction(irr::io::IFileSyst
 //! true if successful
 bool loadFileWithAssetSupportIntoVector(irr::io::IFileSystem* fsys, const std::string& file, std::vector<char>& v);
 
+//! true if successful
+bool loadFileWithAssetSupportIntoString(irr::io::IFileSystem* fsys, const std::string& file, std::string& v);
+
 //! creates a function for loadFileWithAssetSupportIntoVector (useful to reduce boilerplate code)
 std::function<bool(std::vector<char>&)> createLoadFileIntoVectorFunction(irr::io::IFileSystem* fsys, const std::string& file);
 

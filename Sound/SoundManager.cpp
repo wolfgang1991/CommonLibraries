@@ -94,8 +94,10 @@ SoundManager::SoundManager(double maxBufferTime){
 }
 	
 SoundManager::~SoundManager(){
-	for(auto it = p->pool.begin(); it!=p->pool.end(); ++it){
+	for(auto it = p->pool.begin(); it!=p->pool.end(); ++it){//first stop everything then delete (because of SoundSource reuse e.g. in SoundEffectQueue)
 		stop(*it);
+	}
+	for(auto it = p->pool.begin(); it!=p->pool.end(); ++it){
 		delete *it;
 	}
 	delete p;
