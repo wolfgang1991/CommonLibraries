@@ -3,6 +3,8 @@
 
 #undef max
 
+#include "uCMisc.h"
+
 namespace ucstd{
 	
 	template<bool B, class T = void>
@@ -16,16 +18,6 @@ namespace ucstd{
 
 	template<class T, class F>
 	struct conditional<false, T, F> { typedef F type; };
-	
-	template<typename T>
-	T clamp(T value, T min, T max){
-		return value<min?min:(value>max?max:value);
-	}
-	
-	template<typename T>
-	T max(T a, T b){
-		return a>b?a:b;
-	}
 	
 	struct true_type { typedef bool value_type; static constexpr bool value = true; };
 	
