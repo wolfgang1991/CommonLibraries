@@ -39,6 +39,16 @@ class Matrix{
 		}
 	}
 	
+	Matrix<TScalar, columnCount, rowCount> getTranspose() const{
+		Matrix<TScalar, columnCount, rowCount> res(MatrixInit::UNDEFINED);
+		for(uint32_t row=0; row<rowCount; row++){
+			for(uint32_t column=0; column<columnCount; column++){
+				res.set(column, row, get(row, column));
+			}
+		}
+		return res;
+	}
+	
 	void setZero(){
 		for(uint32_t i=0; i<size; i++){
 			data[i] = 0;
@@ -141,6 +151,22 @@ TScalar calcDotProduct(const Vector<TScalar, size>& a, const Vector<TScalar, siz
 template<typename TScalar, uint32_t size>
 TScalar calcAngle(const Vector<TScalar, size>& a, const Vector<TScalar, size>& b){
 	return acos(calcDotProduct(a,b) / (a.calcFrobeniusNorm()*b.calcFrobeniusNorm()) );
+}
+
+template<typename TScalar, uint32_t size>
+void normalizeInPlace(Vector<TScalar, size>& v){
+	TScalar length = v.calcFrobeniusNorm();
+	if(length==static_cast<TScalar>(0)){return;}//no divide by zero
+	TScalar f = static_cast<TScalar>(1)/length;
+	v[0] *= f;
+	v[1] *= f;
+	v[2] *= f;
+}
+
+//! Calculate cross product of two 3D vectors (axb)
+template<typename TScalar>
+Vector3D<TScalar> calcCrossProduct(const Vector3D<TScalar>& a, const Vector3D<TScalar>& b){
+	return Vector3D<TScalar>{ a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0] };
 }
 
 //! Rotation around first axis
