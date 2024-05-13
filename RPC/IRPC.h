@@ -2,6 +2,7 @@
 #define IRPC_H_INCLUDED
 
 #include <SimpleSockets.h>
+#include <timing.h>
 
 #include <vector>
 #include <map>
@@ -12,6 +13,7 @@
 #include <type_traits>
 #include <cassert>
 #include <functional>
+#include <memory>
 
 //! Interface for RPC Values
 class IRPCValue{
@@ -170,6 +172,9 @@ struct is_array<std::set<T>> : public std::true_type {};
 template<typename T> 
 struct is_array<std::unordered_set<T>> : public std::true_type {};
 
+template<typename T, std::size_t N> 
+struct is_array<std::array<T,N>> : public std::true_type {};
+
 //! Currently map and unordered_map supported, in case more types shall be supported additional traits have to be added here
 template<typename T>
 struct is_object : public std::false_type {};
@@ -254,6 +259,22 @@ TNativeValue ObjectValue::createNative(ObjectValue* rpcValue){
 		res[it->first] = createNativeValue<typename TNativeValue::mapped_type>(it->second);
 	}
 	return res;
+}
+
+//! checks only the first "layer"
+inline bool hasValidRPCSignature(const std::vector<IRPCValue*>& values, const std::vector<IRPCValue::Type>& types){
+	if(types.size()!=values.size()){return false;}
+	for(uint32_t i=0; i<values.size(); i++){
+		if(values[i]->getType()!=types[i]){return false;}
+	}
+	return true;
+}
+
+inline bool hasRPCArrayValidFieldTypes(ArrayValue* array, IRPCValue::Type type){
+	for(IRPCValue* v : array->values){
+		if(v->getType()!=type){return false;}
+	}
+	return true;
 }
 
 // Interfaces: ------------------------------
@@ -389,6 +410,30 @@ class IRPCClient : public IMinimalRPCClient{
 	
 };
 
+inline std::shared_ptr<IRPCValue> blockForIRPCResult(const std::function<void(IRPC* rpc, IRemoteProcedureCaller* caller, uint32_t id)>& rpcFunction, IRPC* rpc, uint32_t id){
+	class : public IRemoteProcedureCaller{
+		public:
+		bool done = false;
+		uint32_t funcID;
+		std::shared_ptr<IRPCValue> result;
+		void OnProcedureResult(IRPCValue* results, uint32_t id){
+			done = id==funcID;
+			result = std::shared_ptr<IRPCValue>(results);
+		}
+		virtual void OnProcedureError(int32_t errorCode, const std::string& errorMessage, IRPCValue* errorData, uint32_t id){
+			done = id==funcID;
+			delete errorData;
+		}
+	} cbk;
+	cbk.funcID = id;
+	rpcFunction(rpc, &cbk, id);
+	while(!cbk.done){
+		rpc->update();
+		delay(1);
+	}
+	return cbk.result;
+}
+
 // Helper macros for user defined types:
 // Example:
 /*
@@ -432,22 +477,31 @@ class Foo{
 #define CREATE_NATIVE_END \
 		return nativeValue; \
 	}
-
+	
+#define FILL_FIELD_ALIAS(ALIAS, FIELD_NAME) \
+	rpcValue->values[#ALIAS] = createRPCValue(nativeValue.FIELD_NAME);
+	
 #define FILL_FIELD(FIELD_NAME) \
-	rpcValue->values[#FIELD_NAME] = createRPCValue(nativeValue.FIELD_NAME);
+	FILL_FIELD_ALIAS(FIELD_NAME, FIELD_NAME)
+
+#define FILL_NATIVE_FIELD_ALIAS(ALIAS, FIELD_NAME) \
+	nativeValue.FIELD_NAME = createNativeValue<decltype(nativeValue.FIELD_NAME)>(((ObjectValue*)rpcValue)->values[#ALIAS]);
 
 #define FILL_NATIVE_FIELD(FIELD_NAME) \
-	nativeValue.FIELD_NAME = createNativeValue<decltype(nativeValue.FIELD_NAME)>(((ObjectValue*)rpcValue)->values[#FIELD_NAME]);
+	FILL_NATIVE_FIELD_ALIAS(FIELD_NAME, FIELD_NAME)
 	
-#define FILL_NATIVE_FIELD_IF_AVAILABLE(FIELD_NAME, DEFAULT_VALUE) \
+#define FILL_NATIVE_FIELD_ALIAS_IF_AVAILABLE(ALIAS, FIELD_NAME, DEFAULT_VALUE) \
 	{ \
 		ObjectValue* o = (ObjectValue*)rpcValue; \
-		auto it = o->values.find(#FIELD_NAME); \
+		auto it = o->values.find(#ALIAS); \
 		if(it!=o->values.end()){ \
 			nativeValue.FIELD_NAME = createNativeValue<decltype(nativeValue.FIELD_NAME)>(it->second); \
 		}else{ \
 			nativeValue.FIELD_NAME = DEFAULT_VALUE; \
 		} \
 	}
+
+#define FILL_NATIVE_FIELD_IF_AVAILABLE(FIELD_NAME, DEFAULT_VALUE) \
+	FILL_NATIVE_FIELD_ALIAS_IF_AVAILABLE(FIELD_NAME, FIELD_NAME, DEFAULT_VALUE)
 
 #endif

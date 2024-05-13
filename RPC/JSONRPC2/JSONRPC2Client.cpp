@@ -103,7 +103,7 @@ void* JSONRPC2Client::clientMain(void* p){
 			lastPingSent = t;
 			for(auto it = client->clientToSend.begin(); it != client->clientToSend.end(); ++it){
 				#ifdef PRINT_COMMUNICATION
-				std::cout << "sending: " << *it << std::endl;
+				if(client->enableConsoleOutputIfDebugBuild){std::cout << "sending: " << *it << std::endl;}
 				#endif
 				client->socket->send(it->c_str(), it->size());
 			}
@@ -113,16 +113,20 @@ void* JSONRPC2Client::clientMain(void* p){
 			unlockMutex(client->mutexSync);
 		}
 		//Receive stuff & Timeout:
-		uint32_t read = client->socket->recv(buffer, bufferSize);
-		if(read==0 && t-lastReceived>pingTimeout){
+		int32_t read = client->socket->recv(buffer, bufferSize);
+		if(read<0 || (read==0 && t-lastReceived>pingTimeout)){
 			runThread = false;
-			std::cout << "Ping Timeout: " << (t-lastReceived) << "s" << std::endl;
+			if(read<0){
+				std::cout << "Socket error." << std::endl;
+			}else{
+				std::cout << "Ping Timeout: " << (t-lastReceived) << "s" << std::endl;
+			}
 		}
 		while(read>0){
 			#ifdef PRINT_COMMUNICATION
-			std::cout << "raw: " << std::string(buffer, read) << std::endl << std::flush;
+			if(client->enableConsoleOutputIfDebugBuild){std::cout << "raw: " << std::string(buffer, read) << std::endl << std::flush;}
 			#endif
-			for(uint32_t i=0; i<read; i++){
+			for(int32_t i=0; i<read; i++){
 				char c = buffer[i];
 				//std::cout << c << " state: " << state << " curlyBracketCount: " << curlyBracketCount << " squareBracketCount: " << squareBracketCount << std::endl;
 				switch(state){
@@ -222,7 +226,7 @@ void* JSONRPC2Client::clientMain(void* p){
 	return NULL;
 }
 
-JSONRPC2Client::JSONRPC2Client(bool escapeNonPrintableChars):escapeNonPrintableChars(escapeNonPrintableChars){
+JSONRPC2Client::JSONRPC2Client(bool escapeNonPrintableChars, bool enableConsoleOutputIfDebugBuild):escapeNonPrintableChars(escapeNonPrintableChars),enableConsoleOutputIfDebugBuild(enableConsoleOutputIfDebugBuild){
 	mustJoin = areTherePendingSends = syncExit = false;
 	initMutex(mutexSync);
 	parser = new JSONParser();
@@ -406,6 +410,9 @@ void JSONRPC2Client::handleEntity(IRPCValue* entity){
 						ss << "{\"jsonrpc\": \"2.0\", \"error\": {\"code\":-32601, \"message\": \"Method not found\", \"data\": \"" << method->value << "\"}, \"id\": " << id->value << "}";
 						mainToSend.push_back(ss.str());
 						delete o;
+						return;
+					}else{
+						std::cout << "Method not found & no id to return error: " << method->value << std::endl;
 						return;
 					}
 				}

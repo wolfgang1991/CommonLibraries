@@ -30,7 +30,7 @@ std::string escapeAndQuoteJSONString(const std::string& s, bool escapeNonPrintab
 	return ss.str();
 }
 
-std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPrintableChars){
+std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPrintableChars, uint8_t floatingPointPrecision){
 	IRPCValue::Type type = value.getType();
 	if(type==IRPCValue::BOOLEAN){
 		return ((const BooleanValue&)value).value?"true":"false";
@@ -40,7 +40,13 @@ std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPr
 			std::stringstream ss; ss << "\"" << fvalue << "\"";
 			return ss.str();
 		}
-		std::string res = convertToString<double>(fvalue);
+		std::string res;
+		if(floatingPointPrecision==0){
+			res = convertToString<double>(fvalue);
+		}else{
+			std::stringstream ss; ss << std::setprecision(floatingPointPrecision) << fvalue;
+			res = ss.str();
+		}
 		return res.find('.')==std::string::npos?(res+".0"):res;//must have a . to really be a double
 	}else if(type==IRPCValue::INTEGER){
 		return convertToString<int64_t>(((const IntegerValue&)value).value);
@@ -51,7 +57,7 @@ std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPr
 		std::stringstream ss; ss << "[";
 		for(uint32_t i=0; i<array.values.size(); i++){
 			if(i>0){ss << ",";}
-			ss << convertRPCValueToJSONString(*(array.values[i]), escapeNonPrintableChars);
+			ss << convertRPCValueToJSONString(*(array.values[i]), escapeNonPrintableChars, floatingPointPrecision);
 		}
 		ss << "]";
 		return ss.str();
@@ -61,7 +67,7 @@ std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPr
 		auto begin = object.values.begin();
 		for(auto it = begin; it != object.values.end(); ++it){
 			if(it!=begin){ss << ",";}
-			ss << "\"" << it->first << "\":" << convertRPCValueToJSONString(*(it->second), escapeNonPrintableChars);
+			ss << "\"" << it->first << "\":" << convertRPCValueToJSONString(*(it->second), escapeNonPrintableChars, floatingPointPrecision);
 		}
 		ss << "}";
 		return ss.str();
@@ -628,10 +634,13 @@ IJSONParser::State JSONParser::parse(char c, char lookahead){
 }
 
 IJSONParser::State JSONParser::parse(const std::string& s){
+	return parse(s.c_str());
+}
+
+IJSONParser::State JSONParser::parse(const char* cstr){
 	//double time = getSecs();
 	IJSONParser::State res = IJSONParser::PARSING;
-	const char* cstr = s.c_str();
-	for(uint32_t i=0; i<s.size(); i++){
+	for(uint32_t i=0; cstr[i]!=0; i++){
 		res = parse(cstr[i], cstr[i+1]);
 	}
 	//std::cout << "needed: " << (getSecs()-time) << std::endl;

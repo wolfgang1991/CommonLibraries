@@ -49,6 +49,8 @@ class IPv4Address : public IIPAddress{
 	
 	public:
 	
+	IPv4Address();
+	
 	IPv4Address(const std::string& addressString, uint16_t port);
 	
 	IP_VERSION getIPVersion() const;
@@ -78,6 +80,8 @@ class IPv6Address : public IIPAddress{
 	sockaddr_in6 addr;
 	
 	public:
+	
+	IPv6Address();
 	
 	IPv6Address(const std::string& addressString, uint16_t port);
 	

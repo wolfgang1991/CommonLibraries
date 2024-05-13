@@ -1,6 +1,8 @@
 #ifndef Matrix_H_INCLUDED
 #define Matrix_H_INCLUDED
 
+#include "mathHelpers.h"
+
 #include <cstdint>
 #include <functional>
 #include <array>
@@ -21,8 +23,6 @@ enum class MatrixInit{
 template <uint32_t TRowCount, uint32_t TColumnCount, typename TScalar>
 class Matrix{
 	
-	protected:
-	
 	std::array<TScalar, TRowCount*TColumnCount> data;
 	
 	public:
@@ -31,7 +31,12 @@ class Matrix{
 	typedef TScalar value_type;
 	static constexpr uint32_t rowCount = TRowCount;
 	static constexpr uint32_t columnCount = TColumnCount;
+	static constexpr uint32_t size = rowCount*columnCount;
 	static constexpr bool isMatrix = true;
+	
+	Scalar* getData(){return data.data();}
+	
+	const Scalar* getData() const{return data.data();}
 	
 	const Scalar& get(uint32_t row, uint32_t column = 0) const{
 		return data[column+columnCount*row];
@@ -41,12 +46,12 @@ class Matrix{
 		return data[column+columnCount*row];
 	}
 	
-	const Scalar& operator[](uint32_t row) const{
-		return get(row, 0);
+	const Scalar& operator[](uint32_t i) const{
+		return data[i];
 	}
 	
-	Scalar& operator[](uint32_t row){
-		return get(row, 0);
+	Scalar& operator[](uint32_t i){
+		return data[i];
 	}
 	
 	void set(uint32_t row, uint32_t column, TScalar value){
@@ -60,6 +65,8 @@ class Matrix{
 			visitMatrix(*this, [](uint32_t row, uint32_t column, TScalar& value){value = row==column?(TScalar)1:(TScalar)0;});
 		}
 	}
+	
+	//TODO move constructors, move assignment operator
 	
 	//Init internal array directly
 	template <typename... T> 
@@ -81,6 +88,58 @@ class Matrix{
 	
 };
 
+//! Interpretation of foreign memory as matrix
+template <uint32_t TRowCount, uint32_t TColumnCount, typename TScalar>
+class MatrixInterpretation{
+	
+	protected:
+	
+	TScalar* data;
+	
+	public:
+	
+	typedef TScalar Scalar;
+	typedef TScalar value_type;
+	static constexpr uint32_t rowCount = TRowCount;
+	static constexpr uint32_t columnCount = TColumnCount;
+	static constexpr uint32_t size = rowCount*columnCount;
+	static constexpr bool isMatrix = true;
+	
+	Scalar* getData(){return data;}
+	
+	const Scalar* getData() const{return data;}
+	
+	const Scalar& get(uint32_t row, uint32_t column = 0) const{
+		return data[column+columnCount*row];
+	}
+	
+	Scalar& get(uint32_t row, uint32_t column = 0){
+		return data[column+columnCount*row];
+	}
+	
+	const Scalar& operator[](uint32_t i) const{
+		return data[i];
+	}
+	
+	Scalar& operator[](uint32_t i){
+		return data[i];
+	}
+	
+	void set(uint32_t row, uint32_t column, TScalar value){
+		 get(row, column) = value;
+	}
+	
+	MatrixInterpretation(TScalar* foreignMemory){
+		data = foreignMemory;
+	}
+   
+	template<typename TMatrix>
+	MatrixInterpretation& operator=(const TMatrix& matrix){
+		return copyMatrix(matrix, *this);
+	}
+	
+};
+
 //! A representation of a transpose matrix without the need to copy something
 template <typename TParentMatrix>
 class TransposeMatrix{
@@ -91,6 +150,7 @@ class TransposeMatrix{
 	typedef typename TParentMatrix::Scalar value_type;
 	static constexpr uint32_t rowCount = TParentMatrix::columnCount;
 	static constexpr uint32_t columnCount = TParentMatrix::rowCount;
+	static constexpr uint32_t size = rowCount*columnCount;
 	static constexpr bool isMatrix = TParentMatrix::isMatrix;
 	
 	TParentMatrix& parentMatrix;
@@ -107,12 +167,12 @@ class TransposeMatrix{
 		return parentMatrix.get(column, row);
 	}
 	
-	const Scalar& operator[](uint32_t row) const{
-		return get(row, 0);
+	const Scalar& operator[](uint32_t i) const{
+		return get(i/columnCount, i%columnCount);
 	}
 	
-	Scalar& operator[](uint32_t row){
-		return get(row, 0);
+	Scalar& operator[](uint32_t i){
+		return get(i/columnCount, i%columnCount);
 	}
 	
 	void set(uint32_t row, uint32_t column, Scalar value){
@@ -138,6 +198,7 @@ class SubMatrix{
 	typedef typename TParentMatrix::Scalar value_type;
 	static constexpr uint32_t rowCount = TRowCount;
 	static constexpr uint32_t columnCount = TColumnCount;
+	static constexpr uint32_t size = rowCount*columnCount;
 	static constexpr bool isMatrix = TParentMatrix::isMatrix;
 	
 	TParentMatrix& parentMatrix;
@@ -155,12 +216,12 @@ class SubMatrix{
 		return parentMatrix.get(TRowIndex+row, TColumnIndex+column);
 	}
 	
-	const Scalar& operator[](uint32_t row) const{
-		return get(row, 0);
+	const Scalar& operator[](uint32_t i) const{
+		return get(i/columnCount, i%columnCount);
 	}
 	
-	Scalar& operator[](uint32_t row){
-		return get(row, 0);
+	Scalar& operator[](uint32_t i){
+		return get(i/columnCount, i%columnCount);
 	}
 	
 	void set(uint32_t row, uint32_t column, Scalar value){
@@ -196,6 +257,7 @@ class SubMatrixIJ{
 	typedef typename TParentMatrix::Scalar value_type;
 	static constexpr uint32_t rowCount = TParentMatrix::rowCount-1;
 	static constexpr uint32_t columnCount = TParentMatrix::columnCount-1;
+	static constexpr uint32_t size = rowCount*columnCount;
 	static constexpr bool isMatrix = TParentMatrix::isMatrix;
 	
 	TParentMatrix& parentMatrix;
@@ -236,6 +298,10 @@ using Vector2D = Vector<2, TScalar>;
 
 template<typename TScalar>
 using Vector3D = Vector<3, TScalar>;
+
+//! x,y,z,w = 0,1,2,3 indices in case of quaternion
+template<typename TScalar>
+using Vector4D = Vector<4, TScalar>;
 
 template<typename TScalar>
 using Matrix2D = Matrix<2, 2, TScalar>;
@@ -495,6 +561,13 @@ TMatrix normalize(const TMatrix& m){
 	return factor * m;
 }
 
+template<typename TMatrix, typename TFloat = typename TMatrix::Scalar, typename std::enable_if<TMatrix::isMatrix, int>::type = 0>
+void normalizeInPlace(TMatrix& m){
+	TFloat factor = calcFrobeniusNorm<TMatrix,TFloat>(m);
+	factor = ((TFloat)1)/factor;
+	visitMatrix(m, [factor](uint32_t row, uint32_t column, typename TMatrix::Scalar& value){value *= factor;});
+}
+
 //! Calculate dot Product of Vectors
 template<typename TVectorA, typename TVectorB, typename std::enable_if<TVectorA::isMatrix&&TVectorA::columnCount==1&&TVectorB::isMatrix&&TVectorB::columnCount==1&&TVectorA::rowCount==TVectorB::rowCount, int>::type = 0>
 typename ResultScalar<TVectorA,TVectorB>::type calcDotProduct(const TVectorA& a, const TVectorB& b){
@@ -561,10 +634,128 @@ Matrix3D<TScalar> createRollMatrix3D(TScalar phi){
 		      0, 0, 1};
 }
 
+//! Complete rotation matrix Yaw * Pitch * Roll
+template <typename TScalar = double>
+Matrix3D<TScalar> createRotationMatrix3D(TScalar pitch, TScalar yaw, TScalar roll){
+	TScalar cosPitch = cos(pitch);
+	TScalar sinPitch = sin(pitch);
+	TScalar cosYaw = cos(yaw);
+	TScalar sinYaw = sin(yaw);
+	TScalar cosRoll = cos(roll);
+	TScalar sinRoll = sin(roll);
+	return Matrix3D<TScalar>{
+		sinPitch*sinRoll*sinYaw+cosRoll*cosYaw,	sinPitch*cosRoll*sinYaw-sinRoll*cosYaw,	cosPitch*sinYaw,
+		cosPitch*sinRoll,	cosPitch*cosRoll,	-sinPitch,
+		sinPitch*sinRoll*cosYaw-cosRoll*sinYaw,	sinRoll*sinYaw+sinPitch*cosRoll*cosYaw,	cosPitch*cosYaw};
+}
+
+//! rotation order:  Yaw * Pitch * Roll, assumes: -pi/2 <= pitch <= pi/2, returns: -pi <= yaw <= pi, -pi <= roll <= pi
+template <typename TScalar = double>
+void calcEulerAngles(const Matrix3D<TScalar>& R, TScalar& pitch, TScalar& yaw, TScalar& roll){
+	pitch = asin(-R.get(1,2));
+	if(std::abs(pitch-90.0/DEG_RAD)<0.1/DEG_RAD){//gimbal lock case if pitch close to +90°
+		roll = 0.0;
+		yaw = atan2(R.get(0,1), R.get(0,0));
+	}else if(std::abs(pitch+90.0/DEG_RAD)<0.1/DEG_RAD){//gimbal lock case if pitch close to -90°
+		roll = 0.0;
+		yaw = atan2(-R.get(0,1), R.get(0,0));
+	}else{
+		yaw = atan2(R.get(0,2), R.get(2,2));
+		roll = atan2(R.get(1,0), R.get(1,1));
+	}
+}
+
+template <typename TScalar = double>
+Vector4D<TScalar> createQuaternion(const Matrix3D<TScalar>& m){
+	Vector4D<TScalar> result;
+	const TScalar diag = m.get(0,0) + m.get(1,1)+ m.get(2,2) + static_cast<TScalar>(1);
+	if(diag > static_cast<TScalar>(0)){
+		const TScalar scale = sqrt(diag) * static_cast<TScalar>(2); // get scale from diagonal
+		result[0] = (m.get(2,1) - m.get(1,2)) / scale;
+		result[1] = (m.get(0,2) - m.get(2,0)) / scale;
+		result[2] = (m.get(1,0) - m.get(0,1)) / scale;
+		result[3] = static_cast<TScalar>(0.25) * scale;
+	}else{
+		if(m.get(0,0)>m.get(1,1)&& m.get(0,0)>m.get(2,2)){
+			// 1st element of diag is greatest value
+			// find scale according to 1st element, and double it
+			const TScalar scale = sqrt(static_cast<TScalar>(1) + m.get(0,0) - m.get(1,1)- m.get(2,2)) * static_cast<TScalar>(2);
+			result[0] = static_cast<TScalar>(0.25) * scale;
+			result[1] = (m.get(0,1) + m.get(1,0)) / scale;
+			result[2] = (m.get(2,0) + m.get(0,2)) / scale;
+			result[3] = (m.get(2,1) - m.get(1,2)) / scale;
+		}else if(m.get(1,1)>m.get(2,2)){
+			// 2nd element of diag is greatest value
+			// find scale according to 2nd element, and double it
+			const TScalar scale = sqrt(static_cast<TScalar>(1) + m.get(1,1)- m.get(0,0) - m.get(2,2)) * static_cast<TScalar>(2);
+			result[0] = (m.get(0,1) + m.get(1,0)) / scale;
+			result[1] = static_cast<TScalar>(0.25) * scale;
+			result[2] = (m.get(1,2) + m.get(2,1)) / scale;
+			result[3] = (m.get(0,2) - m.get(2,0)) / scale;
+		}else{
+			// 3rd element of diag is greatest value
+			// find scale according to 3rd element, and double it
+			const TScalar scale = sqrt(static_cast<TScalar>(1) + m.get(2,2) - m.get(0,0) - m.get(1,1)) * static_cast<TScalar>(2);
+			result[0] = (m.get(0,2) + m.get(2,0)) / scale;
+			result[1] = (m.get(1,2) + m.get(2,1)) / scale;
+			result[2] = static_cast<TScalar>(0.25) * scale;
+			result[3] = (m.get(1,0) - m.get(0,1)) / scale;
+		}
+	}
+	normalizeInPlace(result);
+	return result;
+}
+
+//! from angle axis, axis must be normalized, angle in radians
+template <typename TScalar = double>
+Vector4D<TScalar> createQuaternion(const Vector3D<TScalar>& axis, TScalar angle){
+	const TScalar fHalfAngle = static_cast<TScalar>(0.5)*angle;
+	const TScalar fSin = sin(fHalfAngle);
+	return Vector4D<TScalar>(fSin*axis[0], fSin*axis[1], fSin*axis[2], cos(fHalfAngle));
+}
+
+template <typename TScalar = double>
+Matrix3D<TScalar> createRotationMatrixFromQuaternion(const Vector4D<TScalar>& q){
+	TScalar x = q[0], y = q[1], z = q[2], w = q[3];
+	Matrix3D<TScalar> dest;
+	dest.get(0,0) = 1 - 2*y*y - 2*z*z;
+	dest.get(1,0) = 2*x*y + 2*z*w;
+	dest.get(2,0) = 2*x*z - 2*y*w;
+	dest.get(0,1) = 2*x*y - 2*z*w;
+	dest.get(1,1) = 1 - 2*x*x - 2*z*z;
+	dest.get(2,1) = 2*z*y + 2*x*w;
+	dest.get(0,2) = 2*x*z + 2*y*w;
+	dest.get(1,2) = 2*z*y - 2*x*w;
+	dest.get(2,2) = 1 - 2*x*x - 2*y*y;
+	return dest;
+}
+
+//! 0: azimuth/yaw, 1: elevation/pitch, 2: distance
+//! angles follow left hand rule with first axis to the left, second axis to the top, third axis to the front
+template <typename TScalar = double>
+Vector3D<TScalar> calcSphereCoordinates(const Vector3D<TScalar>& cartesian){
+	TScalar length = calcFrobeniusNorm(cartesian);
+	return Vector3D<TScalar>{atan2(cartesian[0], cartesian[2]), length>0.0000001?asin(-cartesian[1]/length):0.0, length};
+}
+
+//! 0: azimuth/yaw, 1: elevation/pitch, 2: distance
+//! angles follow left hand rule with first axis to the left, second axis to the top, third axis to the front
+template <typename TScalar = double>
+Vector3D<TScalar> calcCartesianCoordinates(const Vector3D<TScalar>& sphere){
+	TScalar cosPitch = cos(sphere[1]);
+	return Vector3D<TScalar>{sphere[2] * cosPitch*sin(sphere[0]), sphere[2] * -sin(sphere[1]), sphere[2] * cosPitch*cos(sphere[0])};
+}
+
 //! converts to other vector representations by assuming the constructor
-template <typename TTarget, typename TScalar>
-TTarget convertVector3D(Vector3D<TScalar> v){
+template <typename TOrigin, typename TTarget>
+TTarget convertVector3D(const TOrigin& v){
 	return TTarget(v[0], v[1], v[2]);
+}
+
+//! converts to other vector representations by assuming the constructor
+template <typename TOrigin, typename TTarget>
+TTarget convertVector2D(const TOrigin& v){
+	return TTarget(v[0], v[1]);
 }
 
 #endif

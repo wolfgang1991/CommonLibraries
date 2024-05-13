@@ -4,7 +4,8 @@
 #include <IRPC.h>
 
 //! escapeNonPrintableChars: if true it is standard compliant, however it works with this parser also if they are not escaped (==false, more efficient in case binary data is sent as strings)
-std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPrintableChars);
+//! floatingPointPrecision: digits used / 0 means default
+std::string convertRPCValueToJSONString(const IRPCValue& value, bool escapeNonPrintableChars, uint8_t floatingPointPrecision = 0);
 
 //! escapeNonPrintableChars: if true it is standard compliant, however it works with this parser also if they are not escaped (==false, more efficient in case binary data is sent as strings)
 std::string escapeAndQuoteJSONString(const std::string& s, bool escapeNonPrintableChars);
@@ -69,6 +70,10 @@ class JSONParser : public IJSONParser{
 	//! WARNING #1: Don't forget to reset before parsing new stuff.
 	//! WARNING #2: This only works if the whole content is present inside the string (because a lookahead of '\0' will be used when parsing the last character).
 	virtual IJSONParser::State parse(const std::string& s);
+	
+	//! WARNING #1: Don't forget to reset before parsing new stuff.
+	//! WARNING #2: This only works if the whole content is present inside the string (because a lookahead of '\0' will be used when parsing the last character).
+	virtual IJSONParser::State parse(const char* cstr);
 	
 	virtual IRPCValue* stealResult();
 	

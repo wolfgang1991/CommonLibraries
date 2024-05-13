@@ -76,7 +76,8 @@ class JSONRPC2Client : public IRPCClient{
 	ICommunicationEndpoint* socket;
 	uint32_t pingSendPeriod, pingTimeout, connectTimeout;
 	
-	bool escapeNonPrintableChars;
+	const bool escapeNonPrintableChars;
+	const bool enableConsoleOutputIfDebugBuild;
 	
 	static void* clientMain(void* p);
 	
@@ -88,7 +89,7 @@ class JSONRPC2Client : public IRPCClient{
 	public:
 	
 	//! escapeNonPrintableChars: if true it is standard compliant, however it works with this parser also if they are not escaped (==false, more efficient in case binary data is sent as strings)
-	JSONRPC2Client(bool escapeNonPrintableChars = true);
+	JSONRPC2Client(bool escapeNonPrintableChars = true, bool enableConsoleOutputIfDebugBuild = true);
 	
 	~JSONRPC2Client();
 	

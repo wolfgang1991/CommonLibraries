@@ -80,8 +80,8 @@ std::string AppTracker::AppTrackerData::calcCSVLine() const{
 	return ss.str();
 }
 
-AppTracker::AppTracker(IRPC* rpc, irr::IrrlichtDevice* device, const std::string& iniPath, const std::string& id, const std::string& appVersion):
-	rpc(rpc),device(device),data(id),iniPath(iniPath),ini(iniPath){
+AppTracker::AppTracker(IRPC* rpc, irr::IrrlichtDevice* device, const std::string& iniPath, const std::string& id, const std::string& appVersion, bool enabled):
+	rpc(rpc),device(device),data(id),iniPath(iniPath),ini(iniPath),enabled(enabled){
 	lastLastRenderedElement = lastRenderedElement = NULL;
 	data.readFromIni(&ini);
 	data.id = id;
@@ -98,6 +98,10 @@ AppTracker::AppTracker(IRPC* rpc, irr::IrrlichtDevice* device, const std::string
 	lastActive = device->isWindowActive();
 	startTrackTime = lastActive?getEpochSecs():0;
 	usageTime = 0;
+}
+
+void AppTracker::setEnabled(bool enabled){
+	this->enabled = enabled;
 }
 
 void AppTracker::startTimeTracking(){
@@ -197,7 +201,9 @@ const std::string& AppTracker::getAdditionalField(uint32_t index) const{
 }
 
 void AppTracker::pushToServerAndSave(){
-	rpc->callRemoteProcedure("pushAppTrackerData", std::vector<IRPCValue*>{createRPCValue(data)});
-	data.writeToIni(&ini);
-	ini.save(iniPath);
+	if(enabled){
+		rpc->callRemoteProcedure("pushAppTrackerData", std::vector<IRPCValue*>{createRPCValue(data)});
+		data.writeToIni(&ini);
+		ini.save(iniPath);
+	}
 }

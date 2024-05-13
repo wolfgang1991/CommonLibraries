@@ -167,6 +167,12 @@ static void handleErrorMessage(const char* error = NULL){
 	#endif
 }
 
+IPv4Address::IPv4Address(){
+	checkAndInitGlobally();
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+}
+
 IPv4Address::IPv4Address(const std::string& addressString, uint16_t port){
 	checkAndInitGlobally();
 	memset(&addr, 0, sizeof(addr));
@@ -219,6 +225,12 @@ const sockaddr_in& IPv4Address::getInternalRepresentation() const{
 
 void IPv4Address::setInternalRepresentation(const sockaddr_in& r){
 	addr = r;
+}
+
+IPv6Address::IPv6Address(){
+	checkAndInitGlobally();
+	memset(&addr, 0, sizeof(addr));
+	addr.sin6_family = AF_INET6;
 }
 
 IPv6Address::IPv6Address(const std::string& addressString, uint16_t port){

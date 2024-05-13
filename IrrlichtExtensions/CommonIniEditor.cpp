@@ -254,6 +254,7 @@ void CommonIniEditor::edit(IniFile* Ini){
 			}
 		}
 	}
+	bringToFrontRecursive(win);
 }
 
 bool CommonIniEditor::isCorrectType(std::wstring content, ValueType type){

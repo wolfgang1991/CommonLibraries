@@ -15,7 +15,8 @@ using namespace video;
 using namespace gui;
 
 AMLBox::AMLBox(ICommonAppContext* c, irr::s32 aggregationStyleID, irr::s32 invisibleAggregationStyleId, irr::s32 scrollbarStyleId, const AMLGUIElement::NavButtons* navButtons, const std::string& language, irr::f32 maxW, irr::f32 maxH, const wchar_t* buttonText, irr::s32 buttonId, bool modal, irr::s32 navButtonId, irr::video::SColor* overrideTextColor):
-	IGUIElement(irr::gui::EGUIET_ELEMENT, c->getIrrlichtDevice()->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,c->getIrrlichtDevice()->getVideoDriver()->getScreenSize().Width,c->getIrrlichtDevice()->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)){
+	IGUIElement(irr::gui::EGUIET_ELEMENT, c->getIrrlichtDevice()->getGUIEnvironment(), NULL, -1, modal?rect<s32>(0,0,c->getIrrlichtDevice()->getVideoDriver()->getScreenSize().Width,c->getIrrlichtDevice()->getVideoDriver()->getScreenSize().Height):rect<s32>(0,0,0,0)),
+	OnClosed([](){}){
 	env = c->getIrrlichtDevice()->getGUIEnvironment();
 	env->getRootGUIElement()->addChild(this);
 	setCloseOnScreenResize(true);
@@ -42,6 +43,10 @@ AMLBox::AMLBox(ICommonAppContext* c, irr::s32 aggregationStyleID, irr::s32 invis
 	drop();
 }
 
+void AMLBox::setOnClosedCallback(const std::function<void()>& OnClosed){
+	this->OnClosed = OnClosed;
+}
+
 irr::gui::IGUIButton* AMLBox::getButton() const{
 	return ok;
 }
@@ -60,6 +65,7 @@ void AMLBox::gotoFile(const std::string& path){
 
 AMLBox::~AMLBox(){
 	win->remove();
+	OnClosed();
 }
 
 bool AMLBox::OnEvent(const irr::SEvent& event){

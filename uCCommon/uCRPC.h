@@ -883,9 +883,9 @@ namespace UCRPC{
 						break;
 					}
 				}
-				if(received<0){
-					UCRPC_DEBUG("Error while receiving data from secondarySerial")
-				}
+//				if(received<0){
+//					UCRPC_DEBUG("Error while receiving data from secondarySerial")
+//				}
 			}
 			//Receive:
 			int32_t received = serial.recv((char*)&(rcvBuffer[rcvBufferOffset]), bufferSize-rcvBufferOffset);
@@ -925,9 +925,9 @@ namespace UCRPC{
 					break;
 				}
 			}
-			if(received<0){
-				UCRPC_DEBUG("Error while receiving data.")
-			}
+//			if(received<0){
+//				UCRPC_DEBUG("Error while receiving data.")
+//			}
 			//Send:
 			uc_time_t t = millis();
 			startT = micros();

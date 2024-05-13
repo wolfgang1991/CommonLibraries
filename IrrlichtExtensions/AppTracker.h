@@ -93,6 +93,8 @@ class AppTracker{
 	
 	double lastPushTime;
 	
+	bool enabled;
+	
 	//! called in constructor and destructor, assumes a rpc function "void pushAppTrackerData(data)" at the server
 	virtual void pushToServerAndSave();
 	
@@ -104,9 +106,12 @@ class AppTracker{
 	
 	public:
 	
-	AppTracker(IRPC* rpc, irr::IrrlichtDevice* device, const std::string& iniPath, const std::string& id, const std::string& appVersion);
+	AppTracker(IRPC* rpc, irr::IrrlichtDevice* device, const std::string& iniPath, const std::string& id, const std::string& appVersion, bool enabled);
 	
 	virtual ~AppTracker();
+	
+	//! if not enabled tracking results won't be stored or synchronized with the server
+	virtual void setEnabled(bool enabled);
 	
 	//! observes the true visibility of a GUI Element when the application window is no longer active, automatically removed when GUI Element is deleted
 	virtual void addGUIElementTracker(const std::string& name, irr::gui::IGUIElement* ele);

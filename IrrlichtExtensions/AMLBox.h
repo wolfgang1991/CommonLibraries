@@ -6,6 +6,8 @@ class ICommonAppContext;
 #include "AMLGUIElement.h"
 #include "ForwardDeclarations.h"
 
+#include <functional>
+
 //! A messagebox with a single button displaying an AML file
 class AMLBox : public irr::gui::IGUIElement{
 
@@ -28,9 +30,13 @@ class AMLBox : public irr::gui::IGUIElement{
 	irr::gui::IGUIButton* ok;
 
 	int w, h;
+	
+	std::function<void()> OnClosed;
 
 	AMLBox(ICommonAppContext* c, irr::s32 aggregationStyleID, irr::s32 invisibleAggregationStyleId, irr::s32 scrollbarStyleId, const AMLGUIElement::NavButtons* navButtons = &AMLGUIElement::defaultNavButtons, const std::string& language = "", irr::f32 maxW = 1.0, irr::f32 maxH = 1.0, const wchar_t* buttonText = L"OK", irr::s32 buttonId = -1, bool modal = true, irr::s32 navButtonId = -1, irr::video::SColor* overrideTextColor = NULL);
-
+	
+	void setOnClosedCallback(const std::function<void()>& OnClosed);
+	
 	//! returns true if successful
 	bool setCode(const std::string& utf8Code, bool printParsingErrors = true);
 	
