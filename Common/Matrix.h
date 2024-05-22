@@ -557,14 +557,14 @@ TFloat calcFrobeniusNorm(const TMatrix& m){
 template<typename TMatrix, typename TFloat = typename TMatrix::Scalar, typename std::enable_if<TMatrix::isMatrix, int>::type = 0>
 TMatrix normalize(const TMatrix& m){
 	TFloat factor = calcFrobeniusNorm<TMatrix,TFloat>(m);
-	factor = ((TFloat)1)/factor;
+	factor = factor==0?((TFloat)1):((TFloat)1)/factor;
 	return factor * m;
 }
 
 template<typename TMatrix, typename TFloat = typename TMatrix::Scalar, typename std::enable_if<TMatrix::isMatrix, int>::type = 0>
 void normalizeInPlace(TMatrix& m){
 	TFloat factor = calcFrobeniusNorm<TMatrix,TFloat>(m);
-	factor = ((TFloat)1)/factor;
+	factor = factor==0?((TFloat)1):((TFloat)1)/factor;
 	visitMatrix(m, [factor](uint32_t row, uint32_t column, typename TMatrix::Scalar& value){value *= factor;});
 }
 
@@ -712,6 +712,22 @@ Vector4D<TScalar> createQuaternion(const Vector3D<TScalar>& axis, TScalar angle)
 	const TScalar fHalfAngle = static_cast<TScalar>(0.5)*angle;
 	const TScalar fSin = sin(fHalfAngle);
 	return Vector4D<TScalar>(fSin*axis[0], fSin*axis[1], fSin*axis[2], cos(fHalfAngle));
+}
+
+//! create angle axis representation from quaternion
+template <typename TScalar = double>
+void createAngleAxis(const Vector4D<TScalar>& q, Vector3D<TScalar>& axisOut, TScalar& angleOut){
+	const TScalar scale = sqrt(sq(q[0]) + sq(q[1]) + sq(q[2]));
+	if(fabs(scale)<0.000000001){//eps
+		axisOut[0] = axisOut[2] = angleOut = 0.0;
+		axisOut[1] = 1.0;
+	}else{
+		const TScalar invscale = 1.0/scale;
+		angleOut = 2.0 * acos2(q[3]);
+		axisOut[0] = q[0]*invscale;
+		axisOut[1] = q[1]*invscale;
+		axisOut[2] = q[2]*invscale;
+	}
 }
 
 template <typename TScalar = double>
