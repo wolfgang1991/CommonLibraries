@@ -23,7 +23,11 @@ else#no debugging, with optimizations
 OPTIM = $(USEROPTIM) -O3 -DNDEBUG
 endif
 
-CPPFLAGS += -Wall -std=c++11
+ifndef CPPVERSION
+CPPVERSION = -std=c++11
+endif
+
+CPPFLAGS += -Wall $(CPPVERSION)
 
 all_linux: build_deps $(LINKOBJ) $(C_LINKOBJ)
 	$(CXX) $(CPPFLAGS) $(OPTIM) $(LINKOBJ) $(C_LINKOBJ) -o $(FINALEXECFILE) $(FINALLIBFLAGS)

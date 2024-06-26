@@ -105,7 +105,7 @@ CIrrDeviceLinux::CIrrDeviceLinux(const SIrrlichtCreationParameters& param)
 	HasNetWM(false),
 #endif
 	Width(param.WindowSize.Width), Height(param.WindowSize.Height),
-	WindowHasFocus(false), WindowMinimized(false),
+	WindowHasFocus(true), WindowMinimized(false),//changed WindowHasFocus should be true in the beginning or else problems on Raspberry Pi 5 (window becomes never active here)
 	UseXVidMode(false), UseXRandR(false),
 	ExternalWindow(false), AutorepeatSupport(0)
 {

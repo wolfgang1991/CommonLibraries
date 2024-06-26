@@ -105,7 +105,6 @@ void CImageLoaderJPG::error_exit (j_common_ptr cinfo)
 
 	// cinfo->err really points to a irr_error_mgr struct
 	irr_jpeg_error_mgr *myerr = (irr_jpeg_error_mgr*) cinfo->err;
-
 	longjmp(myerr->setjmp_buffer, 1);
 }
 

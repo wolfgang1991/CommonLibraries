@@ -24,7 +24,11 @@ else#no debugging, with optimizations
 OPTIM = $(USEROPTIM) -O3 -DNDEBUG
 endif
 
-CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall -std=c++11
+ifndef CPPVERSION
+CPPVERSION = -std=c++11
+endif
+
+CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall $(CPPVERSION)
 
 all_linux: CPPFLAGS += -I/usr/X11R6/include
 all_linux: FINALLIBFLAGS += 
