@@ -3,6 +3,8 @@
 #include <ICommunicationEndpoint.h>
 #include <BitFunctions.h>
 
+#include <iostream>
+
 class RTPSenderPrivate{
 
 	public:
@@ -27,7 +29,7 @@ class RTPSenderPrivate{
 	void writeHeader(uint8_t* buf, bool marker, uint32_t timestamp){
 		buf[0] = 0b10000000;
 		buf[1] = setBit(payloadType, 7, marker);
-		uint8_t offset = 3;
+		uint8_t offset = 2;
 		writeBigEndian<uint16_t>(buf, offset, sequenceNumber);
 		sequenceNumber++;
 		writeBigEndian<uint32_t>(buf, offset, timestamp);
@@ -35,12 +37,17 @@ class RTPSenderPrivate{
 	}
 	
 	bool send(uint8_t* buf, uint32_t totalLength, uint32_t timestamp){
-		uint32_t payloadLength = totalLength - 12;
-		for(uint32_t offset = 12; offset < payloadLength; offset += mps){
+		uint32_t fragmentCount = 0;
+		uint8_t saved[12];
+		for(uint32_t offset = 12; offset < totalLength; offset += mps){
 			uint8_t* ptr = &(buf[offset-12]);
-			writeHeader(ptr, offset==12, timestamp);
-			slaveSocket->send((char*)ptr, std::min(12+payloadLength-offset, 12+mps));
+			memcpy(saved, ptr, 12);
+			writeHeader(ptr, offset+mps>=totalLength, timestamp);
+			slaveSocket->send((char*)ptr, 12+std::min(totalLength-offset, mps));
+			memcpy(ptr, saved, 12);
+			fragmentCount++;
 		}
+		std::cout << "fragmentCount: " << fragmentCount << std::endl;
 		return true;
 	}
 	
