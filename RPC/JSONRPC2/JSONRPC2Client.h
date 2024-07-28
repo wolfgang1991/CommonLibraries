@@ -102,6 +102,7 @@ class JSONRPC2Client : public IRPCClient{
 	void connect(const IIPAddress& address, uint32_t pingSendPeriod, uint32_t pingTimeout, uint32_t connectTimeout, IMetaProtocolHandler* metaProtocolHandler = NULL);
 	
 	//! Alternative to connect, also works with arbitrary communication endpoints (only need to implement send and recv)
+	//! socket will be deleted on exit
 	void useSocket(ICommunicationEndpoint* socket, uint32_t pingTimeout, uint32_t pingSendPeriod = PING_DISABLE_SEND_PERIOD);
 	
 	void update();
