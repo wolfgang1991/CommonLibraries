@@ -10,10 +10,11 @@ class StreamProxy{
 	
 	public:
 	
+	//! password required for each peer to connect
 	//! controlPort: listens for incoming control connections
 	//! dataPort: listens for incoming connections for data transfer
 	//! pingTimeout: in milliseconds
-	StreamProxy(uint16_t controlPort, uint16_t dataPort, uint32_t pingTimeout);
+	StreamProxy(const std::string password, uint16_t controlPort, uint16_t dataPort, uint16_t streamPort, uint32_t pingTimeout);
 	
 	~StreamProxy();
 	
