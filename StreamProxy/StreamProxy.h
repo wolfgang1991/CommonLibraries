@@ -1,9 +1,13 @@
 #ifndef STREAM_PROXY_H_
 #define STREAM_PROXY_H_
 
-class StreamProxy;
+#include <string>
+#include <cstdint>
+#include <vector>
 
-//! SSL is used
+class StreamProxyPrivate;
+
+//! SSL is used, to avoid race conditions services must be connected sequentially from a client (e.g. if multiple services @ one server is used)
 class StreamProxy{
 
 	StreamProxyPrivate* p;
@@ -14,7 +18,7 @@ class StreamProxy{
 	//! controlPort: listens for incoming control connections
 	//! dataPort: listens for incoming connections for data transfer
 	//! pingTimeout: in milliseconds
-	StreamProxy(const std::string password, uint16_t controlPort, uint16_t dataPort, uint16_t streamPort, uint32_t pingTimeout);
+	StreamProxy(const std::string password, uint16_t controlPort, uint16_t dataPort, uint32_t pingTimeout, uint32_t dataExchangeTimeout);
 	
 	~StreamProxy();
 	

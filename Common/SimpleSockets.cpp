@@ -190,6 +190,10 @@ bool IPv4Address::operator<(const IPv4Address& other) const{
 	return addr.sin_addr.s_addr<other.addr.sin_addr.s_addr;
 }
 
+bool IPv4Address::operator==(const IPv4Address& other) const{
+	return addr.sin_addr.s_addr==other.addr.sin_addr.s_addr && addr.sin_port==other.addr.sin_port;
+}
+
 IPv4Address* IPv4Address::createNewCopy() const{
 	return new IPv4Address(*this);
 }
@@ -254,6 +258,16 @@ bool IPv6Address::operator<(const IPv6Address& other) const{
 		}
 	}
 	return addr.sin6_port<other.addr.sin6_port;
+}
+
+bool IPv6Address::operator==(const IPv6Address& other) const{
+	bool equal = true;
+	const uint8_t* this_s6_addr = addr.sin6_addr.s6_addr;
+	const uint8_t* other_s6_addr = other.addr.sin6_addr.s6_addr;
+	for(int i=0; i<16 && equal; i++){
+		equal = equal && this_s6_addr[i]==other_s6_addr[i];
+	}
+	return equal && addr.sin6_port==other.addr.sin6_port;
 }
 
 IPv6Address* IPv6Address::createNewCopy() const{

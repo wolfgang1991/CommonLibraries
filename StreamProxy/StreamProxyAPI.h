@@ -1,8 +1,11 @@
 #ifndef StreamProxyAPI_H_
 #define StreamProxyAPI_H_
 
+#include <IRPC.h>
+
 namespace StreamProxyAPI{
 
+/*
 class MulticastStreamSpec{
 	
 	public:
@@ -24,6 +27,7 @@ class MulticastStreamSpec{
 	CREATE_NATIVE_END
 	
 };
+*/
 
 class ServiceSpec{
 	
@@ -31,7 +35,7 @@ class ServiceSpec{
 	
 	std::string name;
 	std::string password;
-	std::list<MulticastStreamSpec> udpStreams;
+	std::list<std::string> udpStreams;
 	
 	CREATE_BEGIN(ServiceSpec)
 		FILL_FIELD(name)
@@ -42,7 +46,7 @@ class ServiceSpec{
 	CREATE_NATIVE_BEGIN(ServiceSpec)
 		FILL_NATIVE_FIELD_IF_AVAILABLE(name, std::string("noname"))
 		FILL_NATIVE_FIELD_IF_AVAILABLE(password, std::string(""))
-		FILL_NATIVE_FIELD_IF_AVAILABLE(udpStreams, std::list<MulticastStreamSpec>())
+		FILL_NATIVE_FIELD_IF_AVAILABLE(udpStreams, std::list<std::string>())
 	CREATE_NATIVE_END
 };
 
@@ -52,11 +56,11 @@ enum RemoteApiFunctions{
 	AUTHENTICATE,
 	GETSERVICELIST,
 	CONNECTTCP,
-	SUBSCRIBETOMCSTREAM,
+/*	SUBSCRIBETOMCSTREAM, TODO UDP stream forwarding via layer on top*/
 	REGISTERSERVICE,
 	//@Client:
 	ONNEWTCPCLIENT,
-	SETMCSTREAMFORWARD,
+/*	SETMCSTREAMFORWARD,*/
 	REMOTE_API_FUNCTION_COUNT
 };
 
@@ -80,11 +84,11 @@ inline void connectTCP(IRPC* rpc, const std::string& service, IRemoteProcedureCa
 	rpc->callRemoteProcedure("connectTCP", std::vector<IRPCValue*>{createRPCValue(service)}, caller, id);
 }
 
-//! subscribes to a multicast stream, returns the port to connect (TLS over Z over TCP) or 0 if unsuccessful
-//! to avoid stream duplication an RemoteUDPStreamManager should run in the local netwok to retransmit via multicast
-inline void subscribeToMCStream(IRPC* rpc, const std::string& service, const std::string& streamName, IRemoteProcedureCaller* caller, uint32_t id = SUBSCRIBETOMCSTREAM){
-	rpc->callRemoteProcedure("subscribeToMCStream", std::vector<IRPCValue*>{createRPCValue(service), createRPCValue(streamName)}, caller, id);
-}
+/*//! subscribes to a multicast stream, returns the port to connect (TLS over Z over TCP) or 0 if unsuccessful*/
+/*//! to avoid stream duplication an RemoteUDPStreamManager should run in the local netwok to retransmit via multicast*/
+/*inline void subscribeToMCStream(IRPC* rpc, const std::string& service, const std::string& streamName, IRemoteProcedureCaller* caller, uint32_t id = SUBSCRIBETOMCSTREAM){*/
+/*	rpc->callRemoteProcedure("subscribeToMCStream", std::vector<IRPCValue*>{createRPCValue(service), createRPCValue(streamName)}, caller, id);*/
+/*}*/
 
 //! registers a service if login done and no service with that name present, returns true if successful
 inline void registerService(IRPC* rpc, const ServiceSpec& spec, IRemoteProcedureCaller* caller, uint32_t id = REGISTERSERVICE){
@@ -97,11 +101,13 @@ inline void OnNewTCPClient(IRPC* rpc, const std::string& service, uint16_t port,
 	rpc->callRemoteProcedure("OnNewTCPClient", std::vector<IRPCValue*>{createRPCValue(service), createRPCValue(port)}, caller, id);
 }
 
+/*
 //!  called @ proxy client / server from other point of view to enable forwarding of multicast UDP streams over a TLS over Z over TCP connection, defines the port in case it is not already connected due to another stream
 //! to identify multiple streams there's a small header before each packet encoded in the TCP stream, defining multicast address and multicast port
 inline void setMCStreamForward(IRPC* rpc, const std::string& service, const std::string streamName, uint16_t proxyPort, IRemoteProcedureCaller* caller, uint32_t id = SETMCSTREAMFORWARD){
 	rpc->callRemoteProcedure("setMCStreamForward", std::vector<IRPCValue*>{createRPCValue(service), createRPCValue(streamName), createRPCValue(proxyPort)}, caller, id);
 }
+*/
 
 }
 

@@ -70,6 +70,8 @@ class IPv4Address : public IIPAddress{
 	IPv4Address* createNewCopy() const;
 	
 	bool operator<(const IPv4Address& other) const;
+	
+	bool operator==(const IPv4Address& other) const;
 
 };
 
@@ -102,6 +104,8 @@ class IPv6Address : public IIPAddress{
 	IPv6Address* createNewCopy() const;
 	
 	bool operator<(const IPv6Address& other) const;
+	
+	bool operator==(const IPv6Address& other) const;
 
 };
 
