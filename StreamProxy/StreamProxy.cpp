@@ -89,7 +89,6 @@ class StreamProxyPrivate{
 	struct Service{
 		IPv6Address address;
 		std::string password;
-		std::list<std::string> udpStreams;
 		ControlClient* client;
 	};
 	
@@ -247,7 +246,7 @@ class StreamProxyPrivate{
 	
 	//! overrides existing service, may be called from any thread
 	void addService(ControlClient* client, const IPv6Address& address, StreamProxyAPI::ServiceSpec& spec){
-		std::shared_ptr<Service> s = std::shared_ptr<Service>(new Service{address, std::move(spec.password), std::move(spec.udpStreams), client});
+		std::shared_ptr<Service> s = std::shared_ptr<Service>(new Service{address, std::move(spec.password), client});
 		{
 			std::lock_guard<std::mutex> lock(mService);
 			services[spec.name] = s;

@@ -65,9 +65,7 @@ class ScalarValue : public IRPCValue{
 	}
 	
 	template<typename TNativeValue>
-	static TNativeValue createNative(ScalarValue<TValueType, TRPCType>* rpcValue){
-		return rpcValue->value;
-	}
+	static TNativeValue createNative(IRPCValue* rpcValue);
 	
 };
 
@@ -75,6 +73,32 @@ typedef ScalarValue<bool, IRPCValue::BOOLEAN> BooleanValue;
 typedef ScalarValue<double, IRPCValue::FLOAT> FloatValue;
 typedef ScalarValue<int64_t, IRPCValue::INTEGER> IntegerValue;
 typedef ScalarValue<std::string, IRPCValue::STRING> StringValue;
+
+//! auto scalar conversion
+template <typename TValueType, IRPCValue::Type TRPCType>
+template<typename TNativeValue>
+TNativeValue ScalarValue<TValueType, TRPCType>::createNative(IRPCValue* rpcValue){
+	auto rpcType = rpcValue->getType();
+	if(rpcType==IRPCValue::BOOLEAN){
+		return ((BooleanValue*)rpcValue)->value;
+	}else if(rpcType==IRPCValue::FLOAT){
+		return ((FloatValue*)rpcValue)->value;
+	}else if(rpcType==IRPCValue::INTEGER){
+		return ((IntegerValue*)rpcValue)->value;
+	}
+	assert(false);
+}
+
+//! string scalars cannot be automatically converted
+template <>
+template<typename TNativeValue>
+TNativeValue ScalarValue<std::string, IRPCValue::STRING>::createNative(IRPCValue* rpcValue){
+	auto rpcType = rpcValue->getType();
+	if(rpcType==IRPCValue::STRING){
+		return ((StringValue*)rpcValue)->value;
+	}
+	assert(false);
+}
 
 //! Representation of arrays
 class ArrayValue : public IRPCValue{
@@ -102,7 +126,7 @@ class ArrayValue : public IRPCValue{
 	static ArrayValue* create(const TNativeValue& ctr);
 	
 	template<typename TNativeValue>
-	static TNativeValue createNative(ArrayValue* rpcValue);
+	static TNativeValue createNative(IRPCValue* rpcValue);
 
 };
 
@@ -128,12 +152,21 @@ class ObjectValue : public IRPCValue{
 		}
 	}
 	
+	IRPCValue* get(const std::string& key){
+		auto it = values.find(key);
+		if(it==values.end()){
+			return NULL;
+		}else{
+			return it->second;
+		}
+	}
+	
 	//! Factory function for arbitrary containers with key (string) and values (any type), implementation see below
 	template<typename TNativeValue>
 	static ObjectValue* create(const TNativeValue& ctr);
 
 	template<typename TNativeValue>
-	static TNativeValue createNative(ObjectValue* rpcValue);
+	static TNativeValue createNative(IRPCValue* rpcValue);
 
 };
 
@@ -197,6 +230,7 @@ using native_to_rpc_type = typename std::conditional<is_bool<TNativeValue>::valu
 														typename std::conditional<is_object<TNativeValue>::value, ObjectValue, 
 															typename std::conditional<chooseNativeIfNoMatch, TNativeValue, IRPCValue>::type>::type>::type>::type>::type>::type>::type;
 
+
 // Functions to convert native and rpc values: ------------------------
 
 //! creates a new rpc value from a native value
@@ -210,8 +244,8 @@ IRPCValue* createRPCValue(const TNativeValue& value){
 //! Attention: The true underlying data structure of rpcValue must match the native signature. Otherwise there will be invalid casts and bad memory access.
 template<typename TNativeValue>
 TNativeValue createNativeValue(IRPCValue* rpcValue){
-	assert(rpcValue->getType()==native_to_rpc_type<TNativeValue>::typeId || native_to_rpc_type<TNativeValue>::typeId==IRPCValue::UNKNOWN);
-	return native_to_rpc_type<TNativeValue, true>::template createNative<TNativeValue>(static_cast<native_to_rpc_type<TNativeValue>*>(rpcValue));
+	assert(rpcValue->getType()==native_to_rpc_type<TNativeValue>::typeId || native_to_rpc_type<TNativeValue>::typeId==IRPCValue::UNKNOWN || is_scalar<TNativeValue>::value);
+	return native_to_rpc_type<TNativeValue, true>::template createNative<TNativeValue>(rpcValue);
 }
 
 template<typename TNativeValue>
@@ -243,19 +277,19 @@ void reserveIfApplicable(std::vector<T>& ctr, size_t size){
 }
 
 template<typename TNativeValue>
-TNativeValue ArrayValue::createNative(ArrayValue* rpcValue){
+TNativeValue ArrayValue::createNative(IRPCValue* rpcValue){
 	TNativeValue res;
-	reserveIfApplicable<TNativeValue>(res, rpcValue->values.size());
-	for(IRPCValue* value : rpcValue->values){
+	reserveIfApplicable<TNativeValue>(res, ((ArrayValue*)rpcValue)->values.size());
+	for(IRPCValue* value : ((ArrayValue*)rpcValue)->values){
 		res.push_back(createNativeValue<typename TNativeValue::value_type>(value));
 	}
 	return res;
 }
 
 template<typename TNativeValue>
-TNativeValue ObjectValue::createNative(ObjectValue* rpcValue){
+TNativeValue ObjectValue::createNative(IRPCValue* rpcValue){
 	TNativeValue res;
-	for(auto it = rpcValue->values.begin(); it != rpcValue->values.end(); ++it){
+	for(auto it = ((ObjectValue*)rpcValue)->values.begin(); it != ((ObjectValue*)rpcValue)->values.end(); ++it){
 		res[it->first] = createNativeValue<typename TNativeValue::mapped_type>(it->second);
 	}
 	return res;

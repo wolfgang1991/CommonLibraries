@@ -237,6 +237,9 @@ JSONRPC2Client::JSONRPC2Client(bool escapeNonPrintableChars, bool enableConsoleO
 }
 
 JSONRPC2Client::~JSONRPC2Client(){
+	for(auto it=jsonId2Caller.begin(); it!=jsonId2Caller.end(); ++it){
+		it->second.first->OnProcedureError(-32000, "Aborting connection...", NULL, it->first);
+	}
 	jsonId2Caller.clear();
 	receivers.clear();//robustness against forgotten deregistrations before delete
 	disconnect();

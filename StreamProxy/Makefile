@@ -1,5 +1,5 @@
 #List of object files without path
-_LINKOBJ = StreamProxy.o
+_LINKOBJ = StreamProxy.o StreamProxyClient.o
 
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj

@@ -1,6 +1,8 @@
 #ifndef STREAM_PROXY_H_
 #define STREAM_PROXY_H_
 
+#include "StreamProxyAPI.h"
+
 #include <string>
 #include <cstdint>
 #include <vector>
@@ -18,7 +20,7 @@ class StreamProxy{
 	//! controlPort: listens for incoming control connections
 	//! dataPort: listens for incoming connections for data transfer
 	//! pingTimeout: in milliseconds
-	StreamProxy(const std::string password, uint16_t controlPort, uint16_t dataPort, uint32_t pingTimeout, uint32_t dataExchangeTimeout);
+	StreamProxy(const std::string password, uint16_t controlPort, uint16_t dataPort, uint32_t pingTimeout = StreamProxyAPI::proxyPingTimeout, uint32_t dataExchangeTimeout = StreamProxyAPI::dataExchangeTimeout);
 	
 	~StreamProxy();
 	

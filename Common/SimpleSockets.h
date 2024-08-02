@@ -360,11 +360,15 @@ class IPv6TCPSocket : public IPv6Socket{
 
 };
 
-//! returns NULL if unsuccessful, timeout in ms (total timeout = timeout * addressList.size())
+//! returns NULL if unsuccessful, timeout in ms (total timeout = timeout * addressList.size()), addressList will be deleted
 ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout);
 
 //! WARNING: NO TIMEOUT; portToFill: port which is filled into the results
 std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_t portToFill = 0);
+
+std::list<IIPAddress*> copyAddressList(const std::list<IIPAddress*>& other);
+
+void deleteAddressList(std::list<IIPAddress*>& l);
 
 //! if tcp create tcp socket and connect with tcpConnectTimeout, else create udp and set target
 //! returns NULL if no known ip address or tcp connection failed

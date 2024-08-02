@@ -1022,6 +1022,21 @@ ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, 
 	return NULL;
 }
 
+std::list<IIPAddress*> copyAddressList(const std::list<IIPAddress*>& other){
+	std::list<IIPAddress*> res;
+	for(IIPAddress* a : other){
+		res.push_back(a->createNewCopy());
+	}
+	return res;
+}
+
+void deleteAddressList(std::list<IIPAddress*>& l){
+	for(IIPAddress* a : l){
+		delete a;
+	}
+	l.clear();
+}
+
 static inline void* get_in_addr(struct sockaddr *sa) {
   return sa->sa_family == AF_INET?(void *)&(((sockaddr_in*)sa)->sin_addr):(void*)&(((sockaddr_in6*)sa)->sin6_addr);
 }
