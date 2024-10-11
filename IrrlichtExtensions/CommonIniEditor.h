@@ -39,6 +39,24 @@ class IIniEditorCustomization{
 	
 };
 
+//! useful e.g. for unit conversions before loading/saving
+class IIniEditorPostProcessor{
+	
+	public:
+	
+	virtual ~IIniEditorPostProcessor(){}
+	
+	//! called when loading the ini editor definition,for each field, key/fieldName/defaultValue may be modified
+	virtual void OnLoadField(std::string& key, std::wstring& fieldName, std::string& defaultValue) const = 0;
+	
+	//! called when an actual value is loaded from the ini, value may be modified
+	virtual void OnLoadValue(const std::string& key, std::string& value) const = 0;
+	
+	//! called when an actual value is saved to the ini, value may be modified
+	virtual void OnSaveValue(const std::string& key, std::string& value) const = 0;
+	
+};
+
 //! Dialog for editing Ini Files Note: rgba default value: r,g,b,a oder bei rgb: r,g,b; ONE_OF default: alternative1;2;3;...
 class CommonIniEditor{
 
@@ -81,6 +99,8 @@ class CommonIniEditor{
 	bool showHelpButton;
 	std::string helpFile;
 
+	IIniEditorPostProcessor* pp;
+	
 	IniFile* ini;
 
 	void createGUI();
@@ -92,12 +112,15 @@ class CommonIniEditor{
 
 	public:
 
-	CommonIniEditor(ICommonAppContext* context, std::string Section, int FieldCount, std::string* Keys, std::string* FieldNames, std::string* DefaultValues, ValueType* ValTypes, IIniEditorCustomization* customization, const char* HelpFile = NULL);
+	CommonIniEditor(ICommonAppContext* context, std::string Section, int FieldCount, std::string* Keys, std::string* FieldNames, std::string* DefaultValues, ValueType* ValTypes, IIniEditorCustomization* customization, const char* HelpFile = NULL, IIniEditorPostProcessor* pp = NULL);
 	
 	//! Syntax (see UnicodeCfgParser): <key>,<fieldname>,<defaultvalue>,<valuetype: see ValueType enum>;
-	CommonIniEditor(ICommonAppContext* context, std::string Section, const std::wstring& guiCode, IIniEditorCustomization* customization, const char* HelpFile = NULL);
+	CommonIniEditor(ICommonAppContext* context, std::string Section, const std::wstring& guiCode, IIniEditorCustomization* customization, const char* HelpFile = NULL, IIniEditorPostProcessor* pp = NULL);
 	
 	virtual ~CommonIniEditor();
+	
+	//! pp gets deleted on destruction
+	virtual void setIniPostProcessor(IIniEditorPostProcessor* pp);
 
 	//! sets a section for editing
 	virtual void setSection(std::string Section){section = Section;}

@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <string>
+#include <cstdint>
 
 //! creates a list of buttons inside a window via aggregate gui elements (independent of EventReceiver implementation)
 irr::gui::IGUIWindow* createChooseFromListDialog(irr::IrrlichtDevice* device, std::vector<irr::gui::IGUIButton*>& buttonsOut, const std::vector<int32_t>& buttonIds, const std::vector<std::wstring>& buttonLabels, const std::wstring& headline, int32_t aggregationId, int32_t aggregatableId, bool modal = true, bool cancelByClickOutside = false);

@@ -34,10 +34,12 @@ using namespace video;
 using namespace io;
 using namespace gui;
 
-CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section, int FieldCount, std::string* Keys, std::string* FieldNames, std::string* DefaultValues, ValueType* ValTypes, IIniEditorCustomization* customization, const char* HelpFile):c(context), customization(customization), section(Section), fieldCount(FieldCount), key(Keys), defaultValue(DefaultValues), valType(ValTypes), sel(context, customization->getAlphaBackground(), SColor(255, 255, 255,255)){
+CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section, int FieldCount, std::string* Keys, std::string* FieldNames, std::string* DefaultValues, ValueType* ValTypes, IIniEditorCustomization* customization, const char* HelpFile, IIniEditorPostProcessor* pp):c(context), customization(customization), section(Section), fieldCount(FieldCount), key(Keys), defaultValue(DefaultValues), valType(ValTypes), sel(context, customization->getAlphaBackground(), SColor(255, 255, 255,255)){
+	this->pp = pp;
 	fieldName = new std::wstring[FieldCount];
 	for(int i=0; i<FieldCount; i++){
 		fieldName[i] = convertUtf8ToWString(FieldNames[i]);
+		if(pp){pp->OnLoadField(key[i], fieldName[i], defaultValue[i]);}
 	}
 	delete[] FieldNames;
 	init(HelpFile);
@@ -54,7 +56,8 @@ static bool areWStringsEqual(const std::wstring& a, const std::wstring& b){//wor
 	return true;
 }
 
-CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section, const std::wstring& guiCode, IIniEditorCustomization* customization, const char* HelpFile):c(context), customization(customization), section(Section), sel(context, customization->getAlphaBackground(), SColor(255, 255, 255,255)){
+CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section, const std::wstring& guiCode, IIniEditorCustomization* customization, const char* HelpFile, IIniEditorPostProcessor* pp):c(context), customization(customization), section(Section), sel(context, customization->getAlphaBackground(), SColor(255, 255, 255,255)){
+	this->pp = pp;
 	UnicodeCfgParser parser(4);
 	parser.parse(guiCode);
 	const std::list<std::vector<std::wstring>>& result = parser.getResult();
@@ -78,6 +81,7 @@ CommonIniEditor::CommonIniEditor(ICommonAppContext* context, std::string Section
 			key[i] = convertWStringToUtf8String(line[0]);
 			fieldName[i] = line[1];
 			defaultValue[i] = convertWStringToUtf8String(line[2]);
+			if(pp){pp->OnLoadField(key[i], fieldName[i], defaultValue[i]);}
 			const std::wstring& t = line[3];
 			valType[i] = NOT_EDITABLE;
 			for(uint32_t j=0; j<TYPE_COUNT; j++){
@@ -219,6 +223,7 @@ CommonIniEditor::~CommonIniEditor(){
 	delete[] input;
 	delete[] height;
 	delete[] lastContent;
+	delete pp;
 }
 
 void CommonIniEditor::edit(IniFile* Ini){
@@ -234,6 +239,7 @@ void CommonIniEditor::edit(IniFile* Ini){
 	for(int i=0; i<fieldCount; i++){
 		if(ini->isAvailable(section, key[i])){
 			def = ini->get(section, key[i]);
+			if(pp){pp->OnLoadValue(key[i], def);}
 		}else{
 			def = defaultValue[i];
 		}
@@ -416,6 +422,7 @@ void CommonIniEditor::processEvent(const irr::SEvent& event){
 							}
 						}
 						if(valType[i]!=COLOR_RGB && valType[i]!=COLOR_RGBA){
+							if(pp){pp->OnSaveValue(key[i], value);}
 							ini->set(section, key[i], value);
 						}
 					}
@@ -430,6 +437,11 @@ void CommonIniEditor::processEvent(const irr::SEvent& event){
 			}
 		}
 	}
+}
+
+void CommonIniEditor::setIniPostProcessor(IIniEditorPostProcessor* pp){
+	delete this->pp;
+	this->pp = pp;
 }
 
 void CommonIniEditor::cancelEdit(){

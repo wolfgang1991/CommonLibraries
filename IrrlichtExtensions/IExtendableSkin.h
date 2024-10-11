@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <map>
 #include <string>
+#include <cstdint>
 
 class Drawer2D;
 

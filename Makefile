@@ -5,6 +5,7 @@ all:
 	cd ./IrrlichtExtensions && "$(MAKE)" DEBUG=$(DEBUG)
 	cd ./RPC/JSONRPC2 && "$(MAKE)" DEBUG=$(DEBUG)
 	cd ./Sound && "$(MAKE)" DEBUG=$(DEBUG)
+	cd ./SHA2 && "$(MAKE)" DEBUG=$(DEBUG)
 
 # Cleans all temporary files and compilation results.
 clean:
@@ -12,5 +13,6 @@ clean:
 	cd ./IrrlichtExtensions && "$(MAKE)" clean
 	cd ./RPC/JSONRPC2 && "$(MAKE)" clean
 	cd ./Sound && "$(MAKE)" clean
+	cd ./SHA2 && "$(MAKE)" clean
 
 .PHONY: all clean

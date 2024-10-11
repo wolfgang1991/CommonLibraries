@@ -6,6 +6,7 @@
 #include <functional>
 #include <algorithm>
 #include <locale>
+#include <cstdint>
 
 class ILanguagePhrases;
 
