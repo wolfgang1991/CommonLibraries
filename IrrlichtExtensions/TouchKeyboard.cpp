@@ -9,6 +9,8 @@
 #include <IGUIEnvironment.h>
 #include <IGUIEditBox.h>
 
+#include <cstdint>
+
 using namespace std;
 using namespace irr;
 using namespace core;

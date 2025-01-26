@@ -119,7 +119,7 @@ void writeBigEndian(uint8_t* buffer, TIndex& offset, const T& value){
 }
 
 template <typename T, typename TIndex = uint32_t>
-T readBigEndian(uint8_t* buffer, TIndex& offset){
+T readBigEndian(const uint8_t* buffer, TIndex& offset){
 	T res = 0;
 	for(uint8_t i=0; i<sizeof(T); i++){
 		uint8_t shift = (sizeof(T)-i-1) << 3;//*8

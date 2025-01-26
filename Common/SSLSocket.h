@@ -46,6 +46,8 @@ class SSLContext{
 	//! @sa useCertificate
 	bool useCertificateFromFile(const std::string& path);
 	
+	static bool loadFile(std::vector<char>& out, const std::string& path);
+	
 };
 
 //! Represantation fo X509 Certificates (see SSLSocket below)

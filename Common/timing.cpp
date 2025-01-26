@@ -32,7 +32,7 @@ double blink(){
 
 double getSecs(){
 	#if _WIN32
-	return ((double)timeGetTime())/1000.0;
+	return ((double)timeGetTime()-offSeconds*1000)/1000.0;
 	#else
 	struct timespec tc;
 	clock_gettime(CLOCK_MONOTONIC, &tc);
@@ -42,7 +42,7 @@ double getSecs(){
 
 uint64_t getMilliSecs(){
 	#if _WIN32
-	return timeGetTime();
+	return timeGetTime()-offSeconds*1000;
 	#else
 	struct timespec tc;
 	clock_gettime(CLOCK_MONOTONIC, &tc);

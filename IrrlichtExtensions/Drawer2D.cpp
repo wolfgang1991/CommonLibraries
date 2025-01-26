@@ -108,6 +108,7 @@ class PolyShaderCallback : public IShaderConstantSetCallBack{
 		driver = NULL;
 		firstSetConstants = true;
 		aaDelta = 0.f;
+		wvpMatrixID = textureUnit0ID = aaDeltaID = -1;
 	}
 	
 	virtual ~PolyShaderCallback(){}

@@ -71,7 +71,7 @@ bool SSLContext::useCertificate(const std::vector<char>& data){
 	return success;
 }
 
-static bool loadFile(std::vector<char>& out, const std::string& path){
+bool SSLContext::loadFile(std::vector<char>& out, const std::string& path){
 	std::ifstream f(path.c_str(), std::ifstream::binary);
 	if(f.good()){
 		f.seekg(0, std::ifstream::end);
@@ -302,7 +302,7 @@ X509Cert::X509Cert(const std::vector<char>& data){
 
 X509Cert::X509Cert(const std::string& path){
 	std::vector<char> v;
-	if(loadFile(v, path)){
+	if(SSLContext::loadFile(v, path)){
 		init(v);
 	}else{
 		data = NULL;

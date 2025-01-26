@@ -2,7 +2,7 @@
 #define XMLParser_H_INCLUDED
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <sstream>
 
 inline bool isWhitespace(char c){
@@ -17,7 +17,7 @@ class XMLTag{
 
 	XMLTag* parent;//! Null, falls kein Parent
 	std::string name;
-	std::map<std::string, std::string> attributes;
+	std::unordered_map<std::string, std::string> attributes;//unordered_map faster than map for strings
 	std::stringstream intermediate;
 
 	std::string getInheritance();
@@ -57,6 +57,27 @@ class IIntermediateCharacterFilter{
 
 };
 
+class FastReuseStringStream{
+
+	std::string s;
+
+	public:
+	
+	FastReuseStringStream& operator<<(char c){
+		s.push_back(c);//amortized constant
+		return *this;
+	}
+	
+	const std::string& str(){
+		return s;
+	}
+	
+	void reset(){
+		s.clear();//existing implementations don't change the capacity, although not guaranteed by standard
+	}
+	
+};
+
 class XMLParser{
 
 	private:
@@ -65,8 +86,9 @@ class XMLParser{
 
 	int mode;//state of the stack machine
 
-	std::stringstream token;
-	std::string ckey;
+	FastReuseStringStream token;
+	//std::string ckey;
+	std::string* valueDestination;
 
 	IParsingCallback* cbk;
 

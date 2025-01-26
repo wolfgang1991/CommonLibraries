@@ -19,7 +19,11 @@ else#no debugging, with optimizations
 OPTIM = $(USEROPTIM) -O3 -DNDEBUG
 endif
 
-CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall -std=c++11
+ifndef CPPVERSION
+CPPVERSION = -std=c++11
+endif
+
+CPPFLAGS += -fstrict-aliasing -fexceptions -frtti -Wall $(CPPVERSION)
 
 all_lib: build_deps $(FINALSTATICLIB)
 
@@ -30,13 +34,13 @@ $(FINALSTATICLIB): $(LINKOBJ) $(C_LINKOBJ)
 # Create dependency files for automatic recompilation
 $(LINKOBJ:.o=.d):$(OBJDIR)/%.d:$(SRCDIR)/%.cpp
 	@mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -MM -MF $@ $<
+	$(CXX) $(CPPFLAGS) -D_CREATE_DEPENDENCY_FILES -MM -MF $@ $<
 	sed -i -e "1s;.*;$(@D)/\0;" $@
 	echo "	$(CXX) $(CPPFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 	
 $(C_LINKOBJ:.o=.d):$(OBJDIR)/%.d:$(SRCDIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -MM -MF $@ $<
+	$(CC) $(CFLAGS) -D_CREATE_DEPENDENCY_FILES -MM -MF $@ $<
 	sed -i -e "1s;.*;$(@D)/\0;" $@
 	echo "	$(CC) $(CFLAGS) -c $(OPTIM) $< -o $(@:.d=.o)" >> $@
 

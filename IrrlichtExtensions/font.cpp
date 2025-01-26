@@ -3,6 +3,7 @@
 #include <IGUIFont.h>
 #include <IGUIElement.h>
 
+#include <cstdint>
 #include <sstream>
 
 using namespace irr;

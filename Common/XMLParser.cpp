@@ -16,10 +16,13 @@ std::string XMLTag::getInheritance(){
 }
 
 void XMLTag::printInheritance(){
+	for(auto it=attributes.begin(); it!=attributes.end(); ++it){
+		printf("%s=%s ", it->first.c_str(), it->second.c_str());
+	}
 	if(parent==NULL){
 		printf("%s\n", name.c_str());
 	}else{
-		printf("%s->", name.c_str());
+		printf("%s -> ", name.c_str());
 		parent->printInheritance();
 	}
 }
@@ -66,7 +69,7 @@ void XMLParser::parse(char c){
 			mode = 12;
 		}else if(!isWhitespace(c)){
 			mode = 2;
-			token.str(""); token << c;
+			token.reset(); token << c;
 		}
 	}else if(mode==2){
 		if(c=='>'){
@@ -89,11 +92,12 @@ void XMLParser::parse(char c){
 			mode = 7;
 		}else if(!isWhitespace(c)){
 			mode = 4;
-			token.str(""); token << c;
+			token.reset(); token << c;
 		}
 	}else if(mode==4){
 		if(c=='='){
-			ckey = std::string(token.str());
+			//ckey = token.str();
+			valueDestination = &(dom->attributes[token.str()]);//avoid extra key copy for more speed
 			mode = 5;
 		}else if(!isWhitespace(c)){
 			token << c;
@@ -101,11 +105,12 @@ void XMLParser::parse(char c){
 	}else if(mode==5){
 		if(c=='"'){
 			mode = 6;
-			token.str("");
+			token.reset();
 		}
 	}else if(mode==6){
 		if(c=='"'){
-			dom->attributes[ckey] = token.str();
+			//dom->attributes[ckey] = token.str();//dom->attributes.emplace(ckey, token.str());// // emplace is slower than =
+			*valueDestination = token.str();
 			mode = 3;
 		}else{
 			token << c;
@@ -118,18 +123,18 @@ void XMLParser::parse(char c){
 			domBack();
 		}else if(!isWhitespace(c)){
 			mode = 4;
-			token.str(""); token << c;
+			token.reset(); token << c;
 		}
 	}else if(mode==8){
 		if(!isWhitespace(c)){
-			token.str(""); token << c;
+			token.reset(); token << c;
 			mode = 9;
 		}
 	}else if(mode==9){
 		if(c=='>'){
 			domBack();//because of extra closing tag
 			if(dom!=NULL){
-				if(token.str().compare(dom->name)!=0){
+				if(token.str() != dom->name){
 					printf("WARNING: Closing tag </%s> closes <%s> line: %i\n  See inheritance: ", token.str().c_str(), dom->name.c_str(), line+1);
 					dom->printInheritance();
 				}
@@ -156,17 +161,17 @@ void XMLParser::parse(char c){
 			mode = 13;
 		}else if(c=='['){//![CDATA[sanctionText]]
 			mode = 14;
-			token.str(""); token << c;
+			token.reset(); token << c;
 		}else{
 			mode = 2;
-			token.str(""); token << "!" << c;
+			token.reset(); token << '!' << c;
 		}
 	}else if(mode==13){
 		if(c=='-'){//second - beim (comment)
 			mode = 10;
 		}else{
 			mode = 2;
-			token.str(""); token << "!-" << c;
+			token.reset(); token << '!' << '-' << c;
 		}
 	}else if(mode==14){
 		if(c=='['){//second [ of <![CDATA[text]]>

@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 #include <string>
+#include <cstdint>
 
 #include "ForwardDeclarations.h"
 

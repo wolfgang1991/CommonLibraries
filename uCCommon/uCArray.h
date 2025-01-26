@@ -3,6 +3,8 @@
 
 #include "uCTypeTraits.h"
 
+#include <stddef.h>
+
 namespace ucstd{
 	
 	//! like std::array (some things missing)
@@ -54,22 +56,23 @@ namespace ucstd{
 		}
 		
 		//! on sorted arrays, returns size() if not found, uses operator<
+		//! returns next greater index instead of exact find or size() if findNextGreater true
 		template<typename TFindValue>
-		size_t findBisect(const TFindValue& toFind){
+		size_t findBisect(const TFindValue& toFind, bool findNextGreater = false) const{
 			size_t a = 0, b = N;
 			while(a!=b){
 				size_t center = (a+b)/2;//div
 				if(content[center]<toFind){
-					if(a==center){break;}//no change
+					if(a==center){if(findNextGreater){return center+1;}else{return N;}}//no change
 					a = center;
 				}else if(toFind<content[center]){
-					if(b==center){break;}//no change
+					if(b==center){if(findNextGreater){return center;}else{return N;}}//no change
 					b = center;
 				}else{//content[center]==toFind
 					return center;
 				}
 			}
-			return size();
+			if(findNextGreater){return a==N?N:(content[a]<toFind?(a+1):a);}else{return N;}
 		}
 		
 		bool operator==(const array<T,N>& other) const{
