@@ -13,6 +13,8 @@
 #include "CTimer.h"
 #include "CEAGLManager.h"
 
+#include <iostream>
+
 #import <UIKit/UIKit.h>
 //changed: #import <CoreMotion/CoreMotion.h>
 
@@ -62,7 +64,7 @@ namespace irr
 - (id)init
 {
     self = [super init];
-    autorotate = false;//autorotation requires recalculation of screen coordinated inside app (I guess it is usually not wanted)
+    autorotate = true;//autorotation requires recalculation of screen coordinated inside app (I guess it is usually not wanted)
     statusBarHidden = true;
     shallKeyboardBeVisible = false;
     for(int i=0; i<KEYMAPSIZE; i++){
@@ -201,6 +203,28 @@ namespace irr
 	Device = nil;
 	Active = true;
 	Focus = false;
+
+	//changed (for Horizon):
+    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+    self.window.rootViewController = [[ViewController alloc] init];
+	self.window.backgroundColor = [UIColor blackColor];
+    /*
+    // Create the colors
+    UIColor *topColor = [UIColor colorWithRed:71.0/255.0 green:108.0/255.0 blue:140.0/255.0 alpha:1.0];
+    UIColor *bottomColor = [UIColor colorWithRed:35.0/255.0 green:52.0/255.0 blue:69.0/255.0 alpha:1.0];
+    // Create the gradient
+    CAGradientLayer *theViewGradient = [CAGradientLayer layer];
+    theViewGradient.colors = [NSArray arrayWithObjects: (id)topColor.CGColor, (id)bottomColor.CGColor, nil];
+    theViewGradient.frame = self.window.bounds;
+    //Add gradient to view
+    [self.window.layer insertSublayer:theViewGradient atIndex:0];
+    */
+    self.window.frame = [[UIScreen mainScreen] bounds];
+    self.window.autoresizesSubviews=YES;
+    self.window.userInteractionEnabled = YES;
+    //[self.window makeKeyAndVisible];
+	[self.window setHidden:YES];
+    //changed end
 	
 	[self performSelectorOnMainThread:@selector(runIrrlicht) withObject:nil waitUntilDone:NO];
 	
@@ -471,6 +495,7 @@ namespace irr
     
     CIrrDeviceiOS::CIrrDeviceiOS(const SIrrlichtCreationParameters& params) : CIrrDeviceStub(params), DataStorage(0), Close(false)
     {
+		winWidth = winHeight = 0;
 #ifdef _DEBUG
         setDebugName("CIrrDeviceiOS");
 #endif
@@ -525,6 +550,33 @@ namespace irr
 			
 			os::Timer::tick();
 			
+			//changed:
+			SIrrDeviceiOSDataStorage* dataStorage = static_cast<SIrrDeviceiOSDataStorage*>(DataStorage);
+			//std::cout << "window: " << dataStorage->Window.bounds.size.width << ", " << dataStorage->Window.bounds.size.height << " view: " << dataStorage->View.bounds.size.width << ", " << dataStorage->View.bounds.size.height << std::endl;
+			
+			auto winBounds = dataStorage->Window.bounds.size;
+			if(winBounds.width!=winWidth || winBounds.height!=winHeight){
+				if(winWidth!=0 && winHeight!=0){//resize
+					std::cout << "Resizing..." << std::endl;
+					std::cout << "winBounds: " << winBounds.width << ", " << winBounds.height << std::endl;
+					UIView* externalView = (__bridge UIView*)CreationParams.WindowId;
+					float scale = (externalView == nil) ? [[UIScreen mainScreen] scale] : 1.f;
+					CGRect old = dataStorage->View.frame;
+					std::cout << "old: " << old.origin.x << ", " << old.origin.y << ", " << old.size.width << ", " << old.size.height << " old scale: " << dataStorage->View.contentScaleFactor << std::endl;
+					[dataStorage->View setFrame:CGRectMake(0, 0, winBounds.width, winBounds.height)];
+					[dataStorage->View setContentScaleFactor:scale];
+					CreationParams.WindowSize.Width = winBounds.width*scale; CreationParams.WindowSize.Height = winBounds.height*scale;
+					if(CreationParams.DriverType==video::EDT_OGLES1 || CreationParams.DriverType==video::EDT_OGLES2){//TODO Metal, others
+						((video::CEAGLManager*)ContextManager)->recreateRenderBuffer(CreationParams);
+					}
+					VideoDriver->OnResize(CreationParams.WindowSize);
+					((CCursorControl*)(CursorControl))->OnResize(CreationParams.WindowSize);
+				}
+				winWidth = winBounds.width;
+				winHeight = winBounds.height;
+			}
+			//changed end
+				
 			//! Update events
 			/* changed:
 			SIrrDeviceiOSDataStorage* dataStorage = static_cast<SIrrDeviceiOSDataStorage*>(DataStorage);
@@ -906,6 +958,11 @@ namespace irr
 				[(ViewController*)dataStorage->ViewController setIrrlichtDevice:this];//changed
 				dataStorage->Window.rootViewController = dataStorage->ViewController;
 				
+				//CIrrDelegateiOS* delegate = [UIApplication sharedApplication].delegate;
+				//delegate.window = dataStorage->Window;
+				dataStorage->Window.autoresizesSubviews=YES;
+				dataStorage->Window.userInteractionEnabled = YES;
+
 				[dataStorage->Window makeKeyAndVisible];
 				[(ViewController*)dataStorage->ViewController setKeyboardVisibility:false];//changed
 			}
@@ -939,7 +996,7 @@ namespace irr
 			}
 		}
     }
-    
+
     void CIrrDeviceiOS::createViewAndDriver()
     {
 		SIrrDeviceiOSDataStorage* dataStorage = static_cast<SIrrDeviceiOSDataStorage*>(DataStorage);

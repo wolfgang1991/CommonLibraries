@@ -51,6 +51,9 @@ namespace video
 		// Destroy EAGL context.
 		/* This method destroy EAGL context. */
 		void destroyContext();
+		
+		//! for ios resize
+		void recreateRenderBuffer(const SIrrlichtCreationParameters& params);
 
 		const SExposedVideoData& getContext() const;
 

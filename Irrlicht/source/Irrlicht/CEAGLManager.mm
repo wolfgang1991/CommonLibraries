@@ -110,7 +110,9 @@ bool CEAGLManager::generateSurface()
 	[layer setDrawableProperties:attribs];
 	
 	Configured = true;
-
+	
+	os::Printer::log("CEAGLManager surface created", ELL_DEBUG);
+	
     return true;
 }
 
@@ -194,6 +196,69 @@ void CEAGLManager::destroyContext()
         dataStorage->Context = 0;
 	
 	Data.OpenGLiOS.Context = 0;
+}
+
+void CEAGLManager::recreateRenderBuffer(const SIrrlichtCreationParameters& params){
+	/*
+	// Delete the old buffer, and create a new one at the current size/orientation
+ GLuint renderbuffer = [self renderBuffer];
+ glDeleteRenderbuffers(1, &renderbuffer);
+
+ glGenRenderbuffers(1, &renderbuffer);
+ [self setRenderBuffer:renderbuffer];
+ glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+ [[self context] renderbufferStorage:GL_RENDERBUFFER fromDrawable:(CAEAGLLayer *)[self view].layer];
+
+ glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderbuffer);
+	*/
+	Params = params;
+	SEAGLManagerDataStorage* dataStorage = static_cast<SEAGLManagerDataStorage*>(DataStorage);
+	
+	[dataStorage->Context renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:nil];
+
+	if (FrameBuffer.BufferID != 0)
+	{
+		glDeleteFramebuffersOES(1, &FrameBuffer.BufferID);
+		FrameBuffer.BufferID = 0;
+	}
+	
+	if (FrameBuffer.ColorBuffer != 0)
+	{
+		glDeleteRenderbuffersOES(1, &FrameBuffer.ColorBuffer);
+		FrameBuffer.ColorBuffer = 0;
+	}
+	
+	if (FrameBuffer.DepthBuffer != 0)
+	{
+		glDeleteRenderbuffersOES(1, &FrameBuffer.DepthBuffer);
+		FrameBuffer.DepthBuffer = 0;
+	}
+	
+	if (FrameBuffer.ColorBuffer == 0)
+	{
+		glGenRenderbuffersOES(1, &FrameBuffer.ColorBuffer);
+		glBindRenderbufferOES(GL_RENDERBUFFER_OES, FrameBuffer.ColorBuffer);
+		[dataStorage->Context renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:dataStorage->Layer];
+	}
+	
+	if (FrameBuffer.DepthBuffer == 0)
+	{
+		GLenum depth = (Params.ZBufferBits >= 24) ? GL_DEPTH_COMPONENT24_OES : GL_DEPTH_COMPONENT16_OES;
+
+		glGenRenderbuffersOES(1, &FrameBuffer.DepthBuffer);
+		glBindRenderbufferOES(GL_RENDERBUFFER_OES, FrameBuffer.DepthBuffer);
+		glRenderbufferStorageOES(GL_RENDERBUFFER_OES, depth, Params.WindowSize.Width, Params.WindowSize.Height);
+	}
+	
+	if (FrameBuffer.BufferID == 0)
+	{
+		glGenFramebuffersOES(1, &FrameBuffer.BufferID);
+		glBindFramebufferOES(GL_FRAMEBUFFER_OES, FrameBuffer.BufferID);
+		glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_OES, GL_RENDERBUFFER_OES, FrameBuffer.ColorBuffer);
+		glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_DEPTH_ATTACHMENT_OES, GL_RENDERBUFFER_OES, FrameBuffer.DepthBuffer);
+	}
+	
+	glBindFramebufferOES(GL_FRAMEBUFFER_OES, FrameBuffer.BufferID);
 }
 
 bool CEAGLManager::activateContext(const SExposedVideoData& videoData, bool restorePrimaryOnZero)

@@ -67,6 +67,11 @@ namespace irr
         
         //changed:---
         
+		int winWidth, winHeight;
+		
+		void initSurface();
+		void destroySurface();
+		
         static const unsigned int touchCount = 20;
         void* touch2Index[touchCount];
         //irr::core::list<void*> touch2Index;
@@ -104,6 +109,11 @@ namespace irr
                 refrect = core::rect<s32>(0,0,sSize.Width,sSize.Height);
                 Device = device;
             }
+			
+			virtual void OnResize(core::dimension2d<u32> ssize){
+				sSize = ssize;
+				refrect = core::rect<s32>(0,0,sSize.Width,sSize.Height);
+			}
             
             virtual void setVisible(bool visible){}//TODO: external mouse cursor visibility
             
