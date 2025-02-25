@@ -1,6 +1,6 @@
 #List of object files without path
 _LINKOBJ = IniFile.o IniIterator.o IniParser.o timing.o StringHelpers.o SimpleSockets.o CRC32.o Threading.o AParallelFunction.o \
-XMLParser.o utf8.o Serial.o misc.o ConcurrentCommunicationEndpoint.o NamedPipes.o ZSocket.o SSLSocket.o RTPSender.o
+XMLParser.o utf8.o Serial.o misc.o ConcurrentCommunicationEndpoint.o NamedPipes.o ZSocket.o SSLSocket.o RTPSender.o PrintLog.o
 
 _C_LINKOBJ = cserial.o
 
