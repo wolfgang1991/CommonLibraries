@@ -17,6 +17,14 @@ class RingBuffer{//TODO more efficiency
 		return start==end;
 	}
 	
+	uint32_t size(){
+		if(start<end){
+			return end-start;
+		}else{
+			return capacity-start+end;
+		}
+	}
+	
 	void push_back(uint8_t byte){
 		data[end] = byte;
 		end = (end+1)%capacity;
