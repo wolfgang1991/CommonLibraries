@@ -100,7 +100,7 @@ class LRUCache{
 			return it->second.first;
 		}else{
 			cacheMissCounter++;
-			return NULL;
+			return nullptr;
 		}
 	}
 

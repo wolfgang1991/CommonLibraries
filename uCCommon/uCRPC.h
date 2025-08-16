@@ -1121,6 +1121,16 @@ bool executeBlockingRPC(TResult& returnValue, TRPC* rpc, uint16_t functionID, co
 	return caller.success;
 }
 
+//! returns true if the rpc function returns and the expected value matches
+template <typename TResult, typename TRPC>
+bool executeBlockingRPCCheck(const TResult& expectValue, TRPC* rpc, uint16_t functionID, const std::function<void(TRPC*,UCRPC::IUCRemoteProcedureCaller*)>& call){
+	TResult returnValue;
+	if(executeBlockingRPC(returnValue, rpc, functionID, call)){
+		return returnValue==expectValue;
+	}
+	return false;
+}
+
 #endif
 
 #endif

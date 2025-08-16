@@ -67,6 +67,9 @@ class ScalarValue : public IRPCValue{
 	template<typename TNativeValue>
 	static TNativeValue createNative(IRPCValue* rpcValue);
 	
+	template<typename TNativeValue>
+	static bool checkSignature(IRPCValue* rpcValue);
+	
 };
 
 typedef ScalarValue<bool, IRPCValue::BOOLEAN> BooleanValue;
@@ -87,6 +90,7 @@ TNativeValue ScalarValue<TValueType, TRPCType>::createNative(IRPCValue* rpcValue
 		return ((IntegerValue*)rpcValue)->value;
 	}
 	assert(false);
+	return TNativeValue();
 }
 
 //! string scalars cannot be automatically converted
@@ -98,6 +102,21 @@ TNativeValue ScalarValue<std::string, IRPCValue::STRING>::createNative(IRPCValue
 		return ((StringValue*)rpcValue)->value;
 	}
 	assert(false);
+	return TNativeValue();
+}
+
+template <typename TValueType, IRPCValue::Type TRPCType>
+template<typename TNativeValue>
+bool ScalarValue<TValueType, TRPCType>::checkSignature(IRPCValue* rpcValue){
+	auto rpcType = rpcValue->getType();
+	return rpcType==IRPCValue::BOOLEAN || rpcType==IRPCValue::FLOAT || rpcType==IRPCValue::INTEGER;//booleans, floats and integers are auto convertible
+}
+
+template <>
+template<typename TNativeValue>
+bool ScalarValue<std::string, IRPCValue::STRING>::checkSignature(IRPCValue* rpcValue){
+	auto rpcType = rpcValue->getType();
+	return rpcType==IRPCValue::STRING;
 }
 
 //! Representation of arrays
@@ -127,6 +146,9 @@ class ArrayValue : public IRPCValue{
 	
 	template<typename TNativeValue>
 	static TNativeValue createNative(IRPCValue* rpcValue);
+	
+	template<typename TNativeValue>
+	static bool checkSignature(IRPCValue* rpcValue);
 
 };
 
@@ -167,6 +189,9 @@ class ObjectValue : public IRPCValue{
 
 	template<typename TNativeValue>
 	static TNativeValue createNative(IRPCValue* rpcValue);
+	
+	template<typename TNativeValue>
+	static bool checkSignature(IRPCValue* rpcValue);
 
 };
 
@@ -239,6 +264,7 @@ template<typename TNativeValue>
 IRPCValue* createRPCValue(const TNativeValue& value){
 	return native_to_rpc_type<TNativeValue, true>::template create<TNativeValue>(value);
 }
+
 //! Creates a default native value from a RPC type
 //! even complicated types work out of the box, provided each component type is convertible e.g. createNativeValue<std::vector<std::list<int>>>(...)
 //! Attention: The true underlying data structure of rpcValue must match the native signature. Otherwise there will be invalid casts and bad memory access.
@@ -246,6 +272,13 @@ template<typename TNativeValue>
 TNativeValue createNativeValue(IRPCValue* rpcValue){
 	assert(rpcValue->getType()==native_to_rpc_type<TNativeValue>::typeId || native_to_rpc_type<TNativeValue>::typeId==IRPCValue::UNKNOWN || is_scalar<TNativeValue>::value);
 	return native_to_rpc_type<TNativeValue, true>::template createNative<TNativeValue>(rpcValue);
+}
+
+//! checks if a native value can be safely created from the given rpc value
+//! if custom objects are involved they must implement the checkSignature method
+template<typename TNativeValue>
+bool checkSignature(IRPCValue* rpcValue){
+	return native_to_rpc_type<TNativeValue, true>::template checkSignature<TNativeValue>(rpcValue);
 }
 
 template<typename TNativeValue>
@@ -276,12 +309,22 @@ void reserveIfApplicable(std::vector<T>& ctr, size_t size){
 	ctr.reserve(size);
 }
 
+template<typename T>
+void insertByContainer(T& ctr, typename T::value_type&& value){
+	ctr.push_back(value);
+}
+
+template<typename T>
+void insertByContainer(std::set<T>& ctr, T&& value){
+	ctr.insert(value);
+}
+
 template<typename TNativeValue>
 TNativeValue ArrayValue::createNative(IRPCValue* rpcValue){
 	TNativeValue res;
 	reserveIfApplicable<TNativeValue>(res, ((ArrayValue*)rpcValue)->values.size());
 	for(IRPCValue* value : ((ArrayValue*)rpcValue)->values){
-		res.push_back(createNativeValue<typename TNativeValue::value_type>(value));
+		insertByContainer(res, createNativeValue<typename TNativeValue::value_type>(value));//res.push_back(createNativeValue<typename TNativeValue::value_type>(value));
 	}
 	return res;
 }
@@ -293,6 +336,30 @@ TNativeValue ObjectValue::createNative(IRPCValue* rpcValue){
 		res[it->first] = createNativeValue<typename TNativeValue::mapped_type>(it->second);
 	}
 	return res;
+}
+
+template<typename TNativeValue>
+bool ArrayValue::checkSignature(IRPCValue* rpcValue){
+	if(rpcValue->getType()==IRPCValue::ARRAY){
+		bool res = true;
+		for(IRPCValue* value : ((ArrayValue*)rpcValue)->values){
+			res = res && ::checkSignature<typename TNativeValue::value_type>(value);
+		}
+		return res;
+	}
+	return false;
+}
+
+template<typename TNativeValue>
+bool ObjectValue::checkSignature(IRPCValue* rpcValue){
+	if(rpcValue->getType()==IRPCValue::OBJECT){
+		bool res = true;
+		for(auto it = ((ObjectValue*)rpcValue)->values.begin(); it != ((ObjectValue*)rpcValue)->values.end(); ++it){
+			res = res && ::checkSignature<typename TNativeValue::mapped_type>(it->second);
+		}
+		return res;
+	}
+	return false;
 }
 
 //! checks only the first "layer"
@@ -489,6 +556,11 @@ class Foo{
 		FILL_NATIVE_FIELD_IF_AVAILABLE(position, defaultPosition)
 	CREATE_NATIVE_END
 	
+	CHECK_SIGNATURE_BEGIN(Foo)
+		CHECK_FIELD_SIGNATURE(name, false)
+		CHECK_FIELD_SIGNATURE(position, true)
+	CHECK_SIGNATURE_END
+	
 };
 */
 
@@ -500,6 +572,33 @@ class Foo{
 	
 #define CREATE_END \
 		return rpcValue; \
+	}
+	
+#define CHECK_SIGNATURE_BEGIN(NATIVE_TYPE) \
+	template<typename TNativeValue> \
+	static bool checkSignature(IRPCValue* rpcValue){ \
+		static_assert(std::is_same<TNativeValue, NATIVE_TYPE>::value, ""); \
+		if(rpcValue->getType()==IRPCValue::OBJECT){ \
+			bool res = true;
+	
+#define CHECK_SIGNATURE_END \
+			return res; \
+		} \
+		return false; \
+	}
+
+#define CHECK_FIELD_SIGNATURE(FIELD_NAME, IS_OK_IF_FIELD_MISSING) \
+	CHECK_FIELD_SIGNATURE_ALIAS(FIELD_NAME, FIELD_NAME, IS_OK_IF_FIELD_MISSING)
+
+#define CHECK_FIELD_SIGNATURE_ALIAS(ALIAS, FIELD_NAME, IS_OK_IF_FIELD_MISSING) \
+	{ \
+		ObjectValue* o = (ObjectValue*)rpcValue; \
+		auto it = o->values.find(#ALIAS); \
+		if(it!=o->values.end()){ \
+			res = res && ::checkSignature<decltype(TNativeValue::FIELD_NAME)>(it->second); \
+		}else{ \
+			res = res && IS_OK_IF_FIELD_MISSING; \
+		} \
 	}
 
 #define CREATE_NATIVE_BEGIN(NATIVE_TYPE) \

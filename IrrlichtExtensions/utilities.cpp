@@ -101,6 +101,18 @@ bool loadFileWithAssetSupportIntoVector(irr::io::IFileSystem* fsys, const std::s
 	return false;
 }
 
+bool loadFileWithAssetSupportIntoString(irr::io::IFileSystem* fsys, const std::string& file, std::string& v){
+	IReadFile* rf = fsys->createAndOpenFile(file.c_str());
+	if(rf){
+		uint32_t size = rf->getSize();
+		v.resize(size);
+		rf->read(&(v[0]), size);
+		rf->drop();
+		return true;
+	}
+	return false;
+}
+
 std::function<bool(std::vector<char>&)> createLoadFileIntoVectorFunction(irr::io::IFileSystem* fsys, const std::string& file){
 	return [fsys, file](std::vector<char>& v){
 		return loadFileWithAssetSupportIntoVector(fsys, file, v);

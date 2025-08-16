@@ -78,7 +78,7 @@ void InvalidDoubleDetector::reset(){
 }
 
 
-InputSystem::InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs, bool preferPlatformDependentInput):c(context){
+InputSystem::InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs):c(context){
 	device = c->getIrrlichtDevice();
 	env = device->getGUIEnvironment();
 	driver = device->getVideoDriver();
@@ -87,7 +87,7 @@ InputSystem::InputSystem(ICommonAppContext* context, const std::vector<KeyboardD
 	button = new TouchKey(c, 0, 0, irr::KEY_TAB, irr::core::rect<s32>(0,0,1.5f*c->getRecommendedButtonWidth(), 1.5f*c->getRecommendedButtonHeight()), driver->getTexture(c->getPath(changeTexturePath).c_str()));
 	inputVisible = false;
 	activeInput = keyboards.empty()?0:1;//first touch keyboard
-	input.push_back(new KeyInput(c, preferPlatformDependentInput));
+	input.push_back(new KeyInput(c, false));
 	assert(input.size()==1);//KeyInput must be the first!
 	for(uint32_t i=0; i<keyboards.size(); i++){
 		input.push_back(new TouchKeyboard(c, inputColor, keyboards[i]));
@@ -115,8 +115,10 @@ bool InputSystem::OnEvent(const irr::SEvent& event){
 	return !processEvent(event);
 }
 
-void InputSystem::loadInputSettingsFromIni(IniFile* ini){
+void InputSystem::loadInputSettingsFromIni(IniFile* ini, bool preferPlatformDependentInputDefaultSetting){
 	setColor(SColor(atoi(ini->get("","inputColor.A").c_str()), atoi(ini->get("","inputColor.R").c_str()), atoi(ini->get("","inputColor.G").c_str()), atoi(ini->get("","inputColor.B").c_str())));
+	bool preferred = (bool)atoi(ini->get("", "platformInput", preferPlatformDependentInputDefaultSetting?"1":"0").c_str());
+	setPlatformDependentInputPreferred(preferred);
 }
 
 void InputSystem::setColor(irr::video::SColor Color){

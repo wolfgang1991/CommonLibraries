@@ -67,7 +67,7 @@ class InputSystem : public irr::IEventReceiver{
 
 	irr::video::SColor inputColor;
 	TouchKey* button;
-
+	
 	std::vector<IInput*> input;
 	int activeInput;
 	bool inputVisible;
@@ -87,7 +87,7 @@ class InputSystem : public irr::IEventReceiver{
 	public:
 	
 	//! keyboards: Keyboards definition (see structs in TouchKeyboard.h), changeTexturePath path for the icon for changing input methods
-	InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs = {}, bool preferPlatformDependentInput = false);
+	InputSystem(ICommonAppContext* context, const std::vector<KeyboardDefinition>& keyboards, const std::string& changeTexturePath, const std::vector<IInput*>& additionalInputs = {});
 
 	~InputSystem();
 
@@ -98,7 +98,7 @@ class InputSystem : public irr::IEventReceiver{
 	void setColor(irr::video::SColor Color);
 
 	//! useful in case the color is stored in a config file
-	void loadInputSettingsFromIni(IniFile* ini);
+	void loadInputSettingsFromIni(IniFile* ini, bool preferPlatformDependentInputDefaultSetting = false);
 	
 	void setChangeButtonLocation(const irr::core::rect<irr::s32>& rectangle);
 	

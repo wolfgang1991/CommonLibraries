@@ -10,6 +10,9 @@ class ConcurrentCommunicationEndpointPrivate{
 
 	public:
 	
+	std::function<void()> OnThreadStart;
+	std::function<void()> OnThreadExit;
+	
 	struct BufferWithOffset{
 		uint8_t* buf;
 		uint32_t offset;
@@ -30,6 +33,8 @@ class ConcurrentCommunicationEndpointPrivate{
 		
 	};
 	
+	bool mustDelete;
+	
 	Thread t;
 	ICommunicationEndpoint* endpoint;
 	BufferWithOffset* sendBuffer;
@@ -44,6 +49,7 @@ class ConcurrentCommunicationEndpointPrivate{
 	static void* cceMain(void* param){
 		ConcurrentCommunicationEndpointPrivate* prv = (ConcurrentCommunicationEndpointPrivate*)param;
 		bool running = true;
+		prv->OnThreadStart();
 		while(running){
 			//exchange buffers or contents
 			lockMutex(prv->m);
@@ -74,19 +80,23 @@ class ConcurrentCommunicationEndpointPrivate{
 			}
 			delay(1);
 		}
+		prv->OnThreadExit();
 		return NULL;
 	}
 
 };
 
-ConcurrentCommunicationEndpoint::ConcurrentCommunicationEndpoint(ICommunicationEndpoint* endpoint, uint32_t sendBufSize, uint32_t rcvBufSize){
+ConcurrentCommunicationEndpoint::ConcurrentCommunicationEndpoint(ICommunicationEndpoint* endpoint, uint32_t sendBufSize, uint32_t rcvBufSize, bool mustDelete, const std::function<void()>& OnThreadStart, const std::function<void()>& OnThreadExit){
 	prv = new ConcurrentCommunicationEndpointPrivate();
+	prv->mustDelete = mustDelete;
 	prv->endpoint = endpoint;
 	prv->sendBuffer = new ConcurrentCommunicationEndpointPrivate::BufferWithOffset(sendBufSize);
 	prv->rcvBuffer = new ConcurrentCommunicationEndpointPrivate::BufferWithOffset(rcvBufSize);
 	prv->sendBufferExchange = new ConcurrentCommunicationEndpointPrivate::BufferWithOffset(sendBufSize);
 	prv->rcvBufferExchange = new ConcurrentCommunicationEndpointPrivate::BufferWithOffset(rcvBufSize);
 	prv->rcvBufferStartOffset = 0;
+	prv->OnThreadStart = OnThreadStart;
+	prv->OnThreadExit = OnThreadExit;
 	initMutex(prv->m);
 	prv->mustExit = false;
 	bool res = createThread(prv->t, ConcurrentCommunicationEndpointPrivate::cceMain, prv, true);
@@ -104,6 +114,9 @@ ConcurrentCommunicationEndpoint::~ConcurrentCommunicationEndpoint(){
 	delete prv->rcvBuffer;
 	delete prv->sendBufferExchange;
 	delete prv->rcvBufferExchange;
+	if(prv->mustDelete){
+		delete prv->endpoint;
+	}
 	delete prv;
 }
 	

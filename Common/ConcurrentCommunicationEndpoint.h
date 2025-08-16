@@ -3,6 +3,8 @@
 
 #include "ICommunicationEndpoint.h"
 
+#include <functional>
+
 class ConcurrentCommunicationEndpointPrivate;
 
 //! A separate thread is used for acutal send/recv to avoid blocking problems.
@@ -20,7 +22,9 @@ class ConcurrentCommunicationEndpoint : public ICommunicationEndpoint{
 	static constexpr uint32_t defaultBufSize = 3264; //1048576;//1MiB
 	
 	//! endpoint must no longer be used in this thread (other threads may access it at any time while this exists)
-	ConcurrentCommunicationEndpoint(ICommunicationEndpoint* endpoint, uint32_t sendBufSize = defaultBufSize, uint32_t rcvBufSize = defaultBufSize);
+	//! mustDelete: deletes endpoint on destruction
+	//! thread callbacks called by thread
+	ConcurrentCommunicationEndpoint(ICommunicationEndpoint* endpoint, uint32_t sendBufSize = defaultBufSize, uint32_t rcvBufSize = defaultBufSize, bool mustDelete = false, const std::function<void()>& OnThreadStart = [](){}, const std::function<void()>& OnThreadExit = [](){});
 	
 	~ConcurrentCommunicationEndpoint();
 	

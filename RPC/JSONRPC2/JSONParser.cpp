@@ -638,12 +638,22 @@ IJSONParser::State JSONParser::parse(const std::string& s){
 }
 
 IJSONParser::State JSONParser::parse(const char* cstr){
-	//double time = getSecs();
 	IJSONParser::State res = IJSONParser::PARSING;
 	for(uint32_t i=0; cstr[i]!=0; i++){
 		res = parse(cstr[i], cstr[i+1]);
 	}
-	//std::cout << "needed: " << (getSecs()-time) << std::endl;
+	return res;
+}
+
+IJSONParser::State JSONParser::parse(const char* cstr, uint32_t length){
+	IJSONParser::State res = IJSONParser::PARSING;
+	if(length>0){
+		length--;
+		for(uint32_t i=0; i<length; i++){
+			res = parse(cstr[i], cstr[i+1]);
+		}
+		res = parse(cstr[length], 0);//0 termination
+	}
 	return res;
 }
 

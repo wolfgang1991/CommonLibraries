@@ -551,7 +551,7 @@ class ICharacterCallback{
 
 static void iterateOverString(const wchar_t* text, size_t textLen, irr::s32 tabSize, const IFontLoader::Font& fontDefinition, ICharacterCallback& cbk){
 	irr::core::stringw kerningKey(L"\1\1");
-	irr::core::map<irr::u32, IFontLoader::FontCharacter>::Node* fallbackNode = fontDefinition.characters.find((u32)L' ');
+	irr::core::map<irr::u32, IFontLoader::FontCharacter>::Node* fallbackNode = fontDefinition.characters.find((u32)L'\'');
 	assert(fallbackNode!=NULL);
 	u32 spaceAdvance = fallbackNode->getValue().xadvance;
 	s32 curX = 0, curY = 0;

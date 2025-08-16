@@ -421,7 +421,7 @@ void CommonIniEditor::processEvent(const irr::SEvent& event){
 								}
 							}
 						}
-						if(valType[i]!=COLOR_RGB && valType[i]!=COLOR_RGBA){
+						if(valType[i]!=COLOR_RGB && valType[i]!=COLOR_RGBA){//MUST BE SAVED FOR SOME APPLICATIONS:  && valType[i]!=NOT_EDITABLE
 							if(pp){pp->OnSaveValue(key[i], value);}
 							ini->set(section, key[i], value);
 						}

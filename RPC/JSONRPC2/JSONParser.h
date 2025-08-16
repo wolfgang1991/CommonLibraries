@@ -75,6 +75,8 @@ class JSONParser : public IJSONParser{
 	//! WARNING #2: This only works if the whole content is present inside the string (because a lookahead of '\0' will be used when parsing the last character).
 	virtual IJSONParser::State parse(const char* cstr);
 	
+	virtual IJSONParser::State parse(const char* cstr, uint32_t length);
+	
 	virtual IRPCValue* stealResult();
 	
 	virtual IRPCValue* getResult();

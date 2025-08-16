@@ -47,6 +47,16 @@ T Max(T value, T min){
 	return value<min?min:value;
 }
 
+//! safe acos (if out of valid range due to rounding errors)
+inline double acos2(double in){
+	return acos(Clamp(in, -1.0, 1.0));
+}
+
+//! safe asin (if out of valid range due to rounding errors)
+inline double asin2(double in){
+	return asin(Clamp(in, -1.0, 1.0));
+}
+
 //! A (in), B (out)
 //! round A to B
 template <class A, class B>

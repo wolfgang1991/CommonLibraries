@@ -320,11 +320,15 @@ void Drawer2D::draw(irr::video::ITexture* tex, const irr::core::rect<irr::s32>& 
 		draw(tex, screenRect.UpperLeftCorner, dimension2d<int>(screenRect.getWidth(), screenRect.getHeight()));
 	}else{
 		core::rect<s32> vp = driver->getViewPort();
-		driver->setViewPort(*clipRect);
+		rect<s32> clipRectCpy(*clipRect);
+		clipRectCpy.clipAgainst(vp);
+		rect<s32> screenRectCpy(screenRect);
+		screenRectCpy.clipAgainst(clipRectCpy);
+		driver->setViewPort(screenRectCpy);
 		setTextureWrap(ETC_CLAMP, ETC_CLAMP);
-		draw(tex, screenRect.UpperLeftCorner-clipRect->UpperLeftCorner, dimension2d<int>(screenRect.getWidth(), screenRect.getHeight()));
+		draw(tex, screenRect.UpperLeftCorner-screenRectCpy.UpperLeftCorner, dimension2d<int>(screenRect.getWidth(), screenRect.getHeight()));
 		setTextureWrap();
-		driver->setViewPort(vp);	
+		driver->setViewPort(vp);
 	}
 }
 

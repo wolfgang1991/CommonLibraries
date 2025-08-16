@@ -364,7 +364,7 @@ class IPv6TCPSocket : public IPv6Socket{
 ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout);
 
 //! WARNING: NO TIMEOUT; portToFill: port which is filled into the results
-std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_t portToFill = 0);
+std::list<IIPAddress*> queryIPAddressesForHostName(const std::string& hostname, uint16_t portToFill = 0);
 
 std::list<IIPAddress*> copyAddressList(const std::list<IIPAddress*>& other);
 
@@ -372,7 +372,7 @@ void deleteAddressList(std::list<IIPAddress*>& l);
 
 //! if tcp create tcp socket and connect with tcpConnectTimeout, else create udp and set target
 //! returns NULL if no known ip address or tcp connection failed
-ASocket* createSocketForHostName(bool tcp, std::string hostName, uint16_t port, uint32_t tcpConnectTimeout);
+ASocket* createSocketForHostName(bool tcp, const std::string& hostname, uint16_t port, uint32_t tcpConnectTimeout);
 
 template<typename TUDPSocket, typename TContainer>
 bool sendUDPToAddresses(TUDPSocket& s, const TContainer& addressList, const char* buf, uint32_t bufSize){

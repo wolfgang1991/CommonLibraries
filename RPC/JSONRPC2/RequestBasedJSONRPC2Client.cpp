@@ -7,7 +7,10 @@
 #include <StringHelpers.h>
 
 #ifndef NO_CURL
+#include <platforms.h>
+#ifndef IOS_SIMULATOR
 #include <curl/curl.h>
+#endif
 #endif
 
 #include <limits>
@@ -245,11 +248,15 @@ static void curl_assert(int returnCode){
 }
 
 size_t CURLRequestSender::write_callback(char* ptr, size_t size, size_t nmemb, void* userdata){
+	#ifdef IOS_SIMULATOR
+	return 0;
+	#else
 	if(nmemb>0){
 		CURLRequestSender* s = (CURLRequestSender*)userdata;
 		s->response << std::string(ptr, nmemb);
 	}
 	return nmemb;
+	#endif
 }
 
 size_t CURLRequestSender::header_callback(char* buffer, size_t size, size_t nitems, void* userdata){
@@ -264,6 +271,7 @@ size_t CURLRequestSender::header_callback(char* buffer, size_t size, size_t nite
 }
 
 CURLRequestSender::CURLRequestSender(const std::string& url, bool skipPeerVerification, bool skipHostnameVerification, bool useCompression){
+	#ifndef IOS_SIMULATOR
 	curl = curl_easy_init();
 	curl_assert(curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L));//for thread safety
 	curl_assert(curl_easy_setopt(curl, CURLOPT_NOPROXY, "localhost,127.0.0.1"));//ipv6 doens't work in this list
@@ -288,14 +296,22 @@ CURLRequestSender::CURLRequestSender(const std::string& url, bool skipPeerVerifi
 	hs = curl_slist_append(hs, "Content-Type: application/json");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hs);
 	this->hs = hs;
+	#else
+	this->hs = NULL;
+	#endif
 }
 	
 CURLRequestSender::~CURLRequestSender(){
+	#ifndef IOS_SIMULATOR
 	curl_easy_cleanup(curl);
 	curl_slist_free_all((curl_slist*)hs);
+	#endif
 }
 
 IRequestSender::ResponseType CURLRequestSender::sendRequest(const std::string& toSend, std::string& result){
+	#ifdef IOS_SIMULATOR
+	return IRequestSender::ERROR_NO_CONNECTION;
+	#else
 	isGoodResponse = true;
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, toSend.c_str());
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, toSend.size());
@@ -303,6 +319,7 @@ IRequestSender::ResponseType CURLRequestSender::sendRequest(const std::string& t
 	result = response.str();
 	response.str("");
 	return r==0?(isGoodResponse?(IRequestSender::SUCCESS):(IRequestSender::ERROR_BAD_RESPONSE)):(IRequestSender::ERROR_NO_CONNECTION);
+	#endif
 }
 
 #endif

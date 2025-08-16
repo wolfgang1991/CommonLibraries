@@ -9,6 +9,12 @@ inline bool isWhitespace(char c){
 	return c==' ' || c=='\t' || c=='\n';
 }
 
+//! escapes &, <, >, ", and '
+std::string escapeXMLString(const std::string& s);
+
+//! removes escapes from escapeXMLString
+std::string unescapeXMLString(const std::string& s);
+
 class XMLTag{
 
 	public:

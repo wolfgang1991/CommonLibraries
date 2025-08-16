@@ -99,7 +99,23 @@ class Matrix{
 	TScalar calcFrobeniusNorm() const{
 		return sqrt(calcSquareSumNorm());
 	}
-
+	
+	Matrix<TScalar, rowCount, columnCount> operator+(const Matrix<TScalar, rowCount, columnCount>& other) const{
+		Matrix<TScalar, rowCount, columnCount> res(UNDEFINED);
+		for(uint32_t i=0; i<size; i++){
+			res[i] = (*this)[i] + other[i];
+		}
+		return res;
+	}
+	
+	Matrix<TScalar, rowCount, columnCount> operator-(const Matrix<TScalar, rowCount, columnCount>& other) const{
+		Matrix<TScalar, rowCount, columnCount> res(UNDEFINED);
+		for(uint32_t i=0; i<size; i++){
+			res[i] = (*this)[i] - other[i];
+		}
+		return res;
+	}
+	
 	template<uint32_t otherColumnCount>
 	Matrix<TScalar, rowCount, otherColumnCount> operator*(const Matrix<TScalar, columnCount, otherColumnCount>& other) const{
 		Matrix<TScalar, rowCount, otherColumnCount> res(UNDEFINED);
@@ -127,6 +143,11 @@ class Matrix{
 
 template<typename TScalar, uint32_t size>
 using Vector = Matrix<TScalar, size, 1>;
+
+template<typename TScalar>
+using Vector2D = Vector<TScalar, 2>;
+
+using Vector2DF = Vector2D<float>;
 
 template<typename TScalar>
 using Vector3D = Vector<TScalar, 3>;

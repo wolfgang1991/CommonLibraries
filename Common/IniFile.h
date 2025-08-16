@@ -37,6 +37,8 @@ class IniFile{
 	const std::string& get(const std::string& section, const std::string& key, const std::string& defaultValue) const;
 	
 	static const std::string& get(std::map< std::string, std::map<std::string, std::string> >::iterator it, const std::string& key, const std::string& defaultValue);
+	
+	static const std::string& get(const std::map<std::string, std::string>& key2value, const std::string& key, const std::string& defaultValue);
 
 	//! set value
 	void set(const std::string& section, const std::string& key, const std::string& value);
@@ -67,6 +69,19 @@ class IniFile{
 	const std::map<std::string, std::string>& getSection(const std::string& section) const;
 	
 	void setSection(const std::string& section, const std::map<std::string, std::string>& key2value);
+	
+	//! calls function for each section with sectionPrefix0 sectionPrefix1 ...
+	//! function should have the following signature: void function(const std::string& section, const map<std::string,std::string>& key2value)
+	template <typename TFunction>
+	void forEachSection(const std::string& sectionPrefix, const TFunction& function) const{
+		uint32_t i = 0;
+		auto it = data.find(sectionPrefix+convertToString(i));
+		while(it!=data.end()){
+			function(it->first, it->second);
+			++i;
+			 it = data.find(sectionPrefix+convertToString(i));
+		} 
+	}
 	
 };
 

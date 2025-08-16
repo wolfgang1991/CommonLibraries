@@ -99,8 +99,12 @@ const std::string& IniFile::get(const std::string& section, const std::string& k
 }
 
 const std::string& IniFile::get(std::map< std::string, std::map<std::string, std::string> >::iterator it, const std::string& key, const std::string& defaultValue){
-	auto it2 = it->second.find(key);
-	if(it2!=it->second.end()){
+	return get(it->second, key, defaultValue);
+}
+
+const std::string& IniFile::get(const std::map<std::string, std::string>& key2value, const std::string& key, const std::string& defaultValue){
+	auto it2 = key2value.find(key);
+	if(it2!=key2value.end()){
 		return it2->second;
 	}
 	return defaultValue;

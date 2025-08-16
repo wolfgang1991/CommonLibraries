@@ -4,7 +4,11 @@
 //! Preprocessor directives to detect specific platforms
 
 #if defined(STM32F0xx) || defined(STM32F1xx) || defined(STM32F2xx) || defined(STM32F3xx) || defined(STM32F4xx) || defined(STM32F5xx) || defined(STM32F6xx) || defined(STM32F7xx)
-#define STM32_MICROCONTROLLER
+	#define STM32_MICROCONTROLLER
+#elif defined(__AVR_ARCH__)
+	#define AVR_MICROCONTROLLER
+#elif defined(ARDUINO_ARCH_ESP32)
+	#define ESP32_MICROCONTROLLER
 #endif
 
 #if defined(__AVR_ARCH__) || defined(ARDUINO) || defined(STM32_MICROCONTROLLER) || defined(ARDUINO_ARCH_ESP32)
@@ -14,6 +18,10 @@
 	#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) || defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 		#define IOS_PLATFORM
 		#define PLATFORM_STRING "iOS"
+		#include <TargetConditionals.h>
+		#if TARGET_OS_SIMULATOR
+		#define IOS_SIMULATOR
+		#endif
 	#else
 		#define MACOSX_PLATFORM
 		#define PLATFORM_STRING "macOS"

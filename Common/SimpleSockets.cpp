@@ -1041,7 +1041,7 @@ static inline void* get_in_addr(struct sockaddr *sa) {
   return sa->sa_family == AF_INET?(void *)&(((sockaddr_in*)sa)->sin_addr):(void*)&(((sockaddr_in6*)sa)->sin6_addr);
 }
 
-std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_t portToFill){
+std::list<IIPAddress*> queryIPAddressesForHostName(const std::string& hostName, uint16_t portToFill){
 	checkAndInitGlobally();
 	std::list<IIPAddress*> l;
 	addrinfo* result;
@@ -1065,7 +1065,7 @@ std::list<IIPAddress*> queryIPAddressesForHostName(std::string hostName, uint16_
 	return l;	
 }
 
-ASocket* createSocketForHostName(bool tcp, std::string hostName, uint16_t port, uint32_t tcpConnectTimeout){
+ASocket* createSocketForHostName(bool tcp, const std::string& hostName, uint16_t port, uint32_t tcpConnectTimeout){
 	ASocket* res = NULL;
 	std::list<IIPAddress*> l = queryIPAddressesForHostName(hostName, port);
 	if(tcp){

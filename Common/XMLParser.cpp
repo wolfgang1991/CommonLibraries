@@ -3,6 +3,58 @@
 
 #include <fstream>
 
+std::string escapeXMLString(const std::string& s){
+	std::string res;
+	res.reserve(2*s.size());
+	for(char c : s){
+		if(c=='&'){
+			res.append("&amp;");
+		}else if(c=='<'){
+			res.append("&lt;");
+		}else if(c=='>'){
+			res.append("&gt;");
+		}else if(c=='"'){
+			res.append("&quot;");
+		}else if(c=='\''){
+			res.append("&#39;");
+		}else{
+			res.push_back(c);
+		}
+	}
+	return res;
+}
+
+std::string unescapeXMLString(const std::string& s){
+	std::string res;
+	res.reserve(s.size());
+	for(uint32_t i=0; i<s.size(); i++){
+		char c = s[i];
+		if(c=='&'){
+			if(i+4<s.size() && s[i+1]=='a' && s[i+2]=='m' && s[i+3]=='p' && s[i+4]==';'){
+				res.push_back('&');
+				i+=4;
+			}else if(i+3<s.size() && s[i+1]=='l' && s[i+2]=='t' && s[i+3]==';'){
+				res.push_back('<');
+				i+=3;
+			}else if(i+3<s.size() && s[i+1]=='g' && s[i+2]=='t' && s[i+3]==';'){
+				res.push_back('>');
+				i+=3;
+			}else if(i+5<s.size() && s[i+1]=='q' && s[i+2]=='u' && s[i+3]=='o' && s[i+4]=='t' && s[i+5]==';'){
+				res.push_back('"');
+				i+=5;
+			}else if(i+4<s.size() && s[i+1]=='#' && s[i+2]=='3' && s[i+3]=='9' && s[i+4]==';'){
+				res.push_back('\'');
+				i+=4;
+			}else{
+				res.push_back(c);
+			}
+		}else{
+			res.push_back(c);
+		}
+	}
+	return res;
+}
+
 XMLTag::XMLTag(XMLTag* parent){
 	this->parent = parent;
 }

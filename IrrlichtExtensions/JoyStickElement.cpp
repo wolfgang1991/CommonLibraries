@@ -50,6 +50,7 @@ void JoyStickElement::draw(){
 }
 
 bool JoyStickElement::OnEvent(const irr::SEvent& event){
+	bool res = false;
 	if(event.EventType==EET_MOUSE_INPUT_EVENT){
 		const SEvent::SMouseInput& m = event.MouseInput;
 		if(moving){
@@ -59,14 +60,15 @@ bool JoyStickElement::OnEvent(const irr::SEvent& event){
 				moving = false;
 				offset = vector2d<s32>(0,0);
 			}
+			res = true;
 		}else if(m.Event==EMIE_LMOUSE_PRESSED_DOWN){
 			startMousePos = vector2d<s32>(m.X,m.Y);
 			vector2d<s32> delta = startMousePos-AbsoluteRect.getCenter();
 			moving = std::abs(delta.X)<0.5f*usableArea*AbsoluteRect.getWidth() && std::abs(delta.Y)<0.5f*usableArea*AbsoluteRect.getHeight();
+			res = moving;
 		}
-		return true;
 	}
-	return false;
+	return res;
 }
 
 irr::core::vector2d<irr::f32> JoyStickElement::getJoystickPosition() const{

@@ -121,12 +121,6 @@ inline std::wstring replace(const std::wstring& s, const std::wstring& search, c
 	return replaceString<std::wstring>(s, search, replace);
 }
 
-//! Convert String to WString
-std::wstring convertStringToWString(const std::string& str);
-
-//! Convert WString to String
-std::string convertWStringToString(const std::wstring& str);
-
 //! special case of parseSeparatedString function template
 //! if noEmptyToken: duplicate separator don't result in empty token in list
 std::list<std::string> parseSeparatedString(const std::string& s, char separator, bool noEmptyToken = false);
@@ -134,7 +128,7 @@ std::list<std::string> parseSeparatedString(const std::string& s, char separator
 //! parses a separated string e.g. csv and pushed back the token into out. TContainer should be a container where push_back is possible in O(1) (e.g. std::list or std::vector)
 //! if noEmptyToken: duplicate separator don't result in empty token in list
 template<typename TContainer>
-void parseSeparatedString(TContainer& out, const typename TContainer::value_type& s, typename TContainer::value_type separators, bool noEmptyToken = false){
+void parseSeparatedString(TContainer& out, const typename TContainer::value_type& s, const typename TContainer::value_type& separators, bool noEmptyToken = false){
 	typedef typename TContainer::value_type String;
 	typedef typename String::value_type Char;
 	std::basic_stringstream<Char> ss;
@@ -264,9 +258,9 @@ inline std::string getHumanReadableTime(uint64_t time, bool showDays = true){
 template<typename TChar>
 std::basic_string<TChar> trimString(const std::basic_string<TChar>& s){
 	if(s.empty()){return s;}
-	uint32_t start = 0; for(;start<s.size()&&s[start]<' ';start++){}
+	uint32_t start = 0; for(;start<s.size()&&s[start]<=' ';start++){}
 	if(start<s.size()){
-		uint32_t end = s.size()-1; for(;s[end]<' ';end--){}
+		uint32_t end = s.size()-1; for(;s[end]<=' ';end--){}
 		return s.substr(start, end-start+1);
 	}else{//only whitespaces etc
 		return std::basic_string<TChar>();

@@ -407,7 +407,7 @@ class AMLParseCallback : public IParsingCallback{
 				f32 scale = ele->zoom*getF32Value(t->attributes["scale"], 1.f);
 				guiFont->setDefaultScale(scale*oldScale);
 				AggregateStackFrame& prev = stack.back();
-				std::wstring text = convertUtf8ToWString(t->intermediate.str());
+				std::wstring text = convertUtf8ToWString(unescapeXMLString(t->intermediate.str()));
 				const std::string& space = t->attributes["space"];
 				bool spaceAvail = !(space.empty() || eq(space, "auto"));
 				f32 fSpace = convertStringTo<f32>(space);
