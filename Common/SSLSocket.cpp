@@ -1,6 +1,6 @@
-#ifndef NO_OPENSSL
-
 #include "SSLSocket.h"
+
+#ifndef NO_OPENSSL
 
 #include <timing.h>
 

@@ -10,13 +10,15 @@
 #include <pthread.h>
 #include <csignal>
 
+volatile bool running = true;
+
 void* SocketMain(void* arg){
 	IPv4TCPSocket* server = (IPv4TCPSocket*)arg;
 	std::list<IPv4TCPSocket*> clients;
 	std::string test("test_from_server");
 	uint32_t bufSize = 512;
 	char buf[bufSize];
-	while(true){
+	while(running){
 		IPv4TCPSocket* newClient = server->accept();
 		if(newClient!=NULL){
 			std::cout << "New Client\n" << std::flush;
@@ -31,6 +33,9 @@ void* SocketMain(void* arg){
 			}
 		}
 		delay(10);
+	}
+	for(auto it = clients.begin(); it != clients.end(); ++it){
+		delete *it;
 	}
 	return NULL;
 }
@@ -57,6 +62,25 @@ static void test(bool in, const char* label = "Test"){
 }
 
 int main(int argc, char *argv[]){
+
+	std::list<IPInterface> ifaces = queryIPInterfaces();
+	for(auto it=ifaces.begin(); it!=ifaces.end(); ++it){
+		std::cout << "Interface: " << it->name << std::endl;
+		if(it->address){
+			std::cout << " Address: " << it->address->getAddressAsString() << std::endl;
+		}
+		if(it->netmask){
+			std::cout << " Netmask: " << it->netmask->getAddressAsString() << std::endl;
+		}
+		if(it->broadcastAddress){
+			std::cout << " Broadcast: " << it->broadcastAddress->getAddressAsString() << std::endl;
+		}
+		std::cout << " isUp: " << (it->isUp?"true":"false") << std::endl;
+		std::cout << " isLoopback: " << (it->isLoopback?"true":"false") << std::endl;
+		std::cout << " isPointToPoint: " << (it->isPointToPoint?"true":"false") << std::endl;
+		std::cout << " isBroadcast: " << (it->isBroadcast?"true":"false") << std::endl;
+		std::cout << std::endl;
+	}
 
 	std::list<IPv4Address> brdAddrList = queryIPv4BroadcastAdresses(666);
 	for(auto it=brdAddrList.begin(); it!=brdAddrList.end(); ++it){
@@ -138,6 +162,13 @@ int main(int argc, char *argv[]){
 	std::list<IIPAddress*> addressList = queryIPAddressesForHostName("google.de", 666);
 	for(auto it = addressList.begin(); it != addressList.end(); ++it){
 		std::cout << "address: " << (*it)->getAddressAsString() << std::endl << std::flush;
+	}
+
+	running = false;
+	pthread_join(sockThread, NULL);
+
+	for(auto it = addressList.begin(); it != addressList.end(); ++it){
+		delete *it;
 	}
 
 	return 0;

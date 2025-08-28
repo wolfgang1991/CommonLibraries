@@ -6,6 +6,8 @@
 #include <string>
 #include <list>
 #include <cstdint>
+#include <memory>
+#include <functional>
 
 #define SIMPLESOCKETS_WIN (defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64))
 
@@ -106,6 +108,22 @@ class IPv6Address : public IIPAddress{
 	bool operator<(const IPv6Address& other) const;
 	
 	bool operator==(const IPv6Address& other) const;
+
+};
+
+struct IPInterface{
+
+	std::string name;
+	std::shared_ptr<IIPAddress> address;
+	std::shared_ptr<IIPAddress> netmask;
+	std::shared_ptr<IIPAddress> broadcastAddress;
+
+	bool isUp;
+	bool isLoopback;
+	bool isPointToPoint;
+	bool isBroadcast;
+
+	IPInterface():isUp(false), isLoopback(false), isPointToPoint(false), isBroadcast(false){}
 
 };
 
@@ -221,9 +239,9 @@ class IPv6Socket : public ASocket{
 
 };
 
-class IPv4UDPSocket : public IPv4Socket{
+struct IPv4UDPSocketAutoMulticastParams; 
 
-	private:
+class IPv4UDPSocket : public IPv4Socket{
 	
 	bool boundOrSent;
 	
@@ -232,6 +250,8 @@ class IPv4UDPSocket : public IPv4Socket{
 	IPv4Address targetAddress;
 	IPv4Address lastReceivedAddress;
 
+	IPv4UDPSocketAutoMulticastParams* autoMulticastParams;
+
 	public:
 	
 	//! create new socket
@@ -239,6 +259,8 @@ class IPv4UDPSocket : public IPv4Socket{
 	
 	//! use existing "native" socket
 	IPv4UDPSocket(int socketHandle);
+
+	~IPv4UDPSocket();
 	
 	bool bind(int port, bool reusePort = false);
 	
@@ -256,7 +278,19 @@ class IPv4UDPSocket : public IPv4Socket{
 	const IPv4Address& getLastDatagramAddress() const;
 	
 	//! addressString must be a multicast address from 224.0.0.0/4 subnet, true if successful
+	//! uses any local interface (chosen by the OS)
 	bool joinMulticastGroup(const std::string& addressString);
+	
+	//! chooses a specific local interface, true if successful, see also queryIPInterfaces, ports are ignored
+	bool joinMulticastGroup(const IPv4Address& multicastAddress, const IPv4Address& localInterfaceAddress);
+
+	//! chooses a list of specific local interfaces (if up), true if successful for all, see also queryIPInterfaces, ports are ignored
+	bool joinMulticastGroup(const IPv4Address& multicastAddress, const std::list<IPInterface>& localInterfaces, const std::function<void(const IPv4Address& multicastAddress, const IPv4Address& localInterfaceAddress, bool success)>& perInterfaceCallback = nullptr);
+
+	//! automatically joins the multicast group on all available interfaces on a regular basis (recv call)
+	//! the callback function is overriden at each call of this function
+	//! if no local interfaces are found the multicast group is joined on INADDR_ANY
+	void enableAutoMulticastGroupJoining(const IPv4Address& multicastAddress, const std::function<void(const IPv4Address& multicastAddress, const IPv4Address& localInterfaceAddress, bool success)>& perInterfaceCallback = nullptr);
 
 };
 
@@ -387,5 +421,7 @@ bool sendUDPToAddresses(TUDPSocket& s, const TContainer& addressList, const char
 
 //! returns the ipv4 broadcast addresses for all interfaces
 std::list<IPv4Address> queryIPv4BroadcastAdresses(uint16_t portToFill = 0);
+
+std::list<IPInterface> queryIPInterfaces();
 
 #endif

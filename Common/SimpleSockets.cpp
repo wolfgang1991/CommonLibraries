@@ -1,9 +1,11 @@
 #include "SimpleSockets.h"
+#include "timing.h"
 
 #include <cassert>
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <set>
 
 #if SIMPLESOCKETS_WIN
 //TODO
@@ -17,6 +19,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
 
 #if defined(__ANDROID__)// || defined(__linux__)
 #include <android/log.h>
@@ -135,7 +138,7 @@ static const char* inet_ntop(int af, const void* src, char* dst, socklen_t size)
 }
 #endif
 
-static void handleErrorMessage(const char* error = NULL){
+static void handleErrorMessage(const char* error = NULL, bool printStackTrace = true){
 	#if SIMPLESOCKETS_WIN
 	const char* finalError = error;
 	if(error==NULL){
@@ -148,14 +151,16 @@ static void handleErrorMessage(const char* error = NULL){
 	}
 	#else
 	const char* finalError = error==NULL?strerror(errno):error;
-	std::cout << "errno: " << errno << std::endl;
+	std::cout << "errno: " << errno << " ";
 	#endif
 	std::cout << "socket error: " << finalError << std::endl;
 	#if HAS_EXECINFO
-	size_t size = 100;
-	void* array[100];
-	size = backtrace(array, size);
-	backtrace_symbols_fd(array, size, STDOUT_FILENO);
+	if(printStackTrace){
+		size_t size = 100;
+		void* array[100];
+		size = backtrace(array, size);
+		backtrace_symbols_fd(array, size, STDOUT_FILENO);
+	}
 	#endif
 	#if defined(__ANDROID__)
 	__android_log_print(ANDROID_LOG_ERROR, "SimpleSockets", "socket error: %s\n", finalError);
@@ -542,6 +547,45 @@ static void disableBlockingTimeout(int sockHandle){
 	setsockopt(sockHandle, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 }
 
+struct IPv4UDPSocketAutoMulticastParams{
+
+	IPv4UDPSocket* s;
+	std::set<IPv4Address> multicastAddresses;
+	std::function<void(const IPv4Address& multicastAddress, const IPv4Address& localInterfaceAddress, bool success)> perInterfaceCallback = nullptr;
+	double lastJoinAttemptTime = 0.0;
+	double lastReceiveTime = 0.0;
+
+	static constexpr double rejoinPeriodNoData = 1.0; //seconds
+	static constexpr double rejoinPeriodWithData = 30.0; //seconds
+	static constexpr double dataTimeout = 1.0; //seconds
+
+	IPv4UDPSocketAutoMulticastParams(IPv4UDPSocket* s):s(s){}
+
+	//! receivedData must be true if data has been received since the last call to update
+	void update(bool receivedData){
+		double t = getSecs();
+		if(receivedData){lastReceiveTime = t;}
+		double dt = t-lastReceiveTime>dataTimeout?rejoinPeriodNoData:rejoinPeriodWithData;
+		if(t-lastJoinAttemptTime>dt){
+			lastJoinAttemptTime = t;
+			std::list<IPInterface> ifaces = queryIPInterfaces();
+			bool error = false;
+			if(ifaces.empty()){
+				for(const IPv4Address& multicastAddress : multicastAddresses){
+					if(!s->joinMulticastGroup(multicastAddress.getAddressAsString())){error = true;}
+				}
+			}else{
+				for(const IPv4Address& multicastAddress : multicastAddresses){
+					if(!s->joinMulticastGroup(multicastAddress, ifaces, perInterfaceCallback)){error = true;}
+				}
+			}
+			if(error){
+				lastJoinAttemptTime += 10.0; //wait longer if there was an error
+			}
+		}
+	}
+};
+
 IPv4UDPSocket::IPv4UDPSocket():boundOrSent(false),targetAddress("0.0.0.0",0),lastReceivedAddress("0.0.0.0",0){
 	init(-1);
 }
@@ -550,7 +594,23 @@ IPv4UDPSocket::IPv4UDPSocket(int socketHandle):boundOrSent(false),targetAddress(
 	init(socketHandle);
 }
 
+IPv4UDPSocket::~IPv4UDPSocket(){
+	delete autoMulticastParams;
+}
+
+void IPv4UDPSocket::enableAutoMulticastGroupJoining(const IPv4Address& multicastAddress, const std::function<void(const IPv4Address& multicastAddress, const IPv4Address& localInterfaceAddress, bool success)>& perInterfaceCallback){
+	if(!autoMulticastParams){
+		autoMulticastParams = new IPv4UDPSocketAutoMulticastParams(this);
+		autoMulticastParams->lastJoinAttemptTime = getSecs();
+	}
+	autoMulticastParams->multicastAddresses.insert(multicastAddress);
+	autoMulticastParams->perInterfaceCallback = perInterfaceCallback;
+	joinMulticastGroup(multicastAddress, queryIPInterfaces(), perInterfaceCallback);
+}
+
+
 void IPv4UDPSocket::init(int socketHandle){
+	autoMulticastParams = nullptr;
 	if(socketHandle==-1){
 		this->socketHandle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	}else{
@@ -608,37 +668,39 @@ uint32_t IPv4UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	int received = ::recvfrom(socketHandle, buf, bufSize, 0, (sockaddr*)(&addr), &len);
 	if(received>0){
 		lastReceivedAddress.setInternalRepresentation(addr);
-		return received;
 	}else if(received<0){
 		int errCode = WSAGetLastError();
 		if(errCode!=WSAEWOULDBLOCK && errCode!=WSAEINPROGRESS && errCode!=WSAEALREADY && errCode!=WSAECONNRESET && errCode!=WSAEHOSTUNREACH){
 			handleErrorMessage();
 		}
-		return 0;
+		received = 0;
 	}
 	#else
 	socklen_t len = sizeof(addr);
 	ssize_t received = recvfrom(socketHandle, buf, bufSize, readBlocking?0:MSG_DONTWAIT, (sockaddr*)(&addr), &len);
 	if(received>=0){
 		lastReceivedAddress.setInternalRepresentation(addr);
-		return received;
-	}else if(received<0 && errno!=EAGAIN && errno!=EWOULDBLOCK && errno!=EHOSTUNREACH){
-		if(errno==ENOTCONN){//reset by iOS
-			if(tryRestoreOnce()){
-				ONRECEIVE(readBlocking)
-				received = recvfrom(socketHandle, buf, bufSize, readBlocking?0:MSG_DONTWAIT, (sockaddr*)(&addr), &len);
-				if(received>=0){
-					return received;
-				}else if(errno==EAGAIN || errno==EWOULDBLOCK || errno==EHOSTUNREACH){
-					return 0;
+	}else if(received<0){
+		received = 0;
+		if(errno!=EAGAIN && errno!=EWOULDBLOCK && errno!=EHOSTUNREACH){
+			if(errno==ENOTCONN){//reset by iOS
+				if(tryRestoreOnce()){
+					ONRECEIVE(readBlocking)
+					received = recvfrom(socketHandle, buf, bufSize, readBlocking?0:MSG_DONTWAIT, (sockaddr*)(&addr), &len);
+					if(received<0){//errno==EAGAIN || errno==EWOULDBLOCK || errno==EHOSTUNREACH){
+						received = 0;
+					}
 				}
+			}else{
+				handleErrorMessage();
 			}
 		}
-		handleErrorMessage();
-		return 0;
 	}
 	#endif
-	return 0;
+	if(autoMulticastParams){
+		autoMulticastParams->update(received>0);
+	}
+	return received;
 }
 	
 const IPv4Address& IPv4UDPSocket::getLastDatagramAddress() const{
@@ -651,12 +713,50 @@ bool IPv4UDPSocket::joinMulticastGroup(const std::string& addressString){
 	command.imr_interface.s_addr = htonl(INADDR_ANY);
 	if(command.imr_multiaddr.s_addr != (in_addr_t)-1){
 		if(setsockopt(socketHandle, IPPROTO_IP, IP_ADD_MEMBERSHIP, &command, sizeof(command))<0){
-			handleErrorMessage();
+			#if !SIMPLESOCKETS_WIN
+			if(errno!=EADDRINUSE){
+			#endif
+				handleErrorMessage();
+			#if !SIMPLESOCKETS_WIN
+			}
+			#endif
 		}else{
 			return true;
 		}
 	}
 	return false;
+}
+
+bool IPv4UDPSocket::joinMulticastGroup(const IPv4Address& multicastAddress, const IPv4Address& localInterfaceAddress){
+	static struct ip_mreq command;
+	command.imr_multiaddr = multicastAddress.getInternalRepresentation().sin_addr;
+	command.imr_interface = localInterfaceAddress.getInternalRepresentation().sin_addr;
+	if(setsockopt(socketHandle, IPPROTO_IP, IP_ADD_MEMBERSHIP, &command, sizeof(command))<0){
+		#if !SIMPLESOCKETS_WIN
+		if(errno!=EADDRINUSE){
+		#endif
+			handleErrorMessage();
+		#if !SIMPLESOCKETS_WIN
+		}
+		#endif
+	}else{
+		return true;
+	}
+	return false;
+}
+
+bool IPv4UDPSocket::joinMulticastGroup(const IPv4Address& multicastAddress, const std::list<IPInterface>& localInterfaces, const std::function<void(const IPv4Address& multicastAddress, const IPv4Address& localInterfaceAddress, bool success)>& perInterfaceCallback){
+	bool allSuccess = true;
+	for(auto it = localInterfaces.begin(); it != localInterfaces.end(); ++it){
+		if(it->address && it->address->getIPVersion() == IIPAddress::IPV4 && it->isUp){
+			bool res = joinMulticastGroup(multicastAddress, *(static_cast<IPv4Address*>(it->address.get())));
+			if(perInterfaceCallback){
+				perInterfaceCallback(multicastAddress, *(static_cast<IPv4Address*>(it->address.get())), res);
+			}
+			allSuccess = allSuccess && res;
+		}
+	}
+	return allSuccess;
 }
 
 IPv6Socket::IPv6Socket(){restoreBind = -1; restoreIPv4ReceptionEnabled = false; restoreReusePort = false;}
@@ -1164,5 +1264,66 @@ std::list<IPv4Address> queryIPv4BroadcastAdresses(uint16_t portToFill){
 	if(l.empty()){
 		l.push_back(address);//push back 255.255.255.255 as fallback
 	}
+	return l;
+}
+
+std::list<IPInterface> queryIPInterfaces(){
+	std::list<IPInterface> l;
+	#if SIMPLESOCKETS_WIN
+	#warning "queryIPInterfaces implementation missing on Windows"
+	#else
+	checkAndInitGlobally();
+	ifaddrs* ifap;
+	if(getifaddrs(&ifap) == 0){
+		ifaddrs* p = ifap;
+		while(p){
+			IPInterface iface;
+			bool anyAssigned = false;
+			if(p->ifa_addr!=NULL){
+				if(p->ifa_addr->sa_family==AF_INET){
+					anyAssigned = true;
+					iface.address = std::shared_ptr<IIPAddress>(new IPv4Address());
+					std::static_pointer_cast<IPv4Address>(iface.address)->setInternalRepresentation(*(sockaddr_in*)p->ifa_addr);
+				}else if(p->ifa_addr->sa_family==AF_INET6){
+					anyAssigned = true;
+					iface.address = std::shared_ptr<IIPAddress>(new IPv6Address());
+					std::static_pointer_cast<IPv6Address>(iface.address)->setInternalRepresentation(*(sockaddr_in6*)p->ifa_addr);
+				}
+			}
+			if(p->ifa_netmask!=NULL){
+				if(p->ifa_netmask->sa_family==AF_INET){
+					anyAssigned = true;
+					iface.netmask = std::shared_ptr<IIPAddress>(new IPv4Address());
+					std::static_pointer_cast<IPv4Address>(iface.netmask)->setInternalRepresentation(*(sockaddr_in*)p->ifa_netmask);
+				}else if(p->ifa_netmask->sa_family==AF_INET6){
+					anyAssigned = true;
+					iface.netmask = std::shared_ptr<IIPAddress>(new IPv6Address());
+					std::static_pointer_cast<IPv6Address>(iface.netmask)->setInternalRepresentation(*(sockaddr_in6*)p->ifa_netmask);
+				}
+			}
+			if(p->ifa_ifu.ifu_broadaddr!=NULL && (p->ifa_flags&IFF_BROADCAST)!=0){
+				if(p->ifa_ifu.ifu_broadaddr->sa_family==AF_INET){
+					anyAssigned = true;
+					iface.broadcastAddress = std::shared_ptr<IIPAddress>(new IPv4Address());
+					std::static_pointer_cast<IPv4Address>(iface.broadcastAddress)->setInternalRepresentation(*(sockaddr_in*)p->ifa_ifu.ifu_broadaddr);
+				}else if(p->ifa_ifu.ifu_broadaddr->sa_family==AF_INET6){
+					anyAssigned = true;
+					iface.broadcastAddress = std::shared_ptr<IIPAddress>(new IPv6Address());
+					std::static_pointer_cast<IPv6Address>(iface.broadcastAddress)->setInternalRepresentation(*(sockaddr_in6*)p->ifa_ifu.ifu_broadaddr);
+				}
+			}
+			if(anyAssigned){
+				iface.name = p->ifa_name;
+				iface.isUp = (p->ifa_flags&IFF_UP)!=0;
+				iface.isLoopback = (p->ifa_flags&IFF_LOOPBACK)!=0;
+				iface.isPointToPoint = (p->ifa_flags&IFF_POINTOPOINT)!=0;
+				iface.isBroadcast = (p->ifa_flags&IFF_BROADCAST)!=0;
+				l.push_back(iface);
+			}
+			p = p->ifa_next;
+		}
+		freeifaddrs(ifap);
+	}
+	#endif
 	return l;
 }

@@ -1,6 +1,12 @@
 #ifndef SSLSocket_H_INCLUDED
 #define SSLSocket_H_INCLUDED
 
+#include "platforms.h"
+#if defined(ANDROID_PLATFORM) || defined(IOS_PLATFORM) || defined(MACOSX_PLATFORM) || defined(WINDOWS_PLATFORM)
+	#warning "OpenSSL is not supported on this platform yet, SSLSocket will not be available"
+	#define NO_OPENSSL
+#endif
+
 #ifndef NO_OPENSSL
 
 #include "SimpleSockets.h"
