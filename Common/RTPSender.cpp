@@ -47,7 +47,7 @@ class RTPSenderPrivate{
 			memcpy(ptr, saved, 12);
 			fragmentCount++;
 		}
-		std::cout << "fragmentCount: " << fragmentCount << std::endl;
+		//std::cout << "fragmentCount: " << fragmentCount << std::endl;
 		return true;
 	}
 	
