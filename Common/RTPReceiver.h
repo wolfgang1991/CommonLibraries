@@ -53,7 +53,7 @@ class FrameBasedRTPReceiver{
 	virtual ~FrameBasedRTPReceiver();
 	
 	//! returns NULL if no complete frame is available
-	const Frame* update();
+	const Frame* update(uint32_t* totalReceived = nullptr);
 	
 };
 

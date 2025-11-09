@@ -189,7 +189,7 @@ class FrameBasedRTPReceiverPrivate{
 		return false;
 	};
 	
-	const Frame* update(){
+	const Frame* update(uint32_t* totalReceived){
 		//remove previous frame
 		if(toRemove!=frames.end()){
 			removeFrame(toRemove);
@@ -197,7 +197,9 @@ class FrameBasedRTPReceiverPrivate{
 		}
 		//receive
 		uint32_t received = slaveSocket->recv(rcvBuf->data, Buffer::size);
+		uint32_t sum = 0;
 		while(received>0){
+			sum += received;
 			if(parseHeader(rcvBuf, received)){
 				//check too many frames
 				if(frames.size()>=maxPendingFrames){
@@ -212,6 +214,7 @@ class FrameBasedRTPReceiverPrivate{
 						const Frame* res = &(*it);
 						removeOlderFrames(it);
 						toRemove = it;
+						if(totalReceived){*totalReceived = sum;}
 						return res;
 					}
 				}
@@ -219,6 +222,7 @@ class FrameBasedRTPReceiverPrivate{
 			rcvBuf->reset();
 			received = slaveSocket->recv(rcvBuf->data, Buffer::size);
 		}
+		if(totalReceived){*totalReceived = sum;}
 		return NULL;
 	}
 	
@@ -233,6 +237,6 @@ FrameBasedRTPReceiver::~FrameBasedRTPReceiver(){
 	delete p;
 }
 
-const FrameBasedRTPReceiver::Frame* FrameBasedRTPReceiver::update(){
-	return p->update();
+const FrameBasedRTPReceiver::Frame* FrameBasedRTPReceiver::update(uint32_t* totalReceived){
+	return p->update(totalReceived);
 }
