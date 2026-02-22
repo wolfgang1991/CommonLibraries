@@ -6,7 +6,7 @@ _LINKOBJ = 	NumberEditBox.o GUI.o utilities.o Drawer2D.o CMBox.o font.o Aggregat
 
 SRCDIR = .
 OBJDIR = $(SRCDIR)/obj
-CPPFLAGS = -Wall -I../Irrlicht/include -I../Common -I../RPC -I. -D_DEBUG=$(DEBUG)
+CPPFLAGS = -Wall -I../Irrlicht/include -I../Irrlicht/source/Irrlicht -I../Common -I../RPC -I. -D_DEBUG=$(DEBUG)
 STATIC_LIB = libIrrlichtExtensions.a
 USEROPTIM = 
 

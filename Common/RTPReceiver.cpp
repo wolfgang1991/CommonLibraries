@@ -67,6 +67,9 @@ class FrameBasedRTPReceiverPrivate{
 	}
 	
 	~FrameBasedRTPReceiverPrivate(){
+		while(!frames.empty()){
+			removeFrame(frames.begin());
+		}
 		if(mustDelete){
 			delete slaveSocket;
 		}
@@ -203,8 +206,8 @@ class FrameBasedRTPReceiverPrivate{
 			if(parseHeader(rcvBuf, received)){
 				//check too many frames
 				if(frames.size()>=maxPendingFrames){
+					std::cerr << "Too many pending frames: " << frames.size() << " of " << maxPendingFrames << ", dropping oldest." << std::endl;
 					removeFrame(frames.begin());
-					std::cerr << "Too many pending frames, dropping oldest." << std::endl;
 				}
 				//insert + check if done + return if not inserted
 				std::list<Frame>::iterator it = insertInFrames(rcvBuf);

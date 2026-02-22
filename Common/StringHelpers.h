@@ -206,9 +206,37 @@ inline std::string round(double val, int acc){
 	return roundToString<char>(val, acc);
 }
 
-bool isAnInteger(const std::string& c);
+template <typename TChar>
+bool isADouble(const std::basic_string<TChar>& c){
+	bool dotRead = false;
+	if(c.size()>=1){
+		if(c[0]=='.'){
+			dotRead = true;
+		}else if((c[0]<'0' || c[0]>'9') && c[0]!='-'){
+			return false;
+		}
+	}
+	for(unsigned int i=1; i<c.size(); i++){
+		if(c[i]=='.'){
+			if(dotRead){return false;}
+			dotRead = true;
+		}else if(c[i]<'0' || c[i]>'9'){
+			return false;
+		}
+	}
+	return true;
+}
 
-bool isADouble(const std::string& c);
+template <typename TChar>
+bool isAnInteger(const std::basic_string<TChar>& c){
+	if(c.size()>=1){
+		if((c[0]<'0' || c[0]>'9') && c[0]!='-'){return false;}
+	}
+	for(unsigned int i=1; i<c.size(); i++){
+		if(c[i]<'0' || c[i]>'9'){return false;}//Fehlerzustand
+	}
+	return true;
+}
 
 //! space in bytes
 template<typename TChar>

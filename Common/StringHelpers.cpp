@@ -32,36 +32,6 @@ std::string stripSpaces(const std::string s){
 	}
 }
 
-bool isADouble(const std::string& c){
-	bool dotRead = false;
-	if(c.size()>=1){
-		if(c[0]=='.'){
-			dotRead = true;
-		}else if((c[0]<'0' || c[0]>'9') && c[0]!='-'){
-			return false;
-		}
-	}
-	for(unsigned int i=1; i<c.size(); i++){
-		if(c[i]=='.'){
-			if(dotRead){return false;}
-			dotRead = true;
-		}else if(c[i]<'0' || c[i]>'9'){
-			return false;
-		}
-	}
-	return true;
-}
-
-bool isAnInteger(const std::string& c){
-	if(c.size()>=1){
-		if((c[0]<'0' || c[0]>'9') && c[0]!='-'){return false;}
-	}
-	for(unsigned int i=1; i<c.size(); i++){
-		if(c[i]<'0' || c[i]>'9'){return false;}//Fehlerzustand
-	}
-	return true;
-}
-
 std::string convertStringToUpper(const std::string& s){
 	std::string ret(s.size(), char());
 	for(unsigned int i = 0; i < s.size(); ++i){

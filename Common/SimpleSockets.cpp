@@ -1,5 +1,6 @@
 #include "SimpleSockets.h"
 #include "timing.h"
+#include "platforms.h"
 
 #include <cassert>
 #include <cstring>
@@ -85,6 +86,13 @@
 #define ONSEND ;
 #define ONRECEIVE(BLOCKING) ;
 #define ONCLOSE ;
+#endif
+
+//#define SIMULATE_PACKET_LOSS
+#ifdef SIMULATE_PACKET_LOSS
+#define ONUDPRECEIVE if((rand()%100)<90){return 0;}// 10% packet loss
+#else
+#define ONUDPRECEIVE ;
 #endif
 
 static volatile bool initialized = false;
@@ -662,6 +670,7 @@ uint32_t IPv4UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	if(!boundOrSent){return 0;}
 	sockaddr_in addr;
 	ONRECEIVE(readBlocking)
+	ONUDPRECEIVE
 	#if SIMPLESOCKETS_WIN
 	handleBlocking(readBlocking);
 	int len = sizeof(addr);
@@ -884,6 +893,7 @@ uint32_t IPv6UDPSocket::recv(char* buf, uint32_t bufSize, bool readBlocking){
 	if(!boundOrSent){return 0;}
 	sockaddr_in6 addr;
 	ONRECEIVE(readBlocking)
+	ONUDPRECEIVE
 	#if SIMPLESOCKETS_WIN
 	handleBlocking(readBlocking);
 	int len = sizeof(addr);
@@ -1103,17 +1113,19 @@ bool IPv6TCPSocket::connect(const IPv6Address& address, uint32_t timeout){
 	return false;
 }
 
-ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout){
+ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout, IIPAddress** connectedAddress){
 	for(std::list<IIPAddress*>::const_iterator it = addressList.begin(); it != addressList.end(); ++it){
 		if((*it)->getIPVersion()==IIPAddress::IPV6){
 			IPv6TCPSocket* s = new IPv6TCPSocket();
 			if(s->connect(*((IPv6Address*)(*it)), timeout)){
+				if(connectedAddress){*connectedAddress = *it;}
 				return s;
 			}
 			delete s;
 		}else{
 			IPv4TCPSocket* s = new IPv4TCPSocket();
 			if(s->connect(*((IPv4Address*)(*it)), timeout)){
+				if(connectedAddress){*connectedAddress = *it;}
 				return s;
 			}
 			delete s;
@@ -1301,6 +1313,9 @@ std::list<IPInterface> queryIPInterfaces(){
 					std::static_pointer_cast<IPv6Address>(iface.netmask)->setInternalRepresentation(*(sockaddr_in6*)p->ifa_netmask);
 				}
 			}
+			#ifdef IOS_PLATFORM
+			#warning "Broadcast addresses currently not supported in iOS"
+			#else
 			if(p->ifa_ifu.ifu_broadaddr!=NULL && (p->ifa_flags&IFF_BROADCAST)!=0){
 				if(p->ifa_ifu.ifu_broadaddr->sa_family==AF_INET){
 					anyAssigned = true;
@@ -1312,6 +1327,7 @@ std::list<IPInterface> queryIPInterfaces(){
 					std::static_pointer_cast<IPv6Address>(iface.broadcastAddress)->setInternalRepresentation(*(sockaddr_in6*)p->ifa_ifu.ifu_broadaddr);
 				}
 			}
+			#endif
 			if(anyAssigned){
 				iface.name = p->ifa_name;
 				iface.isUp = (p->ifa_flags&IFF_UP)!=0;

@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-const double PI = 3.141592654;
+constexpr double PI = 3.14159265358979323846;
 //factor * (m/s)/knots:
 #define METER_S__KNOTS 0.514444444
 //factor * m/feet
@@ -15,8 +15,8 @@ const double PI = 3.141592654;
 //factor * m/SM (statue mile)
 #define METER_S__MPH 0.44704
 //factor * °/rad
-#define GRAD_RAD (180.0/3.141592654)
-#define DEG_RAD (180.0/3.141592654)
+#define GRAD_RAD (180.0/3.14159265358979323846)
+#define DEG_RAD (180.0/3.14159265358979323846)
 #define DOUBLE_EPS 0.00000001
 #define FLOAT_EPS 0.0001
 //Erdradius in Meter

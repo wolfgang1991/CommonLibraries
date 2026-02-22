@@ -72,12 +72,12 @@ public:
     void final(unsigned char *digest);
     static const unsigned int DIGEST_SIZE = ( 384 / 8);
 };
- 
-std::string sha224(std::string input);
-std::string sha256(std::string input);
-std::string sha384(std::string input);
-std::string sha512(std::string input);
- 
+
+std::string sha224(const std::string& input);
+std::string sha256(const std::string& input);
+std::string sha384(const std::string& input);
+std::string sha512(const std::string& input);
+
 #define SHA2_SHFR(x, n)    (x >> n)
 #define SHA2_ROTR(x, n)   ((x >> n) | (x << ((sizeof(x) << 3) - n)))
 #define SHA2_ROTL(x, n)   ((x << n) | (x >> ((sizeof(x) << 3) - n)))

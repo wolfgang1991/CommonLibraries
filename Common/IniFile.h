@@ -94,6 +94,9 @@ class IniFile{
 
 #define INI_GET(VARIABLE, DEFAULT_VALUE) \
 	VARIABLE = getFromIniSection(sectionReference, #VARIABLE, DEFAULT_VALUE);
+
+#define INI_GET_ALIAS(VARIABLE, KEY, DEFAULT_VALUE) \
+	VARIABLE = getFromIniSection(sectionReference, KEY, DEFAULT_VALUE);
 	
 #define INI_GET_VECTOR(VECTOR) \
 	{ \
