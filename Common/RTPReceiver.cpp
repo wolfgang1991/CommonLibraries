@@ -26,7 +26,12 @@ bool FrameBasedRTPReceiver::Frame::isInside(uint16_t sequenceNumber) const{
 }
 
 bool FrameBasedRTPReceiver::Frame::isFullyAssembled() const{
-	return endValid && seqNr2Packet.size()>=(uint32_t)(endSequenceNumber-startSequenceNumber+1);
+	if(!endValid){
+		return false;
+	}
+	const uint16_t span = endSequenceNumber - startSequenceNumber;//might be uint16_t overflow, but that does not matter for the count
+	const uint32_t expectedPacketCount = static_cast<uint32_t>(span) + 1u;
+	return seqNr2Packet.size() >= expectedPacketCount;
 }
 
 FrameBasedRTPReceiver::Buffer::Buffer(){

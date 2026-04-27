@@ -135,7 +135,7 @@ void parseSeparatedString(TContainer& out, const typename TContainer::value_type
 	for(size_t i=0; i<s.size(); i++){
 		Char c = s[i];
 		bool isSeparator = false;
-		for(size_t i=0; i<separators.size() && !isSeparator; i++){isSeparator = c==separators[i];}
+		for(size_t j=0; j<separators.size() && !isSeparator; j++){isSeparator = c==separators[j];}
 		if(isSeparator){
 			out.emplace_back(ss.str());
 			if(noEmptyToken && out.back().empty()){out.pop_back();}

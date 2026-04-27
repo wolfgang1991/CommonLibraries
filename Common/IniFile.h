@@ -130,6 +130,9 @@ bool getFromIniSection(const std::map<std::string, std::string>& section, const 
 
 #define INI_SET(VARIABLE) \
 	setToIniSection(sectionReference, #VARIABLE, VARIABLE);
+
+#define INI_SET_ALIAS(VARIABLE, KEY) \
+	setToIniSection(sectionReference, KEY, VARIABLE);
 	
 #define INI_SET_KV(KEY, VALUE) \
 	setToIniSection(sectionReference, KEY, VALUE);
