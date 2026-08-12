@@ -394,8 +394,8 @@ class IPv6TCPSocket : public IPv6Socket{
 
 };
 
-//! returns NULL if unsuccessful, timeout in ms (total timeout = timeout * addressList.size()), addressList will be deleted
-ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout);
+//! returns NULL if unsuccessful, timeout in ms (total timeout = timeout * addressList.size()), addressList will be deleted, connectedAddress will be filled if not NULL (pointer from list)
+ASocket* connectSocketForAddressList(const std::list<IIPAddress*>& addressList, uint32_t timeout, IIPAddress** connectedAddress = NULL);
 
 //! WARNING: NO TIMEOUT; portToFill: port which is filled into the results
 std::list<IIPAddress*> queryIPAddressesForHostName(const std::string& hostname, uint16_t portToFill = 0);

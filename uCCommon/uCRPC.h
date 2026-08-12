@@ -18,6 +18,7 @@
 #include <misc.h>
 #include <string>
 #include <iostream>
+#include <functional>
 #define UCRPC_DEBUG(MSG) std::cerr << MSG << std::endl;
 #endif
 

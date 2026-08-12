@@ -36,6 +36,8 @@ class FrameBasedRTPReceiver{
 		bool endValid = false;
 		std::map<uint16_t, Buffer*> seqNr2Packet;
 
+		Frame() = delete;
+
 		Frame(uint16_t sequenceNumber):startSequenceNumber(sequenceNumber){}
 
 		void setStart(uint16_t sequenceNumber);

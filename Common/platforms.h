@@ -3,7 +3,7 @@
 
 //! Preprocessor directives to detect specific platforms
 
-#if defined(STM32F0xx) || defined(STM32F1xx) || defined(STM32F2xx) || defined(STM32F3xx) || defined(STM32F4xx) || defined(STM32F5xx) || defined(STM32F6xx) || defined(STM32F7xx)
+#if defined(STM32F0xx) || defined(STM32F1xx) || defined(STM32F2xx) || defined(STM32F3xx) || defined(STM32F4xx) || defined(STM32F5xx) || defined(STM32F6xx) || defined(STM32F7xx) || defined(STM32H7xx)  || defined(STM32H6xx)  || defined(STM32H5xx)  || defined(STM32H4xx)  || defined(STM32H3xx)  || defined(STM32H2xx)  || defined(STM32H1xx)  || defined(STM32H0xx) 
 	#define STM32_MICROCONTROLLER
 #elif defined(__AVR_ARCH__)
 	#define AVR_MICROCONTROLLER

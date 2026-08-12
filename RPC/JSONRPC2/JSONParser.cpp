@@ -9,8 +9,6 @@
 #include <iostream>
 #include <cmath>
 
-using namespace UTF8Conversion;
-
 std::string escapeAndQuoteJSONString(const std::string& s, bool escapeNonPrintableChars){
 	std::stringstream ss;
 	ss << "\"";

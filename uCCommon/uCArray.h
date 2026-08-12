@@ -25,6 +25,13 @@ namespace ucstd{
 		static constexpr bool empty(){
 			return N==0;
 		}
+
+		const array<T,N>& operator=(const array<T,N>& other){
+			for(size_t i=0; i<N; i++){
+				content[i] = other.content[i];
+			}
+			return *this;
+		}
 		
 		T& operator[](size_t index){
 			return content[index];

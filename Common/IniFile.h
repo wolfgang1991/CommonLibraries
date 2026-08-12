@@ -94,6 +94,9 @@ class IniFile{
 
 #define INI_GET(VARIABLE, DEFAULT_VALUE) \
 	VARIABLE = getFromIniSection(sectionReference, #VARIABLE, DEFAULT_VALUE);
+
+#define INI_GET_ALIAS(VARIABLE, KEY, DEFAULT_VALUE) \
+	VARIABLE = getFromIniSection(sectionReference, KEY, DEFAULT_VALUE);
 	
 #define INI_GET_VECTOR(VECTOR) \
 	{ \
@@ -127,6 +130,9 @@ bool getFromIniSection(const std::map<std::string, std::string>& section, const 
 
 #define INI_SET(VARIABLE) \
 	setToIniSection(sectionReference, #VARIABLE, VARIABLE);
+
+#define INI_SET_ALIAS(VARIABLE, KEY) \
+	setToIniSection(sectionReference, KEY, VARIABLE);
 	
 #define INI_SET_KV(KEY, VALUE) \
 	setToIniSection(sectionReference, KEY, VALUE);

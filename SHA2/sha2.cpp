@@ -360,7 +360,7 @@ void SHA512::final(unsigned char *digest)
     }
 }
  
-std::string sha224(std::string input)
+std::string sha224(const std::string& input)
 {
     unsigned char digest[SHA224::DIGEST_SIZE];
     memset(digest,0,SHA224::DIGEST_SIZE);
@@ -371,12 +371,12 @@ std::string sha224(std::string input)
  
     char buf[2*SHA224::DIGEST_SIZE+1];
     buf[2*SHA224::DIGEST_SIZE] = 0;
-    for (int i = 0; i < SHA224::DIGEST_SIZE; i++)
+    for (int i = 0; i < (int)SHA224::DIGEST_SIZE; i++)
         sprintf(buf+i*2, "%02x", digest[i]);
     return std::string(buf);
 }
  
-std::string sha256(std::string input)
+std::string sha256(const std::string& input)
 {
     unsigned char digest[SHA256::DIGEST_SIZE];
     memset(digest,0,SHA256::DIGEST_SIZE);
@@ -388,12 +388,12 @@ std::string sha256(std::string input)
  
     char buf[2*SHA256::DIGEST_SIZE+1];
     buf[2*SHA256::DIGEST_SIZE] = 0;
-    for (int i = 0; i < SHA256::DIGEST_SIZE; i++)
+    for (int i = 0; i < (int)SHA256::DIGEST_SIZE; i++)
         sprintf(buf+i*2, "%02x", digest[i]);
     return std::string(buf);
 }
  
-std::string sha384(std::string input)
+std::string sha384(const std::string& input)
 {
     unsigned char digest[SHA384::DIGEST_SIZE];
     memset(digest,0,SHA384::DIGEST_SIZE);
@@ -404,12 +404,12 @@ std::string sha384(std::string input)
  
     char buf[2*SHA384::DIGEST_SIZE+1];
     buf[2*SHA384::DIGEST_SIZE] = 0;
-    for (int i = 0; i < SHA384::DIGEST_SIZE; i++)
+    for (int i = 0; i < (int)SHA384::DIGEST_SIZE; i++)
         sprintf(buf+i*2, "%02x", digest[i]);
     return std::string(buf);
 }
  
-std::string sha512(std::string input)
+std::string sha512(const std::string& input)
 {
     unsigned char digest[SHA512::DIGEST_SIZE];
     memset(digest,0,SHA512::DIGEST_SIZE);
@@ -420,7 +420,7 @@ std::string sha512(std::string input)
  
     char buf[2*SHA512::DIGEST_SIZE+1];
     buf[2*SHA512::DIGEST_SIZE] = 0;
-    for (int i = 0; i < SHA512::DIGEST_SIZE; i++)
+    for (int i = 0; i < (int)SHA512::DIGEST_SIZE; i++)
         sprintf(buf+i*2, "%02x", digest[i]);
     return std::string(buf);
 }

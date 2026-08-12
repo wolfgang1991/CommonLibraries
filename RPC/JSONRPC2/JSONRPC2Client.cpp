@@ -100,7 +100,7 @@ void* JSONRPC2Client::clientMain(void* p){
 		unlockMutex(client->mutexSync);
 		//Send stuff
 		if(!client->clientToSend.empty()){
-			lastPingSent = t;
+			//don't affect ping, perhaps there's no answer (depending on application): lastPingSent = t;
 			for(auto it = client->clientToSend.begin(); it != client->clientToSend.end(); ++it){
 				#ifdef PRINT_COMMUNICATION
 				if(client->enableConsoleOutputIfDebugBuild){std::cout << "sending: " << *it << std::endl;}

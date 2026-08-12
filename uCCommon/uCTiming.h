@@ -14,6 +14,7 @@ inline uint32_t micros(){
 }
 typedef uint32_t uc_time_t;
 #else
+#include <Arduino.h>
 typedef unsigned long uc_time_t;
 #endif
 

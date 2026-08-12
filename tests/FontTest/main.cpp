@@ -25,7 +25,7 @@ int main(int argc, char *argv[]){
 	
 	SIrrlichtCreationParameters param;
 	param.Bits = 32;
-   param.DriverType = EDT_OPENGL;
+	param.DriverType = EDT_OPENGL;
 	rect<irr::s32> winRect(0,0,9*deskres.Width/10,9*deskres.Height/10);
 	param.WindowSize = winRect.getSize();
 	

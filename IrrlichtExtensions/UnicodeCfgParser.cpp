@@ -74,10 +74,7 @@ bool UnicodeCfgParser::parseFromUTF8File(irr::io::IFileSystem* fsys, const char*
 		rf->read(buffer, size);
 		buffer[size] = '\0';
 		rf->drop();
-		wchar_t* str = new wchar_t[size+1];
-      UTF8Conversion::utf8ToWchar(buffer, str, (irr::u64)((size+1)*sizeof(wchar_t)));
-		parse(str);
-		delete[] str;
+		parse(convertUtf8ToWString(buffer, size));
 		delete[] buffer;
 		return true;
 	}
