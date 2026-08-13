@@ -418,18 +418,22 @@
     */
 #  include <float.h>
 
-#  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
-    defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
-     /* We need to check that <math.h> hasn't already been included earlier
-      * as it seems it doesn't agree with <fp.h>, yet we should really use
-      * <fp.h> if possible.
-      */
-#    if !defined(__MATH_H__) && !defined(__MATH_H) && !defined(__cmath__)
+/* math functions needed for frexp/modf/floor/pow */
+#if defined(PNG_FLOATING_POINT_SUPPORTED) || defined(PNG_FLOATING_ARITHMETIC_SUPPORTED)
+#  include <float.h>
+#  if defined(__has_include)
+#    if __has_include(<math.h>)
+#      include <math.h>
+#    endif
+#    /* Only include legacy fp.h if it actually exists (old classic Mac OS) */
+#    if __has_include(<fp.h>)
 #      include <fp.h>
 #    endif
 #  else
 #    include <math.h>
 #  endif
+#endif
+
 #  if defined(_AMIGA) && defined(__SASC) && defined(_M68881)
      /* Amiga SAS/C: We must include builtin FPU functions when compiling using
       * MATH=68881

@@ -1316,15 +1316,15 @@ std::list<IPInterface> queryIPInterfaces(){
 			#ifdef IOS_PLATFORM
 			#warning "Broadcast addresses currently not supported in iOS"
 			#else
-			if(p->ifa_ifu.ifu_broadaddr!=NULL && (p->ifa_flags&IFF_BROADCAST)!=0){
-				if(p->ifa_ifu.ifu_broadaddr->sa_family==AF_INET){
+			if(p->ifa_broadaddr!=NULL && (p->ifa_flags&IFF_BROADCAST)!=0){
+				if(p->ifa_broadaddr->sa_family==AF_INET){
 					anyAssigned = true;
 					iface.broadcastAddress = std::shared_ptr<IIPAddress>(new IPv4Address());
-					std::static_pointer_cast<IPv4Address>(iface.broadcastAddress)->setInternalRepresentation(*(sockaddr_in*)p->ifa_ifu.ifu_broadaddr);
-				}else if(p->ifa_ifu.ifu_broadaddr->sa_family==AF_INET6){
+					std::static_pointer_cast<IPv4Address>(iface.broadcastAddress)->setInternalRepresentation(*(sockaddr_in*)p->ifa_broadaddr);
+				}else if(p->ifa_broadaddr->sa_family==AF_INET6){
 					anyAssigned = true;
 					iface.broadcastAddress = std::shared_ptr<IIPAddress>(new IPv6Address());
-					std::static_pointer_cast<IPv6Address>(iface.broadcastAddress)->setInternalRepresentation(*(sockaddr_in6*)p->ifa_ifu.ifu_broadaddr);
+					std::static_pointer_cast<IPv6Address>(iface.broadcastAddress)->setInternalRepresentation(*(sockaddr_in6*)p->ifa_broadaddr);
 				}
 			}
 			#endif
