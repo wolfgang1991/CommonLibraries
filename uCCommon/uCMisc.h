@@ -1,6 +1,8 @@
 #ifndef uCMisc_H_
 #define uCMisc_H_
 
+#include <stdint.h>
+
 #undef min
 #undef max
 #undef abs
@@ -18,6 +20,29 @@ T roundFraction(T numerator, T denominator){
 template<typename T>
 T roundFractionUnsigned(T numerator, T denominator){
 	return numerator/denominator + (((T)2)*(numerator%denominator)>=denominator);
+}
+
+constexpr uint8_t CRC8_POLY = 0x07; // CRC-8 (poly x^8 + x^2 + x + 1)
+
+inline uint8_t crc8_update(uint8_t crc, uint8_t data){
+	// MSB-first bitwise implementation
+	crc ^= data;
+	for(uint8_t i = 0; i < 8; ++i){
+		if(crc & 0x80){
+			crc = static_cast<uint8_t>((crc << 1) ^ CRC8_POLY);
+		}else{
+			crc = static_cast<uint8_t>(crc << 1);
+		}
+	}
+	return crc;
+}
+
+inline uint8_t crc8(const uint8_t* data, uint32_t length, uint8_t init = 0x00){
+	uint8_t crc = init;
+	for(uint32_t i = 0; i < length; ++i){
+		crc = crc8_update(crc, data[i]);
+	}
+	return crc;
 }
 
 namespace ucstd{
@@ -49,6 +74,18 @@ namespace ucstd{
 		in = sign?-in:in;//abs
 		B out = (B)(in+(A)0.5);
 		return sign?-out:out;
+	}
+
+	//! compile time log2 of unsigned integer n (rounded up)
+	template <typename TUInt>
+	constexpr TUInt log2(TUInt n){
+		return (n<2?1:(1+log2(n/2)));
+	}
+
+	//! compile time power of 2
+	template <typename TUInt>
+	constexpr TUInt pow2(TUInt exp){
+		return (exp==0?1:(2*pow2(exp-1)));
 	}
 
 };

@@ -66,6 +66,17 @@ class Matrix{
 			}
 		}
 	}
+
+	TScalar& x(){
+		return data[0];
+	}
+	TScalar& y(){
+		return data[1];
+	}
+
+	TScalar& z(){
+		return data[2];
+	}
 	
 	void set(uint32_t rowIndex, uint32_t columnIndex, TScalar s){
 		data[columnIndex + columnCount*rowIndex] = s;
@@ -97,9 +108,39 @@ class Matrix{
 	
 	//! assumes TScalar is a floating point type
 	TScalar calcFrobeniusNorm() const{
-		return sqrt(calcSquareSumNorm());
+		return std::sqrt(calcSquareSumNorm());
 	}
 	
+	Matrix<TScalar, rowCount, columnCount> operator/(TScalar scalar) const{
+		Matrix<TScalar, rowCount, columnCount> res(UNDEFINED);
+		for(uint32_t i=0; i<size; i++){
+			res[i] = (*this)[i] / scalar;
+		}
+		return res;
+	}
+
+	Matrix<TScalar, rowCount, columnCount> operator*(TScalar scalar) const{
+		Matrix<TScalar, rowCount, columnCount> res(UNDEFINED);
+		for(uint32_t i=0; i<size; i++){
+			res[i] = (*this)[i] * scalar;
+		}
+		return res;
+	}
+
+	Matrix<TScalar, rowCount, columnCount>& operator*=(TScalar scalar) {
+		for(uint32_t i=0; i<size; i++){
+			(*this)[i] *= scalar;
+		}
+		return *this;
+	}
+
+	Matrix<TScalar, rowCount, columnCount>& operator/=(TScalar scalar) {
+		for(uint32_t i=0; i<size; i++){
+			(*this)[i] /= scalar;
+		}
+		return *this;
+	}
+
 	Matrix<TScalar, rowCount, columnCount> operator+(const Matrix<TScalar, rowCount, columnCount>& other) const{
 		Matrix<TScalar, rowCount, columnCount> res(UNDEFINED);
 		for(uint32_t i=0; i<size; i++){

@@ -3,6 +3,7 @@
 
 #include <SimpleSockets.h>
 #include <timing.h>
+#include <ForEachMacro.h>
 
 #include <vector>
 #include <map>
@@ -279,6 +280,23 @@ TNativeValue createNativeValue(IRPCValue* rpcValue){
 template<typename TNativeValue>
 bool checkSignature(IRPCValue* rpcValue){
 	return native_to_rpc_type<TNativeValue, true>::template checkSignature<TNativeValue>(rpcValue);
+}
+
+template<typename T>
+bool checkSignatureHelper(const std::vector<IRPCValue*>& rpcValues, uint32_t index){
+	return checkSignature<T>(rpcValues[index]);
+}
+
+template<typename T, typename... Rest, typename std::enable_if<(sizeof...(Rest) > 0), int>::type = 0>
+bool checkSignatureHelper(const std::vector<IRPCValue*>& rpcValues, uint32_t index){
+	return checkSignature<T>(rpcValues[index]) && checkSignatureHelper<Rest...>(rpcValues, index + 1);
+}
+
+//! checks if all signatures of the given rpc values match the given native types
+template<typename... TNativeValues>
+bool checkSignature(const std::vector<IRPCValue*>& rpcValues){
+	if(sizeof...(TNativeValues)!=rpcValues.size()){return false;}
+	return checkSignatureHelper<TNativeValues...>(rpcValues, 0);
 }
 
 template<typename TNativeValue>
@@ -636,5 +654,33 @@ class Foo{
 
 #define FILL_NATIVE_FIELD_IF_AVAILABLE(FIELD_NAME, DEFAULT_VALUE) \
 	FILL_NATIVE_FIELD_ALIAS_IF_AVAILABLE(FIELD_NAME, FIELD_NAME, DEFAULT_VALUE)
+
+#define FILL_NATIVE_FIELD_ALIAS_IF_SIGNATURE_OK(ALIAS, FIELD_NAME, DEFAULT_VALUE) \
+	{ \
+		ObjectValue* o = (ObjectValue*)rpcValue; \
+		auto it = o->values.find(#ALIAS); \
+		if(it!=o->values.end() && ::checkSignature<decltype(nativeValue.FIELD_NAME)>(it->second)){ \
+			nativeValue.FIELD_NAME = createNativeValue<decltype(nativeValue.FIELD_NAME)>(it->second); \
+		}else{ \
+			nativeValue.FIELD_NAME = DEFAULT_VALUE; \
+		} \
+	}
+
+#define FILL_NATIVE_FIELD_IF_SIGNATURE_OK(FIELD_NAME, DEFAULT_VALUE) \
+	FILL_NATIVE_FIELD_ALIAS_IF_SIGNATURE_OK(FIELD_NAME, FIELD_NAME, DEFAULT_VALUE)
+
+#define SIMPLE_CHECK_FIELD_SIGNATURE(FIELD_NAME) \
+	CHECK_FIELD_SIGNATURE_ALIAS(FIELD_NAME, FIELD_NAME, false)
+
+#define CREATE_RPC_FUNCTIONS(NATIVE_TYPE, ...) \
+	CREATE_BEGIN(NATIVE_TYPE) \
+		FOR_EACH(FILL_FIELD, __VA_ARGS__) \
+	CREATE_END \
+	CREATE_NATIVE_BEGIN(NATIVE_TYPE) \
+		FOR_EACH(FILL_NATIVE_FIELD, __VA_ARGS__) \
+	CREATE_NATIVE_END \
+	CHECK_SIGNATURE_BEGIN(NATIVE_TYPE) \
+		FOR_EACH(SIMPLE_CHECK_FIELD_SIGNATURE, __VA_ARGS__) \
+	CHECK_SIGNATURE_END
 
 #endif

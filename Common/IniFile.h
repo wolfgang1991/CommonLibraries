@@ -93,10 +93,10 @@ class IniFile{
 	const std::map<std::string, std::string>& sectionReference = it==(INI).data.end()?sectionFallback:(it->second);
 
 #define INI_GET(VARIABLE, DEFAULT_VALUE) \
-	VARIABLE = getFromIniSection(sectionReference, #VARIABLE, DEFAULT_VALUE);
+	VARIABLE = getFromIniSection(sectionReference, #VARIABLE, decltype(VARIABLE)(DEFAULT_VALUE));
 
 #define INI_GET_ALIAS(VARIABLE, KEY, DEFAULT_VALUE) \
-	VARIABLE = getFromIniSection(sectionReference, KEY, DEFAULT_VALUE);
+	VARIABLE = getFromIniSection(sectionReference, KEY, decltype(VARIABLE)(DEFAULT_VALUE));
 	
 #define INI_GET_VECTOR(VECTOR) \
 	{ \

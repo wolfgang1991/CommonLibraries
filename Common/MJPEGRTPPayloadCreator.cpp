@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <cstdlib>
+#include <iostream>
 
 namespace {
 
@@ -385,6 +387,7 @@ bool parseJpeg(const uint8_t* jpegBuf, uint32_t jpegSize, ParsedJpeg& parsed) {
 void createMJPEGRTPPayload(MJPEGRTPPayload& payload, uint8_t* jpegBuf, uint32_t jpegSize) {
 	ParsedJpeg parsed;
 	if (!parseJpeg(jpegBuf, jpegSize, parsed)) {
+		std::cerr << "Failed to parse JPEG data" << std::endl;
 		invalidatePayload(payload);
 		return;
 	}
@@ -392,6 +395,7 @@ void createMJPEGRTPPayload(MJPEGRTPPayload& payload, uint8_t* jpegBuf, uint32_t 
 	const uint32_t widthBlocks = (static_cast<uint32_t>(parsed.width) + 7U) / 8U;
 	const uint32_t heightBlocks = (static_cast<uint32_t>(parsed.height) + 7U) / 8U;
 	if (widthBlocks == 0 || widthBlocks > 255 || heightBlocks == 0 || heightBlocks > 255 || payload.packetPayloadSize == 0) {
+		std::cerr << "Invalid image dimensions or packet payload size" << std::endl;
 		invalidatePayload(payload);
 		return;
 	}
@@ -407,6 +411,7 @@ void createMJPEGRTPPayload(MJPEGRTPPayload& payload, uint8_t* jpegBuf, uint32_t 
 	const uint32_t firstPacketHeaderLength = baseHeaderLength + restartHeaderLength + quantizationHeaderLength;
 	const uint32_t followingPacketHeaderLength = baseHeaderLength + restartHeaderLength;
 	if (payload.packetPayloadSize <= firstPacketHeaderLength || payload.packetPayloadSize <= followingPacketHeaderLength) {
+		std::cerr << "Packet payload size is too small for headers" << std::endl;
 		invalidatePayload(payload);
 		return;
 	}
@@ -428,6 +433,7 @@ void createMJPEGRTPPayload(MJPEGRTPPayload& payload, uint8_t* jpegBuf, uint32_t 
 	if (payload.buf == nullptr || payload.bufferLength < requiredLength) {
 		uint8_t* resizedBuffer = static_cast<uint8_t*>(std::realloc(payload.buf, requiredLength));
 		if (resizedBuffer == nullptr) {
+			std::cerr << "Failed to allocate memory for MJPEG RTP payload" << std::endl;
 			invalidatePayload(payload);
 			return;
 		}

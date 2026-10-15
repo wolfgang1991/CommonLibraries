@@ -1,6 +1,7 @@
 #ifndef EFFICIENTLOWPASSFILTER_H_INCLUDED
 #define EFFICIENTLOWPASSFILTER_H_INCLUDED
 
+#include "mathHelpers.h"
 #include <cmath>
 
 //! TSample can be a vector class implementing operator* with scalars or a scalar; TTime must be a scalar
@@ -19,9 +20,14 @@ class EfficientLowPassFilter{
 	
 	//! The low pass filter is set up that after dT the weight of the new sample is weightAfterDT (continuous version of oldSample*weightAfterDT+newSample*(1-weightAfterDT) after each dT)
 	//! minSamplePeriod should be small but large enough to avoid rounding errors.
+	//! cuttoff frequency is approximately f = -ln(weightAfterDT)/(2*pi*dT) (AI result)
 	EfficientLowPassFilter(double weightAfterDT, TTime dT, TTime minSamplePeriod, TSample unitializedSample = static_cast<TSample>(0)){
 		setWeightParameters(weightAfterDT, dT, minSamplePeriod);
 		reset(unitializedSample);
+	}
+
+	static EfficientLowPassFilter<TSample, TTime> createWithCutoffFrequency(double cutoffFrequency, TTime minSamplePeriod, TSample unitializedSample = static_cast<TSample>(0)){
+		return EfficientLowPassFilter< TSample, TTime>(exp(-2.0 * PI * cutoffFrequency), static_cast<TTime>(1.0), minSamplePeriod, unitializedSample);
 	}
 	
 	virtual ~EfficientLowPassFilter(){}
