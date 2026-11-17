@@ -247,12 +247,18 @@ class UCMap{
 		}
 	};
 
-	iterator begin(){
+	iterator begin() const{
 		return iterator(this, mostRecentlyUsed);
 	}
 
-	iterator end(){
+	iterator end() const{
 		return iterator(this, invalidIndex);
+	}
+
+	//! returns end() if not found
+	iterator find(const TKey& key) const{
+		TSignedIndex entryIndex = findEntryIndex(key);
+		return iterator(this, entryIndex);
 	}
 
 	iterator erase(iterator it){

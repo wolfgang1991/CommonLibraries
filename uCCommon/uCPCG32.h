@@ -1,7 +1,12 @@
 #ifndef UCPCG32_H
 #define UCPCG32_H
 
+#include "platforms.h"
+
 #include <stdint.h>
+#ifndef MICROCONTROLLER_PLATFORM
+#include <random>
+#endif
 
 //! Fast, simple, and efficient 32-bit PCG random number generator
 //! based on the C example provided by the PCG project by Melissa O'Neill
@@ -33,6 +38,15 @@ class UCPCG32{
 		}
 		init(initstate, initstate);
 	}
+
+	#ifndef MICROCONTROLLER_PLATFORM
+	//initialize from std::randomdevice
+	UCPCG32(){
+		std::random_device rd;
+		auto v = rd();
+		init(v, uint64_t(v) << 32);
+	}
+	#endif
 
 	uint32_t next(){
 		uint64_t oldstate = state;

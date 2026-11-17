@@ -46,8 +46,8 @@ namespace UCRPC{
 	template <typename T>
 	struct is_float{static constexpr bool value = ucstd::is_same<T, float>::value || ucstd::is_same<T, double>::value;};
 	
-	//! for integers/bools
-	template<typename T, typename TIndex, typename ucstd::enable_if<is_bool<T>::value || is_integer<T>::value || is_char<T>::value, int>::type = 0>
+	//! for integers/bools/floats
+	template<typename T, typename TIndex, typename ucstd::enable_if<is_bool<T>::value || is_integer<T>::value || is_char<T>::value || is_float<T>::value, int>::type = 0>
 	void serialize(uint8_t* buffer, TIndex& offset, const T& value){
 		writeLittleEndian(buffer, offset, value);
 	}
@@ -66,8 +66,8 @@ namespace UCRPC{
 		}
 	}
 	
-	//! for integers/bools
-	template<typename T, typename TIndex, typename ucstd::enable_if<is_bool<T>::value || is_integer<T>::value || is_char<T>::value, int>::type = 0>
+	//! for integers/bools/floats
+	template<typename T, typename TIndex, typename ucstd::enable_if<is_bool<T>::value || is_integer<T>::value || is_char<T>::value || is_float<T>::value, int>::type = 0>
 	void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize, T& outValue){
 		outValue = readLittleEndian<T,TIndex>(buffer, offset);
 	}
@@ -119,12 +119,16 @@ namespace UCRPC{
 	}
 
 	//! meant for variable size objects, default: uses space requirement for fixed size
-	template<typename T, typename TIndex, typename ucstd::enable_if<is_scalar<T>::value || ucstd::is_array<T>::value, int>::type = 0>
+	template<typename T, typename TIndex, typename ucstd::enable_if<is_scalar<T>::value, int>::type = 0>
 	TIndex getDynamicLength(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
 		TIndex spaceRequirement = getSpaceRequirement<T,TIndex>();
-		offset += spaceRequirement;
+		if(offset > bufferSize || spaceRequirement > bufferSize - offset) offset = bufferSize + 1;
+		else offset += spaceRequirement;
 		return spaceRequirement;
 	}
+
+	template<typename T, typename TIndex, typename ucstd::enable_if<ucstd::is_array<T>::value, int>::type = 0>
+	TIndex getDynamicLength(const uint8_t* buffer, TIndex& offset, TIndex bufferSize);
 
 	//! for objects
 	template<typename T, typename TIndex, typename ucstd::enable_if<!is_scalar<T>::value && !ucstd::is_array<T>::value, int>::type = 0>
@@ -132,15 +136,31 @@ namespace UCRPC{
 		return ucstd::remove_reference<T>::type::template getDynamicLength<TIndex>(buffer, offset, bufferSize);
 	}
 
-	//! syntactic sugar for deserialize usage on function return values, returns true if successful
+	template<typename T, typename TIndex, typename ucstd::enable_if<ucstd::is_array<T>::value, int>::type>
+	TIndex getDynamicLength(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
+		TIndex start = offset;
+		for(size_t i = 0; i < T::size() && offset <= bufferSize; ++i){
+			getDynamicLength<typename T::value_type, TIndex>(buffer, offset, bufferSize);
+		}
+		return offset - start;
+	}
+
+	//! Length inspection requires one extra value to signal an invalid offset.
+	template<typename TIndex>
+	using DynamicLengthIndex = typename ucstd::conditional<(sizeof(TIndex) < sizeof(uint32_t)), uint32_t, uint64_t>::type;
+
+	//! Validates the complete encoded value before deserializing. Trailing bytes are allowed.
 	template<typename T, typename TIndex>
 	bool deserializeDynamicResult(const uint8_t* buffer, TIndex bufferSize, T& outValue){
-		TIndex offset = 0;
-		TIndex realLength = getDynamicLength<T,TIndex>(buffer, offset, bufferSize);
-		bool ok = realLength <= bufferSize && offset<=bufferSize;
+		using TLength = DynamicLengthIndex<TIndex>;
+		TLength offset = 0;
+		TLength size = bufferSize;
+		if(size == static_cast<TLength>(~TLength(0))) return false;
+		TLength realLength = getDynamicLength<T, TLength>(buffer, offset, size);
+		bool ok = realLength <= size && offset <= size;
 		if(ok){
-			offset = 0;
-			deserialize(buffer, offset, bufferSize, outValue);
+			TIndex readOffset = 0;
+			deserialize(buffer, readOffset, bufferSize, outValue);
 		}
 		return ok;
 	}
@@ -303,13 +323,16 @@ namespace UCRPC{
 
 		template<typename TIndex>
 		static TIndex getDynamicLength(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
-			if(bufferSize < offset+sizeof(uint16_t)){
-				offset += sizeof(uint16_t);//signals overflow
+			if(offset > bufferSize || bufferSize - offset < sizeof(uint16_t)){
+				offset = bufferSize + 1;
 				return sizeof(uint16_t);
 			}
 			uint16_t actualLength;
 			UCRPC::deserialize<decltype(actualLength)>(buffer, offset, bufferSize, actualLength);
-			if(actualLength>maxLength){actualLength = maxLength;}
+			if(actualLength > maxLength || actualLength > bufferSize - offset){
+				offset = bufferSize + 1;
+				return sizeof(uint16_t);
+			}
 			offset += actualLength;
 			return actualLength+sizeof(uint16_t);
 		}
@@ -388,20 +411,23 @@ namespace UCRPC{
 
 		template<typename TIndex>
 		static TIndex getDynamicLength(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
-			if(bufferSize < offset+sizeof(uint16_t)){
-				offset += sizeof(uint16_t);//signals overflow
+			if(offset > bufferSize || bufferSize - offset < sizeof(uint16_t)){
+				offset = bufferSize + 1;
 				return sizeof(uint16_t);
 			}
 			uint16_t actualLength;
 			UCRPC::deserialize<decltype(actualLength)>(buffer, offset, bufferSize, actualLength);
-			if(actualLength>maxLength){actualLength = maxLength;}
+			if(actualLength > maxLength || actualLength > bufferSize - offset){
+				offset = bufferSize + 1;
+				return sizeof(uint16_t);
+			}
 			offset += actualLength;
 			return actualLength+sizeof(uint16_t);
 		}
 		
 	};
 	
-	//! Encode variable length arrays with a maximum capacity. Only sends and receives the used capacity (safety tradeoff: lengths cannot be checked, see UCRPC_DESERIALIZE_PARAMS_WITH_STRINGS)
+	//! Encode variable length arrays with a maximum capacity. Only sends and receives the used capacity (tradeoff: lengths cannot be checked statically without packet inspection)
 	template <typename TObject, uint16_t maxLength>
 	struct ObjectString{
 		
@@ -442,15 +468,15 @@ namespace UCRPC{
 			return maxLength;
 		}
 		
-		//! Warning no range check for single object
 		void push_back(const TObject& object){
+			if(actualLength >= maxLength) return;
 			data[actualLength] = object;
 			actualLength++;
 		}
 		
 		//! no initialization, must not be larger maxLength
 		void resize(uint16_t newLength){
-			actualLength = newLength;
+			actualLength = newLength<maxLength ? newLength : maxLength;
 		}
 
 		template<typename TIndex>
@@ -479,16 +505,20 @@ namespace UCRPC{
 
 		template<typename TIndex>
 		static TIndex getDynamicLength(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
-			if(bufferSize < offset+sizeof(uint16_t)){
-				offset += sizeof(uint16_t);//signals overflow
+			if(offset > bufferSize || bufferSize - offset < sizeof(uint16_t)){
+				offset = bufferSize + 1;
 				return sizeof(uint16_t);
 			}
 			uint16_t actualLength;
 			UCRPC::deserialize<decltype(actualLength)>(buffer, offset, bufferSize, actualLength);
-			if(actualLength>maxLength){actualLength = maxLength;}
-			uint16_t res = sizeof(uint16_t);
+			if(actualLength > maxLength){
+				offset = bufferSize + 1;
+				return sizeof(uint16_t);
+			}
+			TIndex res = sizeof(uint16_t);
 			for(uint16_t i=0; i<actualLength; i++){
 				res += UCRPC::getDynamicLength<decltype(data[i]), TIndex>(buffer, offset, bufferSize);
+				if(offset > bufferSize) break;
 			}
 			return res;
 		}
@@ -498,18 +528,20 @@ namespace UCRPC{
 	//! special implementation for strings
 	template<typename TIndex, uint16_t maxLength>
 	bool deserializeResult(const uint8_t* buffer, TIndex bufferSize, String<maxLength>& outValue){
-		TIndex offset = 0; deserialize(buffer, offset, bufferSize, outValue); // sanity checks included in deserialize
-		return true;//always true / string may contain rubbish in case of malevolent sender
+		return deserializeDynamicResult(buffer, bufferSize, outValue);
 	}
 	
 	//! special implementation for strings
 	template<typename TIndex, uint16_t maxLength>
 	bool deserializeResult(const uint8_t* buffer, TIndex bufferSize, StringInterpretation<maxLength>& outValue){
-		TIndex offset = 0; deserialize(buffer, offset, bufferSize, outValue); // sanity checks included in deserialize
-		return true;//always true / string may contain rubbish in case of malevolent sender
+		return deserializeDynamicResult(buffer, bufferSize, outValue);
 	}
 	
-	//TODO serialize/deserialize/getSpaceRequirement: floats
+	//! special implementation for ObjectString
+	template <typename TIndex, typename TObject, uint16_t maxLength>
+	bool deserializeResult(const uint8_t* buffer, TIndex bufferSize, ObjectString<TObject, maxLength>& outValue){
+		return deserializeDynamicResult(buffer, bufferSize, outValue);
+	}
 
 	class IUCRemoteProcedureCaller{
 		
@@ -1138,7 +1170,7 @@ namespace UCRPC{
 		TIndex res = 0;
 
 #define UCRPC_DYNLEN_ADD(PARAM)\
-		res += UCRPC::getDynamicLength<decltype(PARAM)>(buffer, offset, bufferSize);
+		if(offset <= bufferSize) res += UCRPC::getDynamicLength<decltype(PARAM)>(buffer, offset, bufferSize);
 
 #define UCRPC_DYNLEN_END\
 		return res;\
@@ -1206,14 +1238,10 @@ static constexpr TA uCRPCMax(TA a, TB b){
 	UCRPC::deserialize(parameter, ucrcp_macro_prefix_offset, parameterLength, VALUE);
 
 #define UCRPC_DYNAMIC_DESERIALIZE_PARAMS(VALUE, TINDEX)\
-	TINDEX ucrcp_macro_prefix_offset = 0;\
-	TINDEX realLength = UCRPC::getDynamicLength<decltype(VALUE)>(parameter, ucrcp_macro_prefix_offset, parameterLength);\
-	if(realLength > parameterLength || ucrcp_macro_prefix_offset > parameterLength){\
+	if(!UCRPC::deserializeDynamicResult<decltype(VALUE), TINDEX>(parameter, parameterLength, VALUE)){\
 		ucrpc->returnError(UCRPC::IUCRemoteProcedureCaller::BAD_FORMAT);\
 		return;\
-	}\
-	ucrcp_macro_prefix_offset = 0;\
-	UCRPC::deserialize(parameter, ucrcp_macro_prefix_offset, parameterLength, VALUE);
+	}
 
 #define UCRPC_DESERIALIZE_PARAMS_WITH_STRINGS(VALUE, TINDEX) UCRPC_DYNAMIC_DESERIALIZE_PARAMS(VALUE, TINDEX)
 

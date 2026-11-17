@@ -41,7 +41,7 @@ uc_time_t ta; )
 	averageDt = averageDt*((float)averageDtCount/(float)averageDtCountP1) + ((float)dt)/1000.f*(1.f/(float)averageDtCountP1); \
 	averageDtCount = averageDtCountP1; \
 	if(calcTimeDifference(millis(), lastPrintTime)>1000){ \
-		printDebug(&ucrpc, ApiString(PROFILE_MSG_PREFIX " averageDt [µs]: ") << (int)(averageDt*1000.f) << " averageDtCount: " << averageDtCount); \
+		printDebug(&ucrpc, ApiString(PROFILE_MSG_PREFIX " averageDt [µs]: ") << (int32_t)(averageDt*1000.f) << " averageDtCount: " << averageDtCount); \
 		lastPrintTime = millis(); \
 	} \
 	ta = lastTime = micros();)

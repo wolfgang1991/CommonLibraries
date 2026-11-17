@@ -48,6 +48,10 @@ class uCLowPassFilter {
 		return value;
 	}
 
+	const TSample& getLastValue() const {
+		return value;
+	}
+
 };
 
 #endif

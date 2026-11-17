@@ -4,52 +4,12 @@
 #include <rect.h>
 #include <vector2d.h>
 #include <vector3d.h>
+#include <mathHelpers.h>
 
 #include <cmath>
 
-#define DEG_RAD (180.0/3.141592654)
 #define DOUBLE_EPS 0.00000001
 #define FLOAT_EPS 0.0001
-
-template <typename A, typename B, typename C>
-A Clamp(A value, B min, C max){
-	return value<(A)min?(A)min:(value>(A)max?(A)max:value);
-}
-
-template <class T>
-T Min(T value, T max){
-	return value>max?max:value;
-}
-
-template <class T>
-T Max(T value, T min){
-	return value<min?min:value;
-}
-
-//! ^2
-template <class T>
-T sq(T val){
-	return val*val;
-}
-
-//! safe acos (because of rounding errors in previous calculations which result in an input outside valid bounds)
-inline double acos2(double in){
-	return acos(Clamp(in, -1.0, 1.0));
-}
-
-//! safe asin (because of rounding errors in previous calculations which result in an input outside valid bounds)
-inline double asin2(double in){
-	return asin(Clamp(in, -1.0, 1.0));
-}
-
-//! round A to B
-template <class A, class B>
-B rd(A in){
-	bool sign = in<(A)0.0;
-	in = sign?-in:in;//abs
-	B out = (B)(in+(A)0.5);
-	return sign?-out:out;
-}
 
 //! A (in), B (out)
 template <typename A, typename B>
@@ -106,12 +66,6 @@ template <typename TValue>
 TValue Angle0to360(TValue phi){
 	phi = fmod(phi, (TValue)360.0);
 	return phi<(TValue)0.0?(phi+(TValue)360.0):phi;
-}
-
-//! returns true if the intervals [a1,a2] and [b1,b2] overlap
-template <class T>
-inline bool NumbersOverlap(T a1, T a2, T b1, T b2){
-	return (b1<=a1 && b2>=a1) || (b1<=a2 && b2>=a2) || (b1>=a1 && b2<=a2);
 }
 
 #endif

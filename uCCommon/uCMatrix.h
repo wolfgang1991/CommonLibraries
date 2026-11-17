@@ -2,6 +2,7 @@
 #define uCMatrix_H_
 
 #include "platforms.h"
+#include "BitFunctions.h"
 
 #include <stdint.h>
 
@@ -77,7 +78,27 @@ class Matrix{
 	TScalar& z(){
 		return data[2];
 	}
+
+	TScalar& w(){
+		return data[3];
+	}
 	
+	TScalar x() const{
+		return data[0];
+	}
+
+	TScalar y() const{
+		return data[1];
+	}
+
+	TScalar z() const{
+		return data[2];
+	}
+
+	TScalar w() const{
+		return data[3];
+	}
+
 	void set(uint32_t rowIndex, uint32_t columnIndex, TScalar s){
 		data[columnIndex + columnCount*rowIndex] = s;
 	}
@@ -179,6 +200,36 @@ class Matrix{
 		}
 		return isEqual;
 	}
+
+	// Serialization Methods (usable for ucrpc, ucmsg, ...):
+
+	template<typename TIndex>
+	static constexpr TIndex getSpaceRequirement(){
+		return size*sizeof(TScalar);
+	}
+	
+	template<typename TIndex>
+	TIndex serialize(uint8_t* target) const{
+		TIndex offset = 0;
+		for(TIndex i=0; i<size; i++){
+			writeLittleEndian<TScalar>(target, offset, data[i]);
+		}
+		return offset;
+	}
+		
+	template<typename TIndex>
+	void deserialize(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
+		for(TIndex i=0; i<size && offset<bufferSize; i++){
+			data[i] = readLittleEndian<TScalar>(buffer, offset);
+		}
+	}
+
+	template<typename TIndex>
+	static TIndex getDynamicLength(const uint8_t* buffer, TIndex& offset, TIndex bufferSize){
+		TIndex spaceRequirement = getSpaceRequirement<TIndex>();
+		offset += spaceRequirement;
+		return spaceRequirement;
+	}
 	
 };
 
@@ -200,6 +251,38 @@ using Matrix3D = Matrix<TScalar, 3, 3>;
 
 using Matrix3DF = Matrix3D<float>;
 
+template<typename TScalar>
+using Quaternion = Vector<TScalar, 4>;
+
+using QuaternionF = Quaternion<float>;
+
+template<typename TScalar>
+Quaternion<TScalar> createQuaternionFromAngleAxis(TScalar angle, const Vector3D<TScalar>& axis){
+	TScalar halfAngle = angle * static_cast<TScalar>(0.5);
+	TScalar sinHalfAngle = std::sin(halfAngle);
+	return Quaternion<TScalar>{
+		axis[0] * sinHalfAngle,
+		axis[1] * sinHalfAngle,
+		axis[2] * sinHalfAngle,
+		std::cos(halfAngle)
+	};
+}
+
+template<typename TScalar>
+Quaternion<TScalar> createInverseQuaternion(const Quaternion<TScalar>& q){
+	return Quaternion<TScalar>{ -q[0], -q[1], -q[2], q[3] };
+}
+
+template<typename TScalar>
+Quaternion<TScalar> multiplyQuaternion(const Quaternion<TScalar>& a, const Quaternion<TScalar>& b){
+	return Quaternion<TScalar>{
+		a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1],
+		a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0],
+		a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3],
+		a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2]
+	};
+}
+
 template<typename TScalar, uint32_t size>
 TScalar calcDotProduct(const Vector<TScalar, size>& a, const Vector<TScalar, size>& b){
 	TScalar sum = 0;
@@ -220,9 +303,9 @@ void normalizeInPlace(Vector<TScalar, size>& v){
 	TScalar length = v.calcFrobeniusNorm();
 	if(length==static_cast<TScalar>(0)){return;}//no divide by zero
 	TScalar f = static_cast<TScalar>(1)/length;
-	v[0] *= f;
-	v[1] *= f;
-	v[2] *= f;
+	for(uint32_t i=0; i<size; i++){
+		v.data[i] *= f;
+	}
 }
 
 //! Calculate cross product of two 3D vectors (axb)
@@ -234,8 +317,8 @@ Vector3D<TScalar> calcCrossProduct(const Vector3D<TScalar>& a, const Vector3D<TS
 //! Rotation around first axis
 template <typename TScalar>
 Matrix3D<TScalar> createPitchMatrix3D(TScalar phi){
-	TScalar cosPhi = cos(phi);
-	TScalar sinPhi = sin(phi);
+	TScalar cosPhi = std::cos(phi);
+	TScalar sinPhi = std::sin(phi);
 	return Matrix3D<TScalar>{1, 0, 0,
 		      0, cosPhi, -sinPhi,
 		      0, sinPhi, cosPhi};
@@ -244,8 +327,8 @@ Matrix3D<TScalar> createPitchMatrix3D(TScalar phi){
 //! Rotation around second axis
 template <typename TScalar>
 Matrix3D<TScalar> createYawMatrix3D(TScalar phi){
-	TScalar cosPhi = cos(phi);
-	TScalar sinPhi = sin(phi);
+	TScalar cosPhi = std::cos(phi);
+	TScalar sinPhi = std::sin(phi);
 	return Matrix3D<TScalar>{cosPhi, 0, sinPhi,
 		      0, 1, 0,
 		      -sinPhi, 0, cosPhi};
@@ -254,8 +337,8 @@ Matrix3D<TScalar> createYawMatrix3D(TScalar phi){
 //! Rotation around third axis
 template <typename TScalar>
 Matrix3D<TScalar> createRollMatrix3D(TScalar phi){
-	TScalar cosPhi = cos(phi);
-	TScalar sinPhi = sin(phi);
+	TScalar cosPhi = std::cos(phi);
+	TScalar sinPhi = std::sin(phi);
 	return Matrix3D<TScalar>{cosPhi, -sinPhi, 0,
 		      sinPhi, cosPhi, 0,
 		      0, 0, 1};
