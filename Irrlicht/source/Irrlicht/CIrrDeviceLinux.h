@@ -152,12 +152,9 @@ namespace irr
 				setPosition(pos.X, pos.Y);
 			}
 
-			//! Wayland does not allow clients to warp the pointer, so this only changes the position reported by the cursor control
-			virtual void setPosition(s32 x, s32 y) _IRR_OVERRIDE_
-			{
-				CursorPos.X = x;
-				CursorPos.Y = y;
-			}
+			//! Wayland does not allow clients to warp the pointer. The position reported by the cursor control is a virtual
+			//! one: it can be set by the application and follows the relative pointer movements afterwards.
+			virtual void setPosition(s32 x, s32 y) _IRR_OVERRIDE_;
 
 			virtual const core::position2d<s32>& getPosition(bool updateCursor) _IRR_OVERRIDE_
 			{
@@ -215,11 +212,32 @@ namespace irr
 
 			void clearCursors();
 
-			//! position reported by the compositor
-			void setPositionFromCompositor(s32 x, s32 y)
+			//! the pointer entered the window at the given real position
+			void onPointerEnter(s32 x, s32 y)
 			{
-				CursorPos.X = x;
-				CursorPos.Y = y;
+				CursorPos.X = LastReal.X = x;
+				CursorPos.Y = LastReal.Y = y;
+			}
+
+			//! absolute pointer motion: the virtual position follows the movement
+			void onPointerMotion(s32 x, s32 y)
+			{
+				CursorPos.X += x - LastReal.X;
+				CursorPos.Y += y - LastReal.Y;
+				LastReal.X = x;
+				LastReal.Y = y;
+			}
+
+			//! relative pointer motion (used while the pointer is locked)
+			void onRelativeMotion(f64 dx, f64 dy)
+			{
+				RemX += dx;
+				RemY += dy;
+				const s32 ix = (s32)RemX, iy = (s32)RemY;
+				RemX -= ix;
+				RemY -= iy;
+				CursorPos.X += ix;
+				CursorPos.Y += iy;
 			}
 
 		private:
@@ -247,6 +265,8 @@ namespace irr
 
 			CIrrDeviceLinux* Device;
 			core::position2d<s32> CursorPos;
+			core::position2d<s32> LastReal;
+			f64 RemX, RemY;
 			core::rect<s32> ReferenceRect;
 			core::array<SCursor> Cursors;
 			bool IsVisible;

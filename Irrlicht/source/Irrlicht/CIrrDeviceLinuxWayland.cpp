@@ -24,6 +24,9 @@
 
 #include <libdecor.h>
 
+#include "wayland/pointer-constraints-unstable-v1-client-protocol.h"
+#include "wayland/relative-pointer-unstable-v1-client-protocol.h"
+
 #include "IEventReceiver.h"
 #include "ISceneManager.h"
 #include "IGUIEnvironment.h"
@@ -171,11 +174,12 @@ struct CIrrDeviceLinux::SWayland
 	explicit SWayland(CIrrDeviceLinux* dev) : Dev(dev),
 		Display(0), Registry(0), Compositor(0), Shm(0), DecorContext(0), Frame(0),
 		Seat(0), Pointer(0), Keyboard(0), Output(0),
+		Constraints(0), RelativeManager(0), LockedPointer(0), RelativePointer(0),
 		DataDeviceManager(0), DataDevice(0), DataSource(0), SelectionOffer(0),
 		Surface(0), EglWindow(0),
 		CursorSurface(0), CursorTheme(0),
 		XkbContext(0), XkbKeymap(0), XkbState(0),
-		Configured(false),
+		Configured(false), HasPendingResize(false), PendingWidth(0), PendingHeight(0), FloatWidth(0), FloatHeight(0),
 		InputSerial(0), PointerEnterSerial(0), PointerInside(false),
 		OutputWidth(0), OutputHeight(0),
 		RepeatRate(25), RepeatDelay(600), RepeatKey(0), Repeating(false), NextRepeat(0),
@@ -196,6 +200,10 @@ struct CIrrDeviceLinux::SWayland
 	struct wl_pointer* Pointer;
 	struct wl_keyboard* Keyboard;
 	struct wl_output* Output;
+	struct zwp_pointer_constraints_v1* Constraints;
+	struct zwp_relative_pointer_manager_v1* RelativeManager;
+	struct zwp_locked_pointer_v1* LockedPointer;
+	struct zwp_relative_pointer_v1* RelativePointer;
 	struct wl_data_device_manager* DataDeviceManager;
 	struct wl_data_device* DataDevice;
 	struct wl_data_source* DataSource;
@@ -212,6 +220,9 @@ struct CIrrDeviceLinux::SWayland
 	struct xkb_state* XkbState;
 
 	bool Configured;
+	bool HasPendingResize;
+	u32 PendingWidth, PendingHeight;
+	u32 FloatWidth, FloatHeight; // size of the window when it is neither maximized, fullscreen nor tiled
 
 	u32 InputSerial;
 	u32 PointerEnterSerial;
@@ -232,7 +243,7 @@ struct CIrrDeviceLinux::SWayland
 
 	bool DiscardInput;
 
-	SShmBuffer Buffers[2];
+	SShmBuffer Buffers[3];
 
 	// ------------------------------------------------------------------
 	// helpers
@@ -359,34 +370,85 @@ struct CIrrDeviceLinux::SWayland
 
 	void freeBuffers()
 	{
-		for (u32 i = 0; i < 2; ++i)
+		for (u32 i = 0; i < 3; ++i)
 			destroyShmBuffer(Buffers[i]);
 	}
 
 	SShmBuffer* acquireBuffer(u32 width, u32 height)
 	{
-		for (u32 attempt = 0; attempt < 6; ++attempt)
+		// no event dispatching in here, a nested configure event would resize the window while it is being drawn
+		for (u32 i = 0; i < 3; ++i)
 		{
-			for (u32 i = 0; i < 2; ++i)
+			SShmBuffer& b = Buffers[i];
+			if (b.Busy)
+				continue;
+			if (b.Buffer && (b.Width != width || b.Height != height))
+				destroyShmBuffer(b);
+			if (!b.Buffer)
 			{
-				SShmBuffer& b = Buffers[i];
-				if (b.Busy)
-					continue;
-				if (b.Buffer && (b.Width != width || b.Height != height))
-					destroyShmBuffer(b);
-				if (!b.Buffer)
-				{
-					if (!createShmBuffer(Shm, width, height, WL_SHM_FORMAT_XRGB8888, b))
-						return 0;
-					static const struct wl_buffer_listener listener = { &SWayland::bufferRelease };
-					wl_buffer_add_listener(b.Buffer, &listener, &b);
-				}
-				return &b;
+				if (!createShmBuffer(Shm, width, height, WL_SHM_FORMAT_XRGB8888, b))
+					return 0;
+				static const struct wl_buffer_listener listener = { &SWayland::bufferRelease };
+				wl_buffer_add_listener(b.Buffer, &listener, &b);
 			}
-			// both buffers are still used by the compositor, wait for a release
-			dispatch(20);
+			return &b;
 		}
-		return 0;
+		return 0; // all buffers are still used by the compositor
+	}
+
+	void applyPendingResize()
+	{
+		if (!HasPendingResize)
+			return;
+		HasPendingResize = false;
+		if (PendingWidth != Dev->Width || PendingHeight != Dev->Height)
+			Dev->resizeWindow(PendingWidth, PendingHeight);
+	}
+
+	// ------------------------------------------------------------------
+	// pointer lock (used while the cursor is hidden, e.g. for first person cameras)
+	// ------------------------------------------------------------------
+
+	static void lockedPointerLocked(void*, struct zwp_locked_pointer_v1*) {}
+	static void lockedPointerUnlocked(void*, struct zwp_locked_pointer_v1*) {}
+
+	static void relativeMotion(void* data, struct zwp_relative_pointer_v1*, uint32_t, uint32_t,
+		wl_fixed_t dx, wl_fixed_t dy, wl_fixed_t, wl_fixed_t)
+	{
+		SWayland* wl = static_cast<SWayland*>(data);
+		if (!wl->PointerInside || !wl->Dev->CursorControl)
+			return;
+		CCursorControl* cc = static_cast<CCursorControl*>(wl->Dev->CursorControl);
+		cc->onRelativeMotion(wl_fixed_to_double(dx), wl_fixed_to_double(dy));
+		const core::position2d<s32>& p = cc->getPosition(false);
+		wl->MouseX = core::clamp(p.X, 0, (s32)wl->Dev->Width - 1);
+		wl->MouseY = core::clamp(p.Y, 0, (s32)wl->Dev->Height - 1);
+		wl->postMouse(EMIE_MOUSE_MOVED);
+	}
+
+	void setPointerLock(bool lock)
+	{
+		if (lock)
+		{
+			if (LockedPointer || !Constraints || !RelativeManager || !Pointer || !Surface)
+				return;
+			LockedPointer = zwp_pointer_constraints_v1_lock_pointer(Constraints, Surface, Pointer, NULL,
+				ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+			static const struct zwp_locked_pointer_v1_listener lockListener = { &SWayland::lockedPointerLocked, &SWayland::lockedPointerUnlocked };
+			zwp_locked_pointer_v1_add_listener(LockedPointer, &lockListener, this);
+			RelativePointer = zwp_relative_pointer_manager_v1_get_relative_pointer(RelativeManager, Pointer);
+			static const struct zwp_relative_pointer_v1_listener relListener = { &SWayland::relativeMotion };
+			zwp_relative_pointer_v1_add_listener(RelativePointer, &relListener, this);
+		}
+		else
+		{
+			if (RelativePointer)
+				zwp_relative_pointer_v1_destroy(RelativePointer);
+			RelativePointer = 0;
+			if (LockedPointer)
+				zwp_locked_pointer_v1_destroy(LockedPointer);
+			LockedPointer = 0;
+		}
 	}
 
 	// ------------------------------------------------------------------
@@ -453,6 +515,10 @@ struct CIrrDeviceLinux::SWayland
 				wl_output_add_listener(wl->Output, &listener, wl);
 			}
 		}
+		else if (!strcmp(iface, zwp_pointer_constraints_v1_interface.name))
+			wl->Constraints = (struct zwp_pointer_constraints_v1*)wl_registry_bind(registry, name, &zwp_pointer_constraints_v1_interface, 1);
+		else if (!strcmp(iface, zwp_relative_pointer_manager_v1_interface.name))
+			wl->RelativeManager = (struct zwp_relative_pointer_manager_v1*)wl_registry_bind(registry, name, &zwp_relative_pointer_manager_v1_interface, 1);
 		else if (!strcmp(iface, wl_data_device_manager_interface.name))
 			wl->DataDeviceManager = (struct wl_data_device_manager*)wl_registry_bind(registry, name, &wl_data_device_manager_interface, version < 3 ? version : 3);
 	}
@@ -491,11 +557,25 @@ struct CIrrDeviceLinux::SWayland
 	{
 		SWayland* wl = static_cast<SWayland*>(data);
 		int w = 0, h = 0;
-		if (!libdecor_configuration_get_content_size(configuration, frame, &w, &h) || w <= 0 || h <= 0)
+		const bool hasSize = libdecor_configuration_get_content_size(configuration, frame, &w, &h) && w > 0 && h > 0;
+
+		enum libdecor_window_state windowState = LIBDECOR_WINDOW_STATE_NONE;
+		bool floating = true;
+		if (libdecor_configuration_get_window_state(configuration, &windowState))
+			floating = !(windowState & (LIBDECOR_WINDOW_STATE_MAXIMIZED | LIBDECOR_WINDOW_STATE_FULLSCREEN |
+				LIBDECOR_WINDOW_STATE_TILED_LEFT | LIBDECOR_WINDOW_STATE_TILED_RIGHT |
+				LIBDECOR_WINDOW_STATE_TILED_TOP | LIBDECOR_WINDOW_STATE_TILED_BOTTOM));
+
+		if (!hasSize)
 		{
-			// the compositor leaves the size to us
-			w = (int)wl->Dev->Width;
-			h = (int)wl->Dev->Height;
+			// the compositor leaves the size to us, when leaving maximized state this is the old window size
+			w = (int)((floating && wl->FloatWidth) ? wl->FloatWidth : wl->Dev->Width);
+			h = (int)((floating && wl->FloatHeight) ? wl->FloatHeight : wl->Dev->Height);
+		}
+		if (floating)
+		{
+			wl->FloatWidth = (u32)w;
+			wl->FloatHeight = (u32)h;
 		}
 
 		struct libdecor_state* state = libdecor_state_new(w, h);
@@ -503,8 +583,12 @@ struct CIrrDeviceLinux::SWayland
 		libdecor_state_free(state);
 		wl->Configured = true;
 
-		if ((u32)w != wl->Dev->Width || (u32)h != wl->Dev->Height)
-			wl->Dev->resizeWindow((u32)w, (u32)h);
+		wl->PendingWidth = (u32)w;
+		wl->PendingHeight = (u32)h;
+		wl->HasPendingResize = true;
+		// without a driver nothing can be drawn at the moment, so the size can be applied right away
+		if (!wl->Dev->VideoDriver)
+			wl->applyPendingResize();
 	}
 
 	static void frameClose(struct libdecor_frame*, void* data)
@@ -541,6 +625,7 @@ struct CIrrDeviceLinux::SWayland
 		}
 		else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && wl->Pointer)
 		{
+			wl->setPointerLock(false);
 			wl_pointer_release(wl->Pointer);
 			wl->Pointer = 0;
 			wl->PointerInside = false;
@@ -566,15 +651,23 @@ struct CIrrDeviceLinux::SWayland
 	// pointer
 	// ------------------------------------------------------------------
 
-	static void pointerEnter(void* data, struct wl_pointer*, uint32_t serial, struct wl_surface*, wl_fixed_t x, wl_fixed_t y)
+	static void pointerEnter(void* data, struct wl_pointer*, uint32_t serial, struct wl_surface* surface, wl_fixed_t x, wl_fixed_t y)
 	{
 		SWayland* wl = static_cast<SWayland*>(data);
+		// the decorations are subsurfaces which libdecor handles on its own
+		if (surface != wl->Surface)
+		{
+			wl->PointerInside = false;
+			return;
+		}
 		wl->PointerEnterSerial = serial;
 		wl->PointerInside = true;
 		wl->MouseX = wl_fixed_to_int(x);
 		wl->MouseY = wl_fixed_to_int(y);
-		static_cast<CCursorControl*>(wl->Dev->CursorControl)->setPositionFromCompositor(wl->MouseX, wl->MouseY);
-		static_cast<CCursorControl*>(wl->Dev->CursorControl)->applyCursor(serial);
+		CCursorControl* cc = static_cast<CCursorControl*>(wl->Dev->CursorControl);
+		cc->onPointerEnter(wl->MouseX, wl->MouseY);
+		cc->applyCursor(serial);
+		wl->setPointerLock(!cc->isVisible());
 	}
 
 	static void pointerLeave(void* data, struct wl_pointer*, uint32_t, struct wl_surface*)
@@ -585,9 +678,11 @@ struct CIrrDeviceLinux::SWayland
 	static void pointerMotion(void* data, struct wl_pointer*, uint32_t, wl_fixed_t x, wl_fixed_t y)
 	{
 		SWayland* wl = static_cast<SWayland*>(data);
+		if (!wl->PointerInside)
+			return;
 		wl->MouseX = wl_fixed_to_int(x);
 		wl->MouseY = wl_fixed_to_int(y);
-		static_cast<CCursorControl*>(wl->Dev->CursorControl)->setPositionFromCompositor(wl->MouseX, wl->MouseY);
+		static_cast<CCursorControl*>(wl->Dev->CursorControl)->onPointerMotion(wl->MouseX, wl->MouseY);
 		wl->postMouse(EMIE_MOUSE_MOVED);
 	}
 
@@ -912,6 +1007,13 @@ struct CIrrDeviceLinux::SWayland
 			wl_cursor_theme_destroy(CursorTheme);
 		CursorTheme = 0;
 
+		setPointerLock(false);
+		if (Constraints)
+			zwp_pointer_constraints_v1_destroy(Constraints);
+		Constraints = 0;
+		if (RelativeManager)
+			zwp_relative_pointer_manager_v1_destroy(RelativeManager);
+		RelativeManager = 0;
 		if (Pointer)
 			wl_pointer_release(Pointer);
 		Pointer = 0;
@@ -1287,7 +1389,10 @@ bool CIrrDeviceLinux::run()
 			Close = true;
 		}
 		else
+		{
+			Wl->applyPendingResize();
 			Wl->processKeyRepeat();
+		}
 	}
 
 	if (!Close)
@@ -1347,10 +1452,7 @@ bool CIrrDeviceLinux::present(video::IImage* image, void* windowId, core::rect<s
 
 	SShmBuffer* buffer = Wl->acquireBuffer(Width, Height);
 	if (!buffer)
-	{
-		os::Printer::log("Could not get a shared memory buffer for presenting.", ELL_WARNING);
-		return false;
-	}
+		return true; // compositor still holds all buffers (or allocation failed), skip this frame
 
 	const u32 destPitch = Width * 4;
 	const u32 minWidth = core::min_(image->getDimension().Width, Width);
@@ -1429,6 +1531,8 @@ void CIrrDeviceLinux::setResizable(bool resize)
 		libdecor_frame_set_min_content_size(Wl->Frame, (s32)Width, (s32)Height);
 		libdecor_frame_set_max_content_size(Wl->Frame, (s32)Width, (s32)Height);
 	}
+	// the new limits and capabilities only take effect with a commit
+	wl_surface_commit(Wl->Surface);
 	wl_display_flush(Wl->Display);
 }
 
@@ -1444,6 +1548,8 @@ void CIrrDeviceLinux::setWindowSize(const irr::core::dimension2d<u32>& size)
 
 	// A Wayland client decides the size of its own surface, the compositor can still override it.
 	resizeWindow(size.Width, size.Height);
+	Wl->FloatWidth = size.Width;
+	Wl->FloatHeight = size.Height;
 	struct libdecor_state* state = libdecor_state_new((int)size.Width, (int)size.Height);
 	libdecor_frame_commit(Wl->Frame, state, NULL);
 	libdecor_state_free(state);
@@ -1766,7 +1872,7 @@ void CIrrDeviceLinux::clearSystemMessages()
 // ----------------------------------------------------------------------
 
 CIrrDeviceLinux::CCursorControl::CCursorControl(CIrrDeviceLinux* dev, bool null)
-	: Device(dev), IsVisible(true), Null(null), UseReferenceRect(false)
+	: Device(dev), RemX(0), RemY(0), IsVisible(true), Null(null), UseReferenceRect(false)
 	, ActiveIcon(gui::ECI_NORMAL), ActiveIconStartTime(0), LastFrame(0)
 {
 	if (!Null)
@@ -1853,6 +1959,12 @@ void CIrrDeviceLinux::CCursorControl::applyCursor(unsigned int)
 		showFrame(Cursors[ActiveIcon].Frames[0]);
 }
 
+void CIrrDeviceLinux::CCursorControl::setPosition(s32 x, s32 y)
+{
+	CursorPos.X = x;
+	CursorPos.Y = y;
+}
+
 void CIrrDeviceLinux::CCursorControl::setVisible(bool visible)
 {
 	if (visible == IsVisible)
@@ -1861,6 +1973,8 @@ void CIrrDeviceLinux::CCursorControl::setVisible(bool visible)
 	if (!Null)
 	{
 		applyCursor(0);
+		if (Device->Wl)
+			Device->Wl->setPointerLock(!visible);
 		if (Device->Wl && Device->Wl->Display)
 			wl_display_flush(Device->Wl->Display);
 	}
