@@ -396,6 +396,17 @@ struct CIrrDeviceLinux::SWayland
 		return 0; // all buffers are still used by the compositor
 	}
 
+	// the window content is opaque, whatever alpha value the framebuffer contains
+	void updateOpaqueRegion(u32 width, u32 height)
+	{
+		if (!Surface || !Compositor)
+			return;
+		struct wl_region* region = wl_compositor_create_region(Compositor);
+		wl_region_add(region, 0, 0, (int)width, (int)height);
+		wl_surface_set_opaque_region(Surface, region);
+		wl_region_destroy(region);
+	}
+
 	void applyPendingResize()
 	{
 		if (!HasPendingResize)
@@ -409,8 +420,8 @@ struct CIrrDeviceLinux::SWayland
 	// pointer lock (used while the cursor is hidden, e.g. for first person cameras)
 	// ------------------------------------------------------------------
 
-	static void lockedPointerLocked(void*, struct zwp_locked_pointer_v1*) {}
-	static void lockedPointerUnlocked(void*, struct zwp_locked_pointer_v1*) {}
+	static void lockedPointerLocked(void*, struct zwp_locked_pointer_v1*) { }
+	static void lockedPointerUnlocked(void*, struct zwp_locked_pointer_v1*) { }
 
 	static void relativeMotion(void* data, struct zwp_relative_pointer_v1*, uint32_t, uint32_t,
 		wl_fixed_t dx, wl_fixed_t dy, wl_fixed_t, wl_fixed_t)
@@ -1227,6 +1238,7 @@ bool CIrrDeviceLinux::createWindow()
 		}
 	}
 	// the compositor can have chosen another size (e.g. fullscreen), the driver must use it
+	Wl->updateOpaqueRegion(Width, Height);
 	CreationParams.WindowSize.Width = Width;
 	CreationParams.WindowSize.Height = Height;
 
@@ -1363,6 +1375,7 @@ void CIrrDeviceLinux::resizeWindow(u32 width, u32 height)
 	{
 		if (Wl->EglWindow)
 			wl_egl_window_resize(Wl->EglWindow, (int)width, (int)height, 0, 0);
+		Wl->updateOpaqueRegion(width, height);
 		// shared memory buffers get recreated with the new size on the next present
 		Wl->freeBuffers();
 	}
