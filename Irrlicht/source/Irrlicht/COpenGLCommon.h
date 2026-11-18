@@ -45,6 +45,18 @@
 	#include <SDL/SDL_video.h>
 	#include <SDL/SDL_opengl.h>
 	#include "glext.h"
+#elif defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
+	// OpenGL contexts are created with EGL, there is no GLX on Wayland
+	#if defined(_IRR_OPENGL_USE_EXTPOINTER_)
+		#define GL_GLEXT_LEGACY 1
+	#else
+		#define GL_GLEXT_PROTOTYPES 1
+	#endif
+	#include <GL/gl.h>
+	#include <EGL/egl.h>
+	#if defined(_IRR_OPENGL_USE_EXTPOINTER_)
+	#include "glext.h"
+	#endif
 #else
 	#if defined(_IRR_OPENGL_USE_EXTPOINTER_)
 		#define GL_GLEXT_LEGACY 1

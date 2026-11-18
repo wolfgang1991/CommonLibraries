@@ -54,6 +54,10 @@ bool CEGLManager::initialize(const SIrrlichtCreationParameters& params, const SE
 #elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
 	EglWindow = (NativeWindowType)Data.OpenGLLinux.X11Window;
 	EglDisplay = eglGetDisplay((NativeDisplayType)Data.OpenGLLinux.X11Display);
+#elif defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
+	// On Wayland the same fields carry the wl_egl_window* and the wl_display*
+	EglWindow = (NativeWindowType)Data.OpenGLLinux.X11Window;
+	EglDisplay = eglGetDisplay((NativeDisplayType)Data.OpenGLLinux.X11Display);
 #elif defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_)
 	EglWindow =	(ANativeWindow*)Data.OGLESAndroid.Window;
 	EglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -159,7 +163,9 @@ bool CEGLManager::generateSurface()
 		os::Printer::log("Could not create EGL surface.");
 
 #ifdef EGL_VERSION_1_2
-	if (MinorVersion > 1)
+	if (Params.DriverType == EDT_OPENGL)
+		eglBindAPI(EGL_OPENGL_API);
+	else if (MinorVersion > 1)
 		eglBindAPI(EGL_OPENGL_ES_API);
 #endif
 
@@ -177,6 +183,9 @@ EGLConfig CEGLManager::chooseConfig(EConfigStyle confStyle)
 	EGLint eglOpenGLBIT = 0;
 	switch (Params.DriverType)
 	{
+	case EDT_OPENGL:
+		eglOpenGLBIT = EGL_OPENGL_BIT;
+		break;
 	case EDT_OGLES1:
 		eglOpenGLBIT = EGL_OPENGL_ES_BIT;
 		break;
@@ -581,6 +590,13 @@ bool CEGLManager::generateContext()
 		EGL_NONE, 0
 	};
 
+	// desktop OpenGL contexts do not take an ES client version
+	if (Params.DriverType == EDT_OPENGL)
+	{
+		ContextAttrib[0] = EGL_NONE;
+		ContextAttrib[1] = 0;
+	}
+
 	EglContext = eglCreateContext(EglDisplay, EglConfig, EGL_NO_CONTEXT, ContextAttrib);
 
 	if (testEGLError())
@@ -615,6 +631,11 @@ bool CEGLManager::activateContext(const SExposedVideoData& videoData, bool resto
 		os::Printer::log("Could not make EGL context current.");
 		return false;
 	}
+#ifdef _IRR_COMPILE_WITH_WAYLAND_DEVICE_
+	// The swap interval applies to the current surface, so it can only be set once the context is current.
+	// Without this a window can block in eglSwapBuffers waiting for frame callbacks.
+	eglSwapInterval(EglDisplay, Params.Vsync ? 1 : 0);
+#endif
 	return true;
 }
 

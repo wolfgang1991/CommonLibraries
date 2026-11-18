@@ -24,7 +24,12 @@ all: all_linux
 
 # target specific settings
 all_linux all_win32 static_win32: LDFLAGS += -L$(IrrlichtHome)/lib/$(SYSTEM) -lIrrlicht
+ifdef WAYLAND
+all_linux: CPPFLAGS += -D_IRR_LINUX_WAYLAND_
+all_linux: LDFLAGS += -lGL -lEGL -lGLESv1_CM -lGLESv2 -lwayland-client -lwayland-egl -lwayland-cursor -lxkbcommon
+else
 all_linux: LDFLAGS += -L/usr/X11R6/lib$(LIBSELECT) -lGL -lEGL -lGLESv1_CM -lGLESv2 -lXxf86vm -lX11
+endif
 all_linux clean_linux: SYSTEM=Linux
 all_win32 clean_win32 static_win32: SYSTEM=Win32-gcc
 all_win32 clean_win32 static_win32: SUF=.exe

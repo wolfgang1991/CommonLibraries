@@ -62,6 +62,10 @@ namespace irr
 		Does not need X11 or other graphical subsystems.
 		May support hw-acceleration via OpenGL-ES */
 		EIDT_ANDROID,		
+
+		//! A device native to Linux systems running a Wayland compositor.
+		/** Only available if _IRR_LINUX_WAYLAND_ is defined when compiling Irrlicht. */
+		EIDT_WAYLAND,
 	};
 
 } // end namespace irr

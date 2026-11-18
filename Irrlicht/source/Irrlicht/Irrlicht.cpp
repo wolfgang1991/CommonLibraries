@@ -18,7 +18,7 @@ static const char* const copyright = "Irrlicht Engine (c) 2002-2017 Nikolaus Geb
 #include "CIrrDeviceWin32.h"
 #endif
 
-#ifdef _IRR_COMPILE_WITH_X11_DEVICE_
+#if defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
 #include "CIrrDeviceLinux.h"
 #endif
 
@@ -85,6 +85,11 @@ namespace irr
 
 #ifdef _IRR_COMPILE_WITH_X11_DEVICE_
 		if (params.DeviceType == EIDT_X11 || (!dev && params.DeviceType == EIDT_BEST))
+			dev = new CIrrDeviceLinux(params);
+#endif
+
+#ifdef _IRR_COMPILE_WITH_WAYLAND_DEVICE_
+		if (params.DeviceType == EIDT_WAYLAND || (!dev && params.DeviceType == EIDT_BEST))
 			dev = new CIrrDeviceLinux(params);
 #endif
         

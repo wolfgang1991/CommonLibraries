@@ -32,7 +32,7 @@ namespace video
 // Statics variables
 const u16 COpenGLDriver::Quad2DIndices[4] = { 0, 1, 2, 3 };
 
-#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
+#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_) || defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
 COpenGLDriver::COpenGLDriver(const SIrrlichtCreationParameters& params, io::IFileSystem* io, IContextManager* contextManager)
 	: CNullDriver(io, params.WindowSize), COpenGLExtensionHandler(), CacheHandler(0), CurrentRenderMode(ERM_NONE), ResetRenderStates(true),
 	Transformation3DChanged(true), AntiAlias(params.AntiAlias), ColorFormat(ECF_R8G8B8), FixedPipelineState(EOFPS_ENABLE), Params(params),
@@ -41,6 +41,8 @@ COpenGLDriver::COpenGLDriver(const SIrrlichtCreationParameters& params, io::IFil
 	DeviceType(EIDT_WIN32)
 #elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
 	DeviceType(EIDT_X11)
+#elif defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
+	DeviceType(EIDT_WAYLAND)
 #else
 	DeviceType(EIDT_OSX)
 #endif
@@ -76,7 +78,7 @@ bool COpenGLDriver::initDriver()
 
 	genericDriverInit();
 
-#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_)
+#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
 	extGlSwapInterval(Params.Vsync ? 1 : 0);
 #endif
 
@@ -4436,7 +4438,7 @@ namespace irr
 namespace video
 {
 
-#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
+#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_) || defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
 	IVideoDriver* createOpenGLDriver(const SIrrlichtCreationParameters& params, io::IFileSystem* io, IContextManager* contextManager)
 	{
 #ifdef _IRR_COMPILE_WITH_OPENGL_

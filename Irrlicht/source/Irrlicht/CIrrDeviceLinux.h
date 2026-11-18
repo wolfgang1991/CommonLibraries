@@ -7,13 +7,302 @@
 
 #include "IrrCompileConfig.h"
 
-#ifdef _IRR_COMPILE_WITH_X11_DEVICE_
+#if defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
 
 #include "CIrrDeviceStub.h"
 #include "IrrlichtDevice.h"
 #include "IImagePresenter.h"
 #include "ICursorControl.h"
 #include "os.h"
+
+#ifdef _IRR_COMPILE_WITH_WAYLAND_DEVICE_
+
+// Wayland version of the Linux device (selected by defining _IRR_LINUX_WAYLAND_).
+// The implementation is in CIrrDeviceLinuxWayland.cpp, the X11 version in CIrrDeviceLinux.cpp.
+struct wl_buffer;
+
+namespace irr
+{
+
+	class CIrrDeviceLinux : public CIrrDeviceStub, public video::IImagePresenter
+	{
+	public:
+
+		//! constructor
+		CIrrDeviceLinux(const SIrrlichtCreationParameters& param);
+
+		//! destructor
+		virtual ~CIrrDeviceLinux();
+
+		//! runs the device. Returns false if device wants to be deleted
+		virtual bool run() _IRR_OVERRIDE_;
+
+		//! Cause the device to temporarily pause execution and let other processes to run
+		virtual void yield() _IRR_OVERRIDE_;
+
+		//! Pause execution and let other processes to run for a specified amount of time.
+		virtual void sleep(u32 timeMs, bool pauseTimer) _IRR_OVERRIDE_;
+
+		//! sets the caption of the window
+		virtual void setWindowCaption(const wchar_t* text) _IRR_OVERRIDE_;
+
+		//! returns if window is active. if not, nothing need to be drawn
+		virtual bool isWindowActive() const _IRR_OVERRIDE_;
+
+		//! returns if window has focus.
+		virtual bool isWindowFocused() const _IRR_OVERRIDE_;
+
+		//! returns if window is minimized.
+		virtual bool isWindowMinimized() const _IRR_OVERRIDE_;
+
+		//! returns color format of the window.
+		virtual video::ECOLOR_FORMAT getColorFormat() const _IRR_OVERRIDE_;
+
+		//! presents a surface in the client area (software drivers)
+		virtual bool present(video::IImage* surface, void* windowId=0, core::rect<s32>* src=0 ) _IRR_OVERRIDE_;
+
+		//! notifies the device that it should close itself
+		virtual void closeDevice() _IRR_OVERRIDE_;
+
+		//! \return Returns a pointer to a list with all video modes supported by the gfx adapter.
+		virtual video::IVideoModeList* getVideoModeList() _IRR_OVERRIDE_;
+
+		//! Sets if the window should be resizable in windowed mode.
+		virtual void setResizable(bool resize=false) _IRR_OVERRIDE_;
+
+		//! Resize the render window.
+		virtual void setWindowSize(const irr::core::dimension2d<u32>& size) _IRR_OVERRIDE_;
+
+		//! Minimizes the window.
+		virtual void minimizeWindow() _IRR_OVERRIDE_;
+
+		//! Maximizes the window.
+		virtual void maximizeWindow() _IRR_OVERRIDE_;
+
+		//! Restores the window size.
+		virtual void restoreWindow() _IRR_OVERRIDE_;
+
+		//! Get the position of this window on screen (always 0,0 as Wayland clients don't know their position)
+		virtual core::position2di getWindowPosition() _IRR_OVERRIDE_;
+
+		//! Activate any joysticks, and generate events for them.
+		virtual bool activateJoysticks(core::array<SJoystickInfo> & joystickInfo) _IRR_OVERRIDE_;
+
+		//! Gamma ramps can't be changed by Wayland clients
+		virtual bool setGammaRamp( f32 red, f32 green, f32 blue, f32 brightness, f32 contrast ) _IRR_OVERRIDE_;
+
+		//! Gamma ramps can't be changed by Wayland clients
+		virtual bool getGammaRamp( f32 &red, f32 &green, f32 &blue, f32 &brightness, f32 &contrast ) _IRR_OVERRIDE_;
+
+		//! gets text from the clipboard
+		//! \return Returns 0 if no string is in there.
+		virtual const c8* getTextFromClipboard() const;
+
+		//! copies text to the clipboard
+		virtual void copyToClipboard(const c8* text) const;
+
+		//! Remove all messages pending in the system message loop
+		virtual void clearSystemMessages() _IRR_OVERRIDE_;
+
+		//! Get the device type
+		virtual E_DEVICE_TYPE getType() const _IRR_OVERRIDE_
+		{
+			return EIDT_WAYLAND;
+		}
+
+	private:
+
+		//! all wayland/xkb/egl objects and their listeners, defined in CIrrDeviceLinuxWayland.cpp
+		struct SWayland;
+
+		void createDriver();
+		bool createWindow();
+		void createKeyMap();
+		void pollJoysticks();
+		void resizeWindow(u32 width, u32 height);
+
+		//! Implementation of the Wayland cursor control
+		class CCursorControl : public gui::ICursorControl
+		{
+		public:
+
+			CCursorControl(CIrrDeviceLinux* dev, bool null);
+
+			~CCursorControl();
+
+			virtual void setVisible(bool visible) _IRR_OVERRIDE_;
+
+			virtual bool isVisible() const _IRR_OVERRIDE_
+			{
+				return IsVisible;
+			}
+
+			virtual void setPosition(const core::position2d<f32> &pos) _IRR_OVERRIDE_
+			{
+				setPosition(pos.X, pos.Y);
+			}
+
+			virtual void setPosition(f32 x, f32 y) _IRR_OVERRIDE_
+			{
+				setPosition((s32)(x*Device->Width), (s32)(y*Device->Height));
+			}
+
+			virtual void setPosition(const core::position2d<s32> &pos) _IRR_OVERRIDE_
+			{
+				setPosition(pos.X, pos.Y);
+			}
+
+			//! Wayland does not allow clients to warp the pointer, so this only changes the position reported by the cursor control
+			virtual void setPosition(s32 x, s32 y) _IRR_OVERRIDE_
+			{
+				CursorPos.X = x;
+				CursorPos.Y = y;
+			}
+
+			virtual const core::position2d<s32>& getPosition(bool updateCursor) _IRR_OVERRIDE_
+			{
+				return CursorPos;
+			}
+
+			virtual core::position2d<f32> getRelativePosition(bool updateCursor) _IRR_OVERRIDE_
+			{
+				if (!UseReferenceRect)
+				{
+					return core::position2d<f32>(CursorPos.X / (f32)Device->Width,
+						CursorPos.Y / (f32)Device->Height);
+				}
+
+				return core::position2d<f32>(CursorPos.X / (f32)ReferenceRect.getWidth(),
+						CursorPos.Y / (f32)ReferenceRect.getHeight());
+			}
+
+			virtual void setReferenceRect(core::rect<s32>* rect=0) _IRR_OVERRIDE_
+			{
+				if (rect)
+				{
+					ReferenceRect = *rect;
+					UseReferenceRect = true;
+
+					// prevent division through zero and uneven sizes
+					if (!ReferenceRect.getHeight() || ReferenceRect.getHeight()%2)
+						ReferenceRect.LowerRightCorner.Y += 1;
+
+					if (!ReferenceRect.getWidth() || ReferenceRect.getWidth()%2)
+						ReferenceRect.LowerRightCorner.X += 1;
+				}
+				else
+					UseReferenceRect = false;
+			}
+
+			virtual void setActiveIcon(gui::ECURSOR_ICON iconId) _IRR_OVERRIDE_;
+
+			virtual gui::ECURSOR_ICON getActiveIcon() const _IRR_OVERRIDE_
+			{
+				return ActiveIcon;
+			}
+
+			virtual gui::ECURSOR_ICON addIcon(const gui::SCursorSprite& icon) _IRR_OVERRIDE_;
+
+			virtual void changeIcon(gui::ECURSOR_ICON iconId, const gui::SCursorSprite& icon) _IRR_OVERRIDE_;
+
+			virtual core::dimension2di getSupportedIconSize() const _IRR_OVERRIDE_;
+
+			//! Updates animated cursors
+			void update();
+
+			//! (Re)applies the active icon / visibility to the Wayland pointer (needed after pointer enter)
+			void applyCursor(unsigned int enterSerial);
+
+			void clearCursors();
+
+			//! position reported by the compositor
+			void setPositionFromCompositor(s32 x, s32 y)
+			{
+				CursorPos.X = x;
+				CursorPos.Y = y;
+			}
+
+		private:
+
+			struct SCursorFrame
+			{
+				SCursorFrame() : Buffer(0), Width(0), Height(0), HotX(0), HotY(0), Owned(false) {}
+				struct wl_buffer* Buffer;
+				s32 Width, Height, HotX, HotY;
+				bool Owned; // buffer was created by us (custom cursors), theme buffers are owned by the theme
+			};
+
+			struct SCursor
+			{
+				SCursor() : FrameTime(0) {}
+				core::array<SCursorFrame> Frames;
+				u32 FrameTime;
+			};
+
+			void initCursors();
+			bool loadThemeCursor(const char* name);
+			bool createSpriteCursor(SCursor& cursor, const gui::SCursorSprite& icon);
+			void freeCursor(SCursor& cursor);
+			void showFrame(const SCursorFrame& frame);
+
+			CIrrDeviceLinux* Device;
+			core::position2d<s32> CursorPos;
+			core::rect<s32> ReferenceRect;
+			core::array<SCursor> Cursors;
+			bool IsVisible;
+			bool Null;
+			bool UseReferenceRect;
+			gui::ECURSOR_ICON ActiveIcon;
+			u32 ActiveIconStartTime;
+			u32 LastFrame;
+		};
+
+		friend class CCursorControl;
+
+		SWayland* Wl;
+		u32 Width, Height;
+		bool WindowHasFocus;
+		bool WindowMinimized;
+		bool ExternalWindow;
+		mutable core::stringc Clipboard;
+
+		struct SKeyMap
+		{
+			SKeyMap() {}
+			SKeyMap(u32 keysym, s32 win32)
+				: KeySym(keysym), Win32Key(win32)
+			{
+			}
+
+			u32 KeySym;
+			s32 Win32Key;
+
+			bool operator<(const SKeyMap& o) const
+			{
+				return KeySym<o.KeySym;
+			}
+		};
+
+		core::array<SKeyMap> KeyMap;
+
+#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
+		struct JoystickInfo
+		{
+			int	fd;
+			int	axes;
+			int	buttons;
+
+			SEvent persistentData;
+
+			JoystickInfo() : fd(-1), axes(0), buttons(0) { }
+		};
+		core::array<JoystickInfo> ActiveJoysticks;
+#endif
+	};
+
+} // end namespace irr
+
+#else // _IRR_COMPILE_WITH_WAYLAND_DEVICE_ (X11 below)
 
 #ifdef _IRR_COMPILE_WITH_X11_
 
@@ -441,6 +730,8 @@ namespace irr
 
 } // end namespace irr
 
-#endif // _IRR_COMPILE_WITH_X11_DEVICE_
+#endif // _IRR_COMPILE_WITH_WAYLAND_DEVICE_ / X11
+
+#endif // _IRR_COMPILE_WITH_X11_DEVICE_ || _IRR_COMPILE_WITH_WAYLAND_DEVICE_
 #endif // __C_IRR_DEVICE_LINUX_H_INCLUDED__
 

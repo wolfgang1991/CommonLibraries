@@ -32,6 +32,7 @@
 //! _IRR_COMPILE_WITH_WINDOWS_DEVICE_ for Windows API based device
 //! _IRR_COMPILE_WITH_OSX_DEVICE_ for Cocoa native windowing on OSX
 //! _IRR_COMPILE_WITH_X11_DEVICE_ for Linux X11 based device
+//! _IRR_COMPILE_WITH_WAYLAND_DEVICE_ for Linux Wayland based device (selected by defining _IRR_LINUX_WAYLAND_ instead of X11)
 //! _IRR_COMPILE_WITH_SDL_DEVICE_ for platform independent SDL framework
 //! _IRR_COMPILE_WITH_CONSOLE_DEVICE_ for no windowing system, used as a fallback
 //! _IRR_COMPILE_WITH_FB_DEVICE_ for framebuffer systems
@@ -141,12 +142,22 @@
 #define _IRR_LINUX_PLATFORM_
 #endif
 #define _IRR_POSIX_API_
+//! Define _IRR_LINUX_WAYLAND_ (e.g. via -D_IRR_LINUX_WAYLAND_) to use Wayland instead of X11 on Linux.
+/** The Wayland device (CIrrDeviceLinux) supports the OpenGL, OpenGL-ES and software/Burning's video drivers.
+Requires libwayland-client, libwayland-egl, libwayland-cursor and libxkbcommon.
+OpenGL (EDT_OPENGL) is created via EGL in this mode. */
+#if defined(_IRR_LINUX_WAYLAND_) && !defined(_IRR_SOLARIS_PLATFORM_)
+#define _IRR_COMPILE_WITH_WAYLAND_DEVICE_
+#else
 #define _IRR_COMPILE_WITH_X11_DEVICE_
+#endif
 #endif
 
 //changed
 #if !defined(_IRR_ANDROID_PLATFORM_) && !defined(_IRR_IOS_PLATFORM_)
+#ifndef _IRR_LINUX_WAYLAND_
 #define NO_IRR_COMPILE_WITH_OGLES1_
+#endif
 //#define NO_IRR_COMPILE_WITH_OGLES2_
 #define NO_IRR_COMPILE_WITH_WEBGL1_
 #endif
@@ -231,6 +242,12 @@ define out. */
 	#elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
 		#define _IRR_OPENGL_USE_EXTPOINTER_
 		#define _IRR_COMPILE_WITH_GLX_MANAGER_
+	#elif defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
+		// there is no GLX on Wayland, OpenGL contexts are created with EGL
+		#define _IRR_OPENGL_USE_EXTPOINTER_
+		#ifndef _IRR_COMPILE_WITH_EGL_MANAGER_
+		#define _IRR_COMPILE_WITH_EGL_MANAGER_
+		#endif
 	#elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
 		#define _IRR_COMPILE_WITH_NSOGL_MANAGER_
 	#elif defined(_IRR_SOLARIS_PLATFORM_)
@@ -244,7 +261,7 @@ define out. */
 // Debian 10 removed support for GLES1 in mesa.
 // Can't tell about other Linux platforms or a way to test if it's still available,
 // so removing OGLES1 support on Linux now to allow compiling to work by default.
-#if defined(_IRR_LINUX_PLATFORM_) && !defined(_IRR_ANDROID_PLATFORM_)
+#if defined(_IRR_LINUX_PLATFORM_) && !defined(_IRR_ANDROID_PLATFORM_) && !defined(_IRR_LINUX_WAYLAND_)
 #define NO_IRR_COMPILE_WITH_OGLES1_
 #endif
 
@@ -258,7 +275,7 @@ define out. */
 
 //! Define required options for OpenGL ES 1.1 drivers.
 #if defined(_IRR_COMPILE_WITH_OGLES1_)
-#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_)
+#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_) || defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_)
 #define _IRR_OGLES1_USE_EXTPOINTER_
 #ifndef _IRR_COMPILE_WITH_EGL_MANAGER_
 #define _IRR_COMPILE_WITH_EGL_MANAGER_
@@ -290,7 +307,7 @@ define out. */
 
 //! Define required options for OpenGL ES 2.0 drivers.
 #if defined(_IRR_COMPILE_WITH_OGLES2_)
-#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_) || defined(__EMSCRIPTEN__)
+#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) || defined(_IRR_COMPILE_WITH_X11_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_) || defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_) || defined(__EMSCRIPTEN__)
 #define _IRR_OGLES2_USE_EXTPOINTER_
 #ifndef _IRR_COMPILE_WITH_EGL_MANAGER_
 #define _IRR_COMPILE_WITH_EGL_MANAGER_
@@ -323,7 +340,9 @@ comment this define out */
 /** If you do not wish the engine to be compiled with X11, comment this
 define out. */
 // Only used in LinuxDevice.
+#ifndef _IRR_COMPILE_WITH_WAYLAND_DEVICE_
 #define _IRR_COMPILE_WITH_X11_
+#endif
 #ifdef NO_IRR_COMPILE_WITH_X11_
 #undef _IRR_COMPILE_WITH_X11_
 #endif
