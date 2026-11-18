@@ -155,9 +155,7 @@ OpenGL (EDT_OPENGL) is created via EGL in this mode. */
 
 //changed
 #if !defined(_IRR_ANDROID_PLATFORM_) && !defined(_IRR_IOS_PLATFORM_)
-#ifndef _IRR_LINUX_WAYLAND_
 #define NO_IRR_COMPILE_WITH_OGLES1_
-#endif
 //#define NO_IRR_COMPILE_WITH_OGLES2_
 #define NO_IRR_COMPILE_WITH_WEBGL1_
 #endif
@@ -261,7 +259,7 @@ define out. */
 // Debian 10 removed support for GLES1 in mesa.
 // Can't tell about other Linux platforms or a way to test if it's still available,
 // so removing OGLES1 support on Linux now to allow compiling to work by default.
-#if defined(_IRR_LINUX_PLATFORM_) && !defined(_IRR_ANDROID_PLATFORM_) && !defined(_IRR_LINUX_WAYLAND_)
+#if defined(_IRR_LINUX_PLATFORM_) && !defined(_IRR_ANDROID_PLATFORM_)
 #define NO_IRR_COMPILE_WITH_OGLES1_
 #endif
 

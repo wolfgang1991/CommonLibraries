@@ -22,8 +22,7 @@
 #include <wayland-cursor.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "wayland/xdg-shell-client-protocol.h"
-#include "wayland/xdg-decoration-unstable-v1-client-protocol.h"
+#include <libdecor.h>
 
 #include "IEventReceiver.h"
 #include "ISceneManager.h"
@@ -170,13 +169,13 @@ struct SShmBuffer
 struct CIrrDeviceLinux::SWayland
 {
 	explicit SWayland(CIrrDeviceLinux* dev) : Dev(dev),
-		Display(0), Registry(0), Compositor(0), Shm(0), WmBase(0), DecorationManager(0), Decoration(0),
+		Display(0), Registry(0), Compositor(0), Shm(0), DecorContext(0), Frame(0),
 		Seat(0), Pointer(0), Keyboard(0), Output(0),
 		DataDeviceManager(0), DataDevice(0), DataSource(0), SelectionOffer(0),
-		Surface(0), XdgSurface(0), Toplevel(0), EglWindow(0),
+		Surface(0), EglWindow(0),
 		CursorSurface(0), CursorTheme(0),
 		XkbContext(0), XkbKeymap(0), XkbState(0),
-		Configured(false), PendingWidth(0), PendingHeight(0),
+		Configured(false),
 		InputSerial(0), PointerEnterSerial(0), PointerInside(false),
 		OutputWidth(0), OutputHeight(0),
 		RepeatRate(25), RepeatDelay(600), RepeatKey(0), Repeating(false), NextRepeat(0),
@@ -191,9 +190,8 @@ struct CIrrDeviceLinux::SWayland
 	struct wl_registry* Registry;
 	struct wl_compositor* Compositor;
 	struct wl_shm* Shm;
-	struct xdg_wm_base* WmBase;
-	struct zxdg_decoration_manager_v1* DecorationManager;
-	struct zxdg_toplevel_decoration_v1* Decoration;
+	struct libdecor* DecorContext; // draws the window decorations (title bar, buttons) if the compositor does not
+	struct libdecor_frame* Frame;
 	struct wl_seat* Seat;
 	struct wl_pointer* Pointer;
 	struct wl_keyboard* Keyboard;
@@ -204,8 +202,6 @@ struct CIrrDeviceLinux::SWayland
 	struct wl_data_offer* SelectionOffer;
 
 	struct wl_surface* Surface;
-	struct xdg_surface* XdgSurface;
-	struct xdg_toplevel* Toplevel;
 	struct wl_egl_window* EglWindow;
 
 	struct wl_surface* CursorSurface;
@@ -216,7 +212,6 @@ struct CIrrDeviceLinux::SWayland
 	struct xkb_state* XkbState;
 
 	bool Configured;
-	s32 PendingWidth, PendingHeight;
 
 	u32 InputSerial;
 	u32 PointerEnterSerial;
@@ -427,6 +422,8 @@ struct CIrrDeviceLinux::SWayland
 
 		if (wl_display_dispatch_pending(Display) < 0)
 			return false;
+		if (DecorContext && libdecor_dispatch(DecorContext, 0) < 0)
+			return false;
 		return wl_display_get_error(Display) == 0;
 	}
 
@@ -441,12 +438,6 @@ struct CIrrDeviceLinux::SWayland
 			wl->Compositor = (struct wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version < 4 ? version : 4);
 		else if (!strcmp(iface, wl_shm_interface.name))
 			wl->Shm = (struct wl_shm*)wl_registry_bind(registry, name, &wl_shm_interface, 1);
-		else if (!strcmp(iface, xdg_wm_base_interface.name))
-		{
-			wl->WmBase = (struct xdg_wm_base*)wl_registry_bind(registry, name, &xdg_wm_base_interface, version < 2 ? version : 2);
-			static const struct xdg_wm_base_listener listener = { &SWayland::wmBasePing };
-			xdg_wm_base_add_listener(wl->WmBase, &listener, wl);
-		}
 		else if (!strcmp(iface, wl_seat_interface.name))
 		{
 			wl->Seat = (struct wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, version < 5 ? version : 5);
@@ -464,16 +455,9 @@ struct CIrrDeviceLinux::SWayland
 		}
 		else if (!strcmp(iface, wl_data_device_manager_interface.name))
 			wl->DataDeviceManager = (struct wl_data_device_manager*)wl_registry_bind(registry, name, &wl_data_device_manager_interface, version < 3 ? version : 3);
-		else if (!strcmp(iface, zxdg_decoration_manager_v1_interface.name))
-			wl->DecorationManager = (struct zxdg_decoration_manager_v1*)wl_registry_bind(registry, name, &zxdg_decoration_manager_v1_interface, 1);
 	}
 
 	static void registryGlobalRemove(void*, struct wl_registry*, uint32_t) {}
-
-	static void wmBasePing(void*, struct xdg_wm_base* base, uint32_t serial)
-	{
-		xdg_wm_base_pong(base, serial);
-	}
 
 	// ------------------------------------------------------------------
 	// output
@@ -495,38 +479,46 @@ struct CIrrDeviceLinux::SWayland
 	static void outputScale(void*, struct wl_output*, int32_t) {}
 
 	// ------------------------------------------------------------------
-	// xdg-shell
+	// libdecor
 	// ------------------------------------------------------------------
 
-	static void xdgSurfaceConfigure(void* data, struct xdg_surface* surface, uint32_t serial)
+	static void decorError(struct libdecor*, enum libdecor_error error, const char* message)
+	{
+		os::Printer::log("libdecor error", message, ELL_ERROR);
+	}
+
+	static void frameConfigure(struct libdecor_frame* frame, struct libdecor_configuration* configuration, void* data)
 	{
 		SWayland* wl = static_cast<SWayland*>(data);
-		xdg_surface_ack_configure(surface, serial);
+		int w = 0, h = 0;
+		if (!libdecor_configuration_get_content_size(configuration, frame, &w, &h) || w <= 0 || h <= 0)
+		{
+			// the compositor leaves the size to us
+			w = (int)wl->Dev->Width;
+			h = (int)wl->Dev->Height;
+		}
+
+		struct libdecor_state* state = libdecor_state_new(w, h);
+		libdecor_frame_commit(frame, state, configuration);
+		libdecor_state_free(state);
 		wl->Configured = true;
 
-		const s32 w = wl->PendingWidth;
-		const s32 h = wl->PendingHeight;
-		if (w > 0 && h > 0 && ((u32)w != wl->Dev->Width || (u32)h != wl->Dev->Height))
+		if ((u32)w != wl->Dev->Width || (u32)h != wl->Dev->Height)
 			wl->Dev->resizeWindow((u32)w, (u32)h);
 	}
 
-	static void toplevelConfigure(void* data, struct xdg_toplevel*, int32_t width, int32_t height, struct wl_array*)
-	{
-		SWayland* wl = static_cast<SWayland*>(data);
-		wl->PendingWidth = width;
-		wl->PendingHeight = height;
-	}
-
-	static void toplevelClose(void* data, struct xdg_toplevel*)
+	static void frameClose(struct libdecor_frame*, void* data)
 	{
 		os::Printer::log("Quit message received.", ELL_INFORMATION);
 		static_cast<SWayland*>(data)->Dev->Close = true;
 	}
 
-	static void toplevelConfigureBounds(void*, struct xdg_toplevel*, int32_t, int32_t) {}
-	static void toplevelWmCapabilities(void*, struct xdg_toplevel*, struct wl_array*) {}
+	static void frameCommit(struct libdecor_frame*, void* data)
+	{
+		wl_surface_commit(static_cast<SWayland*>(data)->Surface);
+	}
 
-	static void decorationConfigure(void*, struct zxdg_toplevel_decoration_v1*, uint32_t) {}
+	static void frameDismissPopup(struct libdecor_frame*, const char*, void*) {}
 
 	// ------------------------------------------------------------------
 	// seat
@@ -889,15 +881,9 @@ struct CIrrDeviceLinux::SWayland
 		if (EglWindow)
 			wl_egl_window_destroy(EglWindow);
 		EglWindow = 0;
-		if (Decoration)
-			zxdg_toplevel_decoration_v1_destroy(Decoration);
-		Decoration = 0;
-		if (Toplevel)
-			xdg_toplevel_destroy(Toplevel);
-		Toplevel = 0;
-		if (XdgSurface)
-			xdg_surface_destroy(XdgSurface);
-		XdgSurface = 0;
+		if (Frame)
+			libdecor_frame_unref(Frame);
+		Frame = 0;
 		if (Surface)
 			wl_surface_destroy(Surface);
 		Surface = 0;
@@ -939,12 +925,9 @@ struct CIrrDeviceLinux::SWayland
 			wl_output_destroy(Output);
 		Output = 0;
 
-		if (DecorationManager)
-			zxdg_decoration_manager_v1_destroy(DecorationManager);
-		DecorationManager = 0;
-		if (WmBase)
-			xdg_wm_base_destroy(WmBase);
-		WmBase = 0;
+		if (DecorContext)
+			libdecor_unref(DecorContext);
+		DecorContext = 0;
 		if (Shm)
 			wl_shm_destroy(Shm);
 		Shm = 0;
@@ -1097,9 +1080,9 @@ bool CIrrDeviceLinux::createWindow()
 	wl_display_roundtrip(Wl->Display); // globals
 	wl_display_roundtrip(Wl->Display); // seat capabilities, output modes, ...
 
-	if (!Wl->Compositor || !Wl->Shm || !Wl->WmBase)
+	if (!Wl->Compositor || !Wl->Shm)
 	{
-		os::Printer::log("The Wayland compositor does not support wl_compositor, wl_shm and xdg_wm_base.", ELL_ERROR);
+		os::Printer::log("The Wayland compositor does not support wl_compositor and wl_shm.", ELL_ERROR);
 		Wl->destroyAll();
 		delete Wl;
 		Wl = 0;
@@ -1108,34 +1091,31 @@ bool CIrrDeviceLinux::createWindow()
 
 	Wl->setupDataDevice();
 
-	Wl->Surface = wl_compositor_create_surface(Wl->Compositor);
-	Wl->XdgSurface = xdg_wm_base_get_xdg_surface(Wl->WmBase, Wl->Surface);
-	static const struct xdg_surface_listener xdgSurfaceListener = { &SWayland::xdgSurfaceConfigure };
-	xdg_surface_add_listener(Wl->XdgSurface, &xdgSurfaceListener, Wl);
-	Wl->Toplevel = xdg_surface_get_toplevel(Wl->XdgSurface);
-	static const struct xdg_toplevel_listener toplevelListener = {
-		&SWayland::toplevelConfigure, &SWayland::toplevelClose, &SWayland::toplevelConfigureBounds, &SWayland::toplevelWmCapabilities };
-	xdg_toplevel_add_listener(Wl->Toplevel, &toplevelListener, Wl);
-	xdg_toplevel_set_title(Wl->Toplevel, "Irrlicht");
-	xdg_toplevel_set_app_id(Wl->Toplevel, "irrlicht");
-
-	if (Wl->DecorationManager)
+	static struct libdecor_interface decorInterface = { &SWayland::decorError };
+	Wl->DecorContext = libdecor_new(Wl->Display, &decorInterface);
+	if (!Wl->DecorContext)
 	{
-		// ask for a title bar drawn by the compositor, otherwise the window has no decorations
-		Wl->Decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(Wl->DecorationManager, Wl->Toplevel);
-		static const struct zxdg_toplevel_decoration_v1_listener decorationListener = { &SWayland::decorationConfigure };
-		zxdg_toplevel_decoration_v1_add_listener(Wl->Decoration, &decorationListener, Wl);
-		zxdg_toplevel_decoration_v1_set_mode(Wl->Decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+		os::Printer::log("Could not create the libdecor context (xdg_wm_base required).", ELL_ERROR);
+		Wl->destroyAll();
+		delete Wl;
+		Wl = 0;
+		return false;
 	}
 
+	Wl->Surface = wl_compositor_create_surface(Wl->Compositor);
+	static struct libdecor_frame_interface frameInterface = {
+		&SWayland::frameConfigure, &SWayland::frameClose, &SWayland::frameCommit, &SWayland::frameDismissPopup };
+	Wl->Frame = libdecor_decorate(Wl->DecorContext, Wl->Surface, &frameInterface, Wl);
+	libdecor_frame_set_title(Wl->Frame, "Irrlicht");
+	libdecor_frame_set_app_id(Wl->Frame, "irrlicht");
 	if (CreationParams.Fullscreen)
-		xdg_toplevel_set_fullscreen(Wl->Toplevel, NULL);
+		libdecor_frame_set_fullscreen(Wl->Frame, NULL);
+	libdecor_frame_map(Wl->Frame);
 
-	// the initial commit without a buffer triggers the first configure event
-	wl_surface_commit(Wl->Surface);
+	// wait for the first configure, it triggers the creation of the decorations
 	while (!Wl->Configured)
 	{
-		if (wl_display_dispatch(Wl->Display) < 0)
+		if (!Wl->dispatch(100))
 		{
 			os::Printer::log("Lost connection to the Wayland compositor while creating the window.", ELL_ERROR);
 			Wl->destroyAll();
@@ -1347,13 +1327,13 @@ void CIrrDeviceLinux::sleep(u32 timeMs, bool pauseTimer=false)
 //! sets the caption of the window
 void CIrrDeviceLinux::setWindowCaption(const wchar_t* text)
 {
-	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Toplevel)
+	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Frame)
 		return;
 
 	core::stringc utf8;
 	for (const wchar_t* p = text; p && *p; ++p)
 		appendUtf8(utf8, (u32)*p);
-	xdg_toplevel_set_title(Wl->Toplevel, utf8.c_str());
+	libdecor_frame_set_title(Wl->Frame, utf8.c_str());
 	wl_display_flush(Wl->Display);
 }
 
@@ -1433,20 +1413,22 @@ video::ECOLOR_FORMAT CIrrDeviceLinux::getColorFormat() const
 //! Sets if the window should be resizable in windowed mode.
 void CIrrDeviceLinux::setResizable(bool resize)
 {
-	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Toplevel || CreationParams.Fullscreen)
+	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Frame || CreationParams.Fullscreen)
 		return;
 
+	// without the resize capability the decorations have neither a maximize button nor resize borders
 	if (resize)
 	{
-		xdg_toplevel_set_min_size(Wl->Toplevel, 0, 0);
-		xdg_toplevel_set_max_size(Wl->Toplevel, 0, 0);
+		libdecor_frame_set_capabilities(Wl->Frame, LIBDECOR_ACTION_RESIZE);
+		libdecor_frame_set_min_content_size(Wl->Frame, 0, 0);
+		libdecor_frame_set_max_content_size(Wl->Frame, 0, 0);
 	}
 	else
 	{
-		xdg_toplevel_set_min_size(Wl->Toplevel, (s32)Width, (s32)Height);
-		xdg_toplevel_set_max_size(Wl->Toplevel, (s32)Width, (s32)Height);
+		libdecor_frame_unset_capabilities(Wl->Frame, LIBDECOR_ACTION_RESIZE);
+		libdecor_frame_set_min_content_size(Wl->Frame, (s32)Width, (s32)Height);
+		libdecor_frame_set_max_content_size(Wl->Frame, (s32)Width, (s32)Height);
 	}
-	wl_surface_commit(Wl->Surface);
 	wl_display_flush(Wl->Display);
 }
 
@@ -1454,7 +1436,7 @@ void CIrrDeviceLinux::setResizable(bool resize)
 //! Resize the render window.
 void CIrrDeviceLinux::setWindowSize(const irr::core::dimension2d<u32>& size)
 {
-	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Toplevel)
+	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Frame)
 		return;
 
 	if (size.Width == 0 || size.Height == 0 || (size.Width == Width && size.Height == Height))
@@ -1462,6 +1444,9 @@ void CIrrDeviceLinux::setWindowSize(const irr::core::dimension2d<u32>& size)
 
 	// A Wayland client decides the size of its own surface, the compositor can still override it.
 	resizeWindow(size.Width, size.Height);
+	struct libdecor_state* state = libdecor_state_new((int)size.Width, (int)size.Height);
+	libdecor_frame_commit(Wl->Frame, state, NULL);
+	libdecor_state_free(state);
 	wl_display_flush(Wl->Display);
 }
 
@@ -1513,9 +1498,9 @@ video::IVideoModeList* CIrrDeviceLinux::getVideoModeList()
 //! Minimizes the window.
 void CIrrDeviceLinux::minimizeWindow()
 {
-	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Toplevel)
+	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Frame)
 		return;
-	xdg_toplevel_set_minimized(Wl->Toplevel);
+	libdecor_frame_set_minimized(Wl->Frame);
 	wl_display_flush(Wl->Display);
 }
 
@@ -1523,9 +1508,9 @@ void CIrrDeviceLinux::minimizeWindow()
 //! Maximizes the window.
 void CIrrDeviceLinux::maximizeWindow()
 {
-	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Toplevel)
+	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Frame)
 		return;
-	xdg_toplevel_set_maximized(Wl->Toplevel);
+	libdecor_frame_set_maximized(Wl->Frame);
 	wl_display_flush(Wl->Display);
 }
 
@@ -1533,9 +1518,9 @@ void CIrrDeviceLinux::maximizeWindow()
 //! Restore the window to normal size if possible.
 void CIrrDeviceLinux::restoreWindow()
 {
-	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Toplevel)
+	if (CreationParams.DriverType == video::EDT_NULL || !Wl || !Wl->Frame)
 		return;
-	xdg_toplevel_unset_maximized(Wl->Toplevel);
+	libdecor_frame_unset_maximized(Wl->Frame);
 	wl_display_flush(Wl->Display);
 }
 

@@ -24,7 +24,13 @@ all: all_linux
 
 # target specific settings
 all_linux all_win32 static_win32: LDFLAGS += -L$(IrrlichtHome)/lib/$(SYSTEM) -lIrrlicht
+# make WAYLAND=1 uses the Wayland device (_IRR_LINUX_WAYLAND_) instead of X11 (the engine must be built the same way)
+ifdef WAYLAND
+all_linux: CPPFLAGS += -D_IRR_LINUX_WAYLAND_
+all_linux: LDFLAGS += -lGL -lEGL -lGLESv2 -lwayland-client -lwayland-egl -lwayland-cursor -lxkbcommon -ldecor-0
+else
 all_linux: LDFLAGS += -L/usr/X11R6/lib$(LIBSELECT) -lGL -lEGL -lGLESv1_CM -lGLESv2 -lXxf86vm -lXext -lX11 -lXcursor
+endif
 all_linux clean_linux: SYSTEM=Linux
 all_win32 clean_win32 static_win32: SYSTEM=Win32-gcc
 all_win32 clean_win32 static_win32: SUF=.exe

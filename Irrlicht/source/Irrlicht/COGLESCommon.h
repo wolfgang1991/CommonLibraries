@@ -12,16 +12,10 @@
 #if defined(_IRR_COMPILE_WITH_IOS_DEVICE_)
 #include <OpenGLES/ES1/gl.h>
 #include <OpenGLES/ES1/glext.h>
-#elif defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_) || defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
+#elif defined(_IRR_COMPILE_WITH_ANDROID_DEVICE_)
 #include <GLES/gl.h>
 #include <GLES/glext.h>
 #include <EGL/eglplatform.h>
-#if defined(_IRR_COMPILE_WITH_WAYLAND_DEVICE_)
-typedef char GLchar;
-#if defined(_IRR_OGLES1_USE_EXTPOINTER_)
-#include "gles-ext.h"
-#endif
-#endif
 #else
 #include <khronos-api/GLES/gl.h>
 #include <EGL/eglplatform.h>

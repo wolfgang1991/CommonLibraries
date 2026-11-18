@@ -127,7 +127,7 @@ int main()
 	dimensions, etc.
 	*/
 	IrrlichtDevice *device =
-		createDevice( video::EDT_OGLES1, dimension2d<u32>(640, 480), 32,
+		createDevice( video::EDT_BURNINGSVIDEO, dimension2d<u32>(640, 480), 32,
 			false, false, false, 0);
 
 	if (!device)
