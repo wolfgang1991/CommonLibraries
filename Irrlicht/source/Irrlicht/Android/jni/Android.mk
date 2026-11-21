@@ -7,6 +7,7 @@ LOCAL_MODULE := Irrlicht
 IRRLICHT_LIB_NAME := lib$(LOCAL_MODULE).a
 
 LOCAL_CFLAGS := -Wall -pipe -fno-exceptions -fno-rtti -fstrict-aliasing
+LOCAL_CPPFLAGS := -std=gnu++11
 
 ifndef NDEBUG
 LOCAL_CFLAGS += -g -D_DEBUG

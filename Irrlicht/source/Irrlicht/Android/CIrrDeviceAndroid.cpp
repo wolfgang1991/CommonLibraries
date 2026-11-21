@@ -137,7 +137,7 @@ CIrrDeviceAndroid::CIrrDeviceAndroid(const SIrrlichtCreationParameters& param)
 		s32 Events = 0;
 		android_poll_source* Source = 0;
 
-		while ((ALooper_pollAll(((Focused && !Paused) || (!Stopped && IsSplitScreen) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)//changed
+		while ((ALooper_pollOnce(((Focused && !Paused) || (!Stopped && IsSplitScreen) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)//changed
 		{
 			if(Source)
 				Source->process(Android, Source);
@@ -204,7 +204,7 @@ bool CIrrDeviceAndroid::run()
 	s32 Events = 0;
 	android_poll_source* Source = 0;
 
-	while ((id = ALooper_pollAll(((Focused && !Paused) || (!Stopped && IsSplitScreen) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)//changed
+	while ((id = ALooper_pollOnce(((Focused && !Paused) || (!Stopped && IsSplitScreen) || !Initialized) ? 0 : -1, 0, &Events, (void**)&Source)) >= 0)//changed
 	{
 		if(Source)
 			Source->process(Android, Source);
